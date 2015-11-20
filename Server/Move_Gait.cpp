@@ -1052,6 +1052,9 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
     	if (pCMP->count<100)
     	{
+    		if (pCMP->count==0)
+    			pRobot->GetBodyPe(pCMLP.startPE);
+
     		pCMLP.moveState=MoveState::None;
 
     		pCMLP.forceSum[0]+=pCMP->pForceData->at(0).Fx;
@@ -1100,6 +1103,8 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     		{
     			pCMLP.countIter=pCMP->count;
     			pCMLP.moveState=MoveState::Backward;
+
+    			isConfirm=false;
     		}
 
     		break;
@@ -1126,6 +1131,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 				if (fabs(pCMP->pForceData->at(0).Fy/1000-pCMLP.forceAvg[1])>ForceRange[0])
 				{
 					pCMLP.countIter=pCMP->count;
+					pRobot->GetBodyPe(pCMLP.handlePE);
 					pCMLP.moveState=MoveState::Rightward;
 				}
 			}
@@ -1149,6 +1155,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     			if (fabs(pCMP->pForceData->at(0).Fy/1000-pCMLP.forceAvg[1])>ForceRange[0])
     			{
     				pCMLP.countIter=pCMP->count;
+    				pRobot->GetBodyPe(pCMLP.handlePE);
     				pCMLP.moveState=MoveState::Leftward;
     			}
     		}
@@ -1203,7 +1210,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     		F[2]=-1;
 
     		if (pCMP->count-pCMLP.countIter>5000)
-    		    pCMLP.moveState=MoveState::PrePush;
+    		    pCMLP.moveState=MoveState::Push;
 
     		break;
 
@@ -1216,8 +1223,14 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
 			break;
 
-    	case MoveState::PrePush:
+    	case MoveState::Push:
+    		//Three Step using position control:
+    		//1.Move back to startPE; 2.Move rightward to align the door; 3.Move through the door
 
+
+
+
+    		break;
 
     	default:
     		break;

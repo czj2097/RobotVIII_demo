@@ -67,7 +67,7 @@ enum MoveState
 	Upward=6,
 	Pullhandle=7,
 	Pushhandle=8,
-	PrePush=9,
+	Push=9,
 };
 
 struct CM_LAST_PARAM
@@ -79,9 +79,13 @@ struct CM_LAST_PARAM
 
 	const double posLimit[6]{0.3,0.25,0.5,0.524,0.349,0.349};
 
-	double bodyPE_last[6]{0};
-	double bodyVel_last[6]{0};
+	double bodyPE_last[6]{0,0,0,0,0,0};
+	double bodyVel_last[6]{0,0,0,0,0,0};
+
     bool downwardFlag;
+
+    double startPE[6];
+    double handlePE[6];
 };
 
 /*parse function*/
