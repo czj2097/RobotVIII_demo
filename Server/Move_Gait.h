@@ -67,6 +67,7 @@ enum MoveState
 	Upward=6,
 	Pullhandle=7,
 	Pushhandle=8,
+	PrePush=9,
 };
 
 struct CM_LAST_PARAM

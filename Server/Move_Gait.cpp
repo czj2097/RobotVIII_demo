@@ -1203,7 +1203,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     		F[2]=-1;
 
     		if (pCMP->count-pCMLP.countIter>5000)
-    		    pCMLP.moveState=MoveState::Upward;
+    		    pCMLP.moveState=MoveState::PrePush;
 
     		break;
 
@@ -1215,6 +1215,9 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 				isContinue=false;
 
 			break;
+
+    	case MoveState::PrePush:
+
 
     	default:
     		break;
