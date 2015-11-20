@@ -32,7 +32,7 @@ int main()
 {
 	auto rs = Robots::ROBOT_SERVER::GetInstance();
 	rs->CreateRobot<Robots::ROBOT_TYPE_I>();
- 	rs->LoadXml("/home/hex/Desktop/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
+ 	rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
 
 
 	rs->AddGait("wk", Robots::walk, Robots::parseWalk);
@@ -44,8 +44,10 @@ int main()
     rs->AddGait("sw",swing,parseSwing);
 
     rs->AddGait("mr",moveWithRotate,parseMoveWithRotate);
-    //rs->AddGait("cmb",continueMoveBegin,parseContinueMoveBegin);
-    rs->AddGait("cmj",continueMoveJudge,parseContinueMoveJudge);
+    rs->AddGait("cmb",continueMove,parseContinueMoveBegin);
+    rs->AddGait("cmj",continueMove,parseContinueMoveJudge);
+    rs->AddGait("cmfb",continueMoveWithForce,parseContinueMoveForceBegin);
+    rs->AddGait("cmfj",continueMoveWithForce,parseContinueMoveForceJudge);
 
 	rs->Start();
 	std::cout<<"started"<<std::endl;
