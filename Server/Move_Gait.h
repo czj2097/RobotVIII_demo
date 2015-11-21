@@ -70,9 +70,17 @@ enum MoveState
 	Push=9,
 };
 
+enum PushState
+{
+    now2Start=0,
+    rightWalk=1,
+    forwardWalk=2,
+};
+
 struct CM_LAST_PARAM
 {
 	MoveState moveState;
+    PushState pushState;
 	int countIter;
 	double forceSum[3]{0,0,0};
 	double forceAvg[3]{0,0,0};
@@ -83,9 +91,18 @@ struct CM_LAST_PARAM
 	double bodyVel_last[6]{0,0,0,0,0,0};
 
     bool downwardFlag;
+    int forwardWalkFlag{0};
 
     double startPE[6];
     double handlePE[6];
+    double nowPE[6];
+    double nowPee[18];
+    double realPE[6];
+
+    int now2StartCount{5000};
+    int ret{0};
+
+    Robots::WALK_PARAM walkParam;
 };
 
 /*parse function*/
