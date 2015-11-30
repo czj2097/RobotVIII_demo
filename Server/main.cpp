@@ -32,7 +32,7 @@ int main()
 {
 	auto rs = Robots::ROBOT_SERVER::GetInstance();
 	rs->CreateRobot<Robots::ROBOT_TYPE_I>();
- 	rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
+    rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
 
 
 	rs->AddGait("wk", Robots::walk, Robots::parseWalk);

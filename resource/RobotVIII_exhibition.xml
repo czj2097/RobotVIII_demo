@@ -154,7 +154,8 @@
           <U2j Pos="U2jpe" RelativeTo=""/>
         </ChildMarker>
       </LR_P2a>
-      <LR_P2b Active="true" Inertia="P2bGamma" Pos="{0 , 0 , 0 , 0 , 0 , 0}" Vel="{0 , 0 , 0 , 0 , 0 , 0}" Acc="{0 , 0 , 0 , 0 , 0 , 0}"
+      <LR_P2b Active="true" Inertia="P2bGamma" Pos="{0 , 
+0 , 0 , 0 , 0 , 0}" Vel="{0 , 0 , 0 , 0 , 0 , 0}" Acc="{0 , 0 , 0 , 0 , 0 , 0}"
               Graphic_File_Path="C:\Robots\resource\Robot_Type_I\Robot_III_x_t\aligned_p23b.x_t">
         <ChildMarker>
           <P2i Pos="P2ipe" RelativeTo=""/>
@@ -553,7 +554,6 @@
       </cmj>
       <cmfb default="cmfb_param">
       	<cmfb_param type="group">
-      	  <isPull abbreviation="i" type="int" default="1"/>
       	  <u abbreviation="u" type="double" default="0"/>
       	  <v abbreviation="v" type="double" default="0"/>
       	  <w abbreviation="w" type="double" default="0"/>
@@ -564,6 +564,7 @@
       </cmfb>
       <cmfj>
       	<cmfj_param type="group">
+	  <isPull abbreviation="i" type="int" default="1"/>
       	  <isStop abbreviation="s" type="int" default="0"/>    	  
       	  <isConfirm abbreviation="c" type="int" default="0"/>
       	  <u abbreviation="u" type="int" default="0"/>

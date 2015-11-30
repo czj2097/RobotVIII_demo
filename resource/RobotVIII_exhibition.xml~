@@ -154,7 +154,8 @@
           <U2j Pos="U2jpe" RelativeTo=""/>
         </ChildMarker>
       </LR_P2a>
-      <LR_P2b Active="true" Inertia="P2bGamma" Pos="{0 , 0 , 0 , 0 , 0 , 0}" Vel="{0 , 0 , 0 , 0 , 0 , 0}" Acc="{0 , 0 , 0 , 0 , 0 , 0}"
+      <LR_P2b Active="true" Inertia="P2bGamma" Pos="{0 , 
+0 , 0 , 0 , 0 , 0}" Vel="{0 , 0 , 0 , 0 , 0 , 0}" Acc="{0 , 0 , 0 , 0 , 0 , 0}"
               Graphic_File_Path="C:\Robots\resource\Robot_Type_I\Robot_III_x_t\aligned_p23b.x_t">
         <ChildMarker>
           <P2i Pos="P2ipe" RelativeTo=""/>
@@ -530,7 +531,7 @@
       	  <totalCount abbreviation="t" type="double" default="3000"/>
       	</mr_param>
       </mr>
-      <cmb>
+      <cmb default="cmb_param">
       	<cmb_param type="group">
       	  <u abbreviation="u" type="double" default="0"/>
       	  <v abbreviation="v" type="double" default="0"/>
@@ -540,9 +541,9 @@
       	  <yaw abbreviation="y" type="double" default="0"/>
       	</cmb_param>
       </cmb>
-      <cmj>
+      <cmj default="cmj_param">
       	<cmj_param type="group">
-      	  <isContinue abbreviation="c" type="int" default="1"/>
+      	  <isStop abbreviation="s" type="int" default="0"/>
       	  <u abbreviation="u" type="int" default="0"/>
       	  <v abbreviation="v" type="int" default="0"/>
       	  <w abbreviation="w" type="int" default="0"/>
@@ -551,7 +552,7 @@
       	  <yaw abbreviation="y" type="int" default="0"/>
       	</cmj_param>
       </cmj>
-      <cmfb>
+      <cmfb default="cmfb_param">
       	<cmfb_param type="group">
       	  <u abbreviation="u" type="double" default="0"/>
       	  <v abbreviation="v" type="double" default="0"/>
@@ -563,9 +564,9 @@
       </cmfb>
       <cmfj>
       	<cmfj_param type="group">
-      	  <isContinue abbreviation="c" type="int" default="1"/>
-      	  <isPull abbreviation="i" type="int" default="1"/>
-      	  <isConfirm abbreviation="s" type="int" default="0"/>
+	  <isPull abbreviation="i" type="int" default="1"/>
+      	  <isStop abbreviation="s" type="int" default="0"/>    	  
+      	  <isConfirm abbreviation="c" type="int" default="0"/>
       	  <u abbreviation="u" type="int" default="0"/>
       	  <v abbreviation="v" type="int" default="0"/>
       	  <w abbreviation="w" type="int" default="0"/>
@@ -583,11 +584,11 @@
       <homePin>
         {
         0.669, 0.69, 0.69;
+        0.665, 0.686, 0.686;
         0.669, 0.69, 0.69;
+        0.669, 0.69, 0.685;
         0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
+        0.669, 0.685, 0.69;
         }
       </homePin>
       <AlignPee>
@@ -673,7 +674,7 @@
           </AtiForceSensor>
         </SlaveType>
         <Slave>
-          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>
+          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>        
           <Motion2 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion3 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion4 type="ElmoSoloWhistle" maxSpeed="8738133"/>
@@ -690,8 +691,8 @@
           <Motion15 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion16 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion17 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <ForceSensor type="AtiForceSensor"/>
+          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>  
+          <ForceSensor type="AtiForceSensor"/>           
         </Slave>
       </EtherCat>
     </Control>

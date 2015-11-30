@@ -719,14 +719,7 @@ Aris::Core::MSG parseContinueMoveForceBegin(const std::string &cmd, const map<st
 	for(auto &i:params)
 	{
 
-		if(i.first=="isPull")
-		{
-			if(i.second=="1")
-				isPull=true;
-			else
-				isPull=false;
-		}
-		else if(i.first=="u")
+        if(i.first=="u")
 		{
 			param.move_direction[0]=stoi(i.second);
 
@@ -852,9 +845,8 @@ Aris::Core::MSG parseContinueMoveForceBegin(const std::string &cmd, const map<st
 			return MSG{};
 		}
 	}
-
+    isPull=true;
 	isContinue=true;
-
 	isConfirm=false;
 
 	Aris::Core::MSG msg;
@@ -872,14 +864,21 @@ Aris::Core::MSG parseContinueMoveForceJudge(const std::string &cmd, const map<st
 
 	for(auto &i:params)
 	{
-		if(i.first=="isStop")
+        if(i.first=="isPull")
+        {
+            if(i.second=="1")
+                isPull=true;
+            else
+                isPull=false;
+        }
+        else if(i.first=="isStop")
 		{
 			if(i.second=="0")
 				isContinue=true;
             else
                 isContinue=false;
 		}
-		else if(i.first=="isConfirm")
+        else if(i.first=="isConfirm")
 		{
 			if(i.second=="1")
 				isConfirm=true;
@@ -1027,10 +1026,11 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     double bodyAcc[6];
     double bodyPE[6];
 
-    double bodyPE313[6];
-
-    double beginBodyPE213[6];
+    double beginBodyPE213[6];//in force control to calculate realBodyPE
     double realBodyPE[6];
+
+    double pushBodyPE313[6];//in position control during push
+    double pushPee[18];
 
     double zeros[6]{0,0,0,0,0,0};
 
@@ -1041,7 +1041,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
     double ForceRange[2]{10,100};
 
-    double d0=0.5;//distance from the handle to the middle of the door
+    double d0=0.42;//distance from the handle to the middle of the door
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
 
@@ -1056,8 +1056,13 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
     	if (pCMP->count<100)
     	{
-    		if (pCMP->count==0)
+            if (pCMP->count==0)
+            {
     			pRobot->GetBodyPe(pCMLP.startPE);
+			pCMLP.startPE[1]+=0.05;
+                pCMLP.moveState_last=MoveState::None;
+                pCMLP.pauseFlag=false;
+            }
 
     		pCMLP.moveState=MoveState::None;
 
@@ -1079,28 +1084,28 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     	switch(pCMLP.moveState)
     	{
     	case MoveState::None:
+            for (int i=0;i<6;i++)
+            {
+                if (moveDir[2*i+0]==true && moveDir[2*i+1]==false)
+                    F[i]=1;
+                else if (moveDir[2*i+0]==false && moveDir[2*i+1]==true)
+                    F[i]=-1;
+                else if (moveDir[2*i+0]==false && moveDir[2*i+1]==false)
+                    F[i]=0;
+                else
+                    rt_printf("parse move diretion wrong!!!\n");
+            }
 
-    		for (int i=0;i<6;i++)
-			{
-				if (moveDir[2*i+0]==true && moveDir[2*i+1]==false)
-					F[i]=1;
-				else if (moveDir[2*i+0]==false && moveDir[2*i+1]==true)
-					F[i]=-1;
-				else if (moveDir[2*i+0]==false && moveDir[2*i+1]==false)
-					F[i]=0;
-				else
-					rt_printf("parse move diretion wrong!!!\n");
-			}
-
-    		if (fabs(pCMP->pForceData->at(0).Fx/1000-pCMLP.forceAvg[0])>ForceRange[0] && pCMP->count>200)
-    		{
-    			rt_printf("count:%d, %f\n\n\n\n\n\n",pCMP->count,pCMP->pForceData->at(0).Fx/1000-pCMLP.forceAvg[0]);
-    			pCMLP.countIter=pCMP->count;
-    			pCMLP.moveState=MoveState::WaitConfirm;
-    		}
+            if (fabs(pCMP->pForceData->at(0).Fx/1000-pCMLP.forceAvg[0])>ForceRange[0] && pCMP->count>200 && pCMLP.pauseFlag==false)
+            {
+                //rt_printf("count:%d,%f\n",pCMP->count,pCMP->pForceData->at(0).Fx/1000-pCMLP.forceAvg[0]);
+                pCMLP.countIter=pCMP->count;
+                pCMLP.moveState=MoveState::Backward;
+            }
 
     		break;
 
+        /*
     	case MoveState::WaitConfirm:
 
     		if (isConfirm==true)
@@ -1112,6 +1117,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     		}
 
     		break;
+        */
 
     	case MoveState::Backward:
     		F[2]=1;
@@ -1141,7 +1147,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 			}
 			else
 			{
-				if (pCMP->count-pCMLP.countIter>4000)
+				if (pCMP->count-pCMLP.countIter>3000)
 				{
 					pCMLP.moveState=MoveState::Downward;
 				    pCMLP.downwardFlag = false;
@@ -1165,7 +1171,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     		}
     		else
     		{
-    			if (pCMP->count-pCMLP.countIter>4000)
+    			if (pCMP->count-pCMLP.countIter>3000)
     			{
     				pCMLP.moveState=MoveState::Downward;
     				pCMLP.downwardFlag = false;
@@ -1177,6 +1183,7 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
     	case MoveState::Downward:
 
     		F[1]=-1;
+    		/*
     		if (pCMLP.downwardFlag)
             {
     			if(isPull==true)
@@ -1188,8 +1195,10 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
             {
             	pCMLP.downwardFlag = true;
             }
+            */
 
-    		if (fabs(pCMP->pForceData->at(0).Fz/1000-pCMLP.forceAvg[2])>ForceRange[1])
+    		//if (fabs(pCMP->pForceData->at(0).Fz/1000-pCMLP.forceAvg[2])>ForceRange[1])
+    		if(pCMP->count-pCMLP.countIter>11000)
     		{
     			pCMLP.countIter=pCMP->count;
     			if(isPull==true)
@@ -1215,20 +1224,39 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
     		if (pCMP->count-pCMLP.countIter>5000)
             {
-                pCMLP.countIter=pCMP->count+1;
-                pCMLP.moveState=MoveState::Push;
-                pCMLP.pushState=PushState::now2Start;
+                pCMLP.moveState=MoveState::Upward;
             }
     		break;
 
     	case MoveState::Upward:
 
 			F[1]=1;
-
-			if (pCMP->count-pCMLP.countIter>10000)
-				isContinue=false;
-
+			if(isPull==true)
+			{
+				if (pCMP->count-pCMLP.countIter>10000)
+				{
+					isContinue=false;
+				}
+			}
+			else
+			{
+				if (pCMP->count-pCMLP.countIter>16000)
+				{
+					pCMLP.moveState=MoveState::PrePush;
+				}
+			}
 			break;
+
+        case MoveState::PrePush:
+
+            if ( fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10 && fabs(bodyVel[3])<1e-10 && fabs(bodyVel[4])<1e-10 && fabs(bodyVel[5])<1e-10)
+            {
+                pCMLP.countIter=pCMP->count+1;
+                pCMLP.moveState=MoveState::Push;
+                pCMLP.pushState=PushState::now2Start;
+            }
+
+            break;
 
     	case MoveState::Push:
             //Three Step using position control
@@ -1242,7 +1270,6 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
             {
             case PushState::now2Start:
                 //1.Move back to startPE;
-                pRobot->GetBodyPe(pCMLP.nowPE);
                 for (int i=0;i<6;i++)
                 {
                     pCMLP.realPE[i]=pCMLP.nowPE[i]+(pCMLP.startPE[i]-pCMLP.nowPE[i])/2*(1-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.now2StartCount));
@@ -1252,14 +1279,21 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
                 if(pCMP->count-pCMLP.countIter+1==pCMLP.now2StartCount)
                 {
-                    pCMLP.pushState=PushState::rightWalk;
-                    pCMLP.countIter=pCMP->count+1;
+                    if(isContinue==true)
+                    {
+                        pCMLP.pushState=PushState::rightWalk;
+                        pCMLP.countIter=pCMP->count+1;
 
-                    pCMLP.walkParam.n=2;
-                    pCMLP.walkParam.alpha=-PI/2;
-                    pCMLP.walkParam.d=(d0-fabs(pCMLP.startPE[0]-pCMLP.handlePE[0]))/3*2;
-                    pRobot->GetPee(pCMLP.walkParam.beginPee);
-                    pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                        pCMLP.walkParam.n=2;
+                        pCMLP.walkParam.alpha=-PI/2;
+                        pCMLP.walkParam.d=(d0-fabs(pCMLP.startPE[0]-pCMLP.handlePE[0]))/3*2;
+                        pRobot->GetPee(pCMLP.walkParam.beginPee);
+                        pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                    }
+                    else
+                    {
+                        pRobot->SetPee(pCMLP.nowPee,pCMLP.startPE);
+                    }
                 }
 
                 break;
@@ -1272,16 +1306,25 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
                 if(pCMLP.ret==0)
                 {
-                    pCMLP.pushState=PushState::forwardWalk;
-                    pCMLP.countIter=pCMP->count+1;
-                    pCMLP.forwardWalkFlag=0;
+                    if(isContinue==true)
+                    {
+                        pCMLP.pushState=PushState::forwardWalk;
+                        pCMLP.countIter=pCMP->count+1;
+                        pCMLP.forwardWalkFlag=0;
 
-                    pCMLP.walkParam.totalCount=5000;
-                    pCMLP.walkParam.n=1;
-                    pCMLP.walkParam.alpha=0;
-                    pCMLP.walkParam.d=1.1;
-                    pRobot->GetPee(pCMLP.walkParam.beginPee);
-                    pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                        pCMLP.walkParam.totalCount=2000;
+                        pCMLP.walkParam.n=4;
+                        pCMLP.walkParam.alpha=0;
+                        pCMLP.walkParam.d=0.5;
+                        pRobot->GetPee(pCMLP.walkParam.beginPee);
+                        pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                    }
+                    else
+                    {
+                        pRobot->GetPee(pushPee);
+                        pRobot->GetBodyPe(pushBodyPE313);
+                        pRobot->SetPee(pushPee,pushBodyPE313);
+                    }
                 }
 
                 break;
@@ -1294,16 +1337,25 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
                 if(pCMLP.ret==0)
                 {
-                    if(pCMLP.forwardWalkFlag<2)
+                    if(isContinue==true)
                     {
-                        pCMLP.forwardWalkFlag++;
-                        pCMLP.countIter=pCMP->count+1;
-                        pRobot->GetPee(pCMLP.walkParam.beginPee);
-                        pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                     //   if(pCMLP.forwardWalkFlag<5)
+                       // {
+                         //   pCMLP.forwardWalkFlag++;
+                           // pCMLP.countIter=pCMP->count+1;
+                           // pRobot->GetPee(pCMLP.walkParam.beginPee);
+                           // pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                       // }
+                       // else
+                       // {
+                            return 0;
+                       // }
                     }
                     else
                     {
-                        return 0;
+                        pRobot->GetPee(pushPee);
+                        pRobot->GetBodyPe(pushBodyPE313);
+                        pRobot->SetPee(pushPee,pushBodyPE313);
                     }
                 }
 
@@ -1313,8 +1365,8 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
                 break;
             }
 
-            pRobot->GetBodyPe(bodyPE313);
-            Aris::DynKer::s_pe2pe("313",bodyPE313,"213",bodyPE);
+            pRobot->GetBodyPe(pushBodyPE313);
+            Aris::DynKer::s_pe2pe("313",pushBodyPE313,"213",bodyPE);
             for(int i=0;i<6;i++)
             {
                 bodyVel[i]=bodyPE[i]-pCMLP.bodyPE_last[i];
@@ -1328,6 +1380,29 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
         if(pCMLP.moveState!=MoveState::Push)
         {
+            if (isConfirm==false && pCMLP.pauseFlag==false)
+            {
+                pCMLP.moveState_last=pCMLP.moveState;
+                pCMLP.moveState=MoveState::None;
+                pCMLP.pauseFlag=true;
+            }
+            else if(isConfirm==false && pCMLP.pauseFlag==true)
+            {
+                pCMLP.moveState=MoveState::None;
+                pCMLP.pauseCount++;//Do not change F to zeros, so that we can move the robot manually when paused
+            }
+            else if(isConfirm==true && pCMLP.pauseFlag==true)
+            {
+                pCMLP.moveState=pCMLP.moveState_last;
+                pCMLP.pauseFlag=false;
+                pCMLP.pauseCount++;
+            }
+            else//isConfirm=true && pauseFlag=false
+            {
+                pCMLP.countIter+=pCMLP.pauseCount;
+                pCMLP.pauseCount=0;
+            }
+
             for (int i=0;i<6;i++)
             {
                 if (fabs(pCMLP.bodyPE_last[i])>pCMLP.posLimit[i])
