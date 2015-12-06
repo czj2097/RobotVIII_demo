@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 #include <string>
+#include <thread>
 
 using namespace std;
 
@@ -18,22 +19,27 @@ using namespace std;
 
 
 #include <Aris_Core.h>
+#include <Aris_Pipe.h>
 #include <Aris_Message.h>
 #include <Aris_IMU.h>
 #include <Robot_Server.h>
 #include <Robot_Gait.h>
 #include <Robot_Type_I.h>
+#include <memory>
 
 using namespace Aris::Core;
+using namespace Aris::Control;
 #include "Move_Gait.h"
 
+void startRecordGaitData();
 
 int main()
 {
+    startRecordGaitData();
+
 	auto rs = Robots::ROBOT_SERVER::GetInstance();
 	rs->CreateRobot<Robots::ROBOT_TYPE_I>();
     rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
-
 
 	rs->AddGait("wk", Robots::walk, Robots::parseWalk);
 	rs->AddGait("ad", Robots::adjust, Robots::parseAdjust);
@@ -50,11 +56,55 @@ int main()
     rs->AddGait("cmfj",continueMoveWithForce,parseContinueMoveForceJudge);
 
 	rs->Start();
-	std::cout<<"started"<<std::endl;
-
 	
+	std::cout<<"started"<<std::endl;
 	
 	Aris::Core::RunMsgLoop();
 
+	std::cout << "Program exited!" << std::endl;
 	return 0;
 }
+
+void startRecordGaitData()
+{
+	gaitDataThread = std::thread([&]()
+	{
+		struct CM_LAST_PARAM param;
+		static std::fstream fileGait;
+		std::string name = Aris::Core::logFileName();
+		name.replace(name.rfind("log.txt"), std::strlen("gait.txt"), "gait.txt");
+		fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
+
+		long long count = -1;
+		while (1)
+		{
+			gaitDataPipe.RecvInNRT(param);
+
+			//fileGait << ++count << " ";
+			fileGait << param.count << "  ";
+			fileGait << param.countIter << "  ";
+			fileGait << param.moveState << "  ";
+			fileGait << param.planeYPR[0] << "  ";
+			fileGait << param.walkParam.beta << "  ";
+
+
+			for (int i = 0; i < 6; i++)
+			{
+				fileGait << param.bodyPE_last[i] << "  ";
+			}
+			for (int i = 0; i < 6; i++)
+			{
+				fileGait << param.walkParam.beginBodyPE[i] << "  ";
+			}
+			for (int i = 0; i < 3; i++)
+			{
+				fileGait << param.force[i] << "  ";
+			}
+			fileGait << std::endl;
+		}
+
+		fileGait.close();
+	});
+
+}
+

@@ -564,7 +564,7 @@
       </cmfb>
       <cmfj>
       	<cmfj_param type="group">
-	  <isPull abbreviation="i" type="int" default="1"/>
+	  	  <isPull abbreviation="i" type="int" default="1"/>
       	  <isStop abbreviation="s" type="int" default="0"/>    	  
       	  <isConfirm abbreviation="c" type="int" default="0"/>
       	  <u abbreviation="u" type="int" default="0"/>
@@ -584,11 +584,11 @@
       <homePin>
         {
         0.669, 0.69, 0.69;
-        0.665, 0.686, 0.686;
         0.669, 0.69, 0.69;
-        0.669, 0.69, 0.685;
         0.669, 0.69, 0.69;
-        0.669, 0.685, 0.69;
+        0.669, 0.69, 0.69;
+        0.669, 0.696, 0.696;
+        0.666, 0.685, 0.685;
         }
       </homePin>
       <AlignPee>
@@ -674,7 +674,7 @@
           </AtiForceSensor>
         </SlaveType>
         <Slave>
-          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>        
+          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>              
           <Motion2 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion3 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion4 type="ElmoSoloWhistle" maxSpeed="8738133"/>
@@ -691,8 +691,8 @@
           <Motion15 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion16 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion17 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>  
-          <ForceSensor type="AtiForceSensor"/>           
+          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>
+          <ForceSensor type="AtiForceSensor"/>                              
         </Slave>
       </EtherCat>
     </Control>

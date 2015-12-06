@@ -1,9 +1,8 @@
 #ifndef MOVE_GAIT_H
 #define MOVE_GAIT_H
 
-#endif // MOVE_GAIT_H
-
 #include <iostream>
+#include <memory>
 #include <cstring>
 #include <iomanip>
 #include <bitset>
@@ -11,6 +10,7 @@
 #include <string>
 #include <stdlib.h>
 
+#include <Aris_Pipe.h>
 #include <Aris_Core.h>
 #include <Aris_Message.h>
 #include <Aris_DynKer.h>
@@ -21,12 +21,10 @@
 
 using namespace Aris::Core;
 using namespace std;
+using namespace Aris::Control;
 
 
-
-#ifndef PI
-#define PI 3.141592653589793
-#endif
+//static const double PI = 3.141592653589793;
 
 struct MOVES_PARAM :public Robots::GAIT_PARAM_BASE
 {
@@ -59,16 +57,21 @@ struct CONTINUEMOVE_PARAM :public Robots::GAIT_PARAM_BASE
 enum MoveState
 {
 	None=0,
-	WaitConfirm=1,
-	Backward=2,
-	Rightward=3,
-	Leftward=4,
-	Downward=5,
-	Upward=6,
-	Pullhandle=7,
-	Pushhandle=8,
-    PrePush=9,
-    Push=10,
+	PointLocate1=1,
+	PointLocate2=2,
+	LocateAjust=3,
+	Forward=4,
+	Backward=5,
+	Rightward=6,
+	Leftward=7,
+	Follow=8,
+	Downward=9,
+	Upward=10,
+	Pullhandle=11,
+	Pushhandle=12,
+    PrePush=13,
+    Push=14,
+
 };
 
 enum PushState
@@ -83,31 +86,62 @@ struct CM_LAST_PARAM
 	MoveState moveState;
     MoveState moveState_last;
     PushState pushState;
-    int countIter{0};
+
+    std::int32_t count;
+    std::int32_t countIter{0};
     int pauseCount{0};
-	double forceSum[3]{0,0,0};
+	double forceSum[3];
 	double forceAvg[3]{0,0,0};
+	double force[3];
+	double forceYZ;
 
 	const double posLimit[6]{0.3,0.25,0.5,0.524,0.349,0.349};
 
-	double bodyPE_last[6]{0,0,0,0,0,0};
-	double bodyVel_last[6]{0,0,0,0,0,0};
+	double bodyPE_last[6];
+	double bodyVel_last[6];
 
     bool downwardFlag;
     bool pauseFlag;
     int forwardWalkFlag{0};
 
     double startPE[6];
+    double startPm[4][4];
     double handlePE[6];
     double nowPE[6];
+    double nowPm[4][4];
     double nowPee[18];
     double realPE[6];
+    double now2startDistance[3];
+    double now2startDistanceModified[6]{0,0,0,0,0,0};
+    double handle2startDistance[3];
+    double xNowInG[3];
 
-    int now2StartCount{3000};
+    const int now2StartCount{2000};
+    int downwardCount;
     int ret{0};
 
     Robots::WALK_PARAM walkParam;
+
+    double pointLocation1[6];
+    double pointLocation2[6];
+    double pointLocation3[6];
+    double planeParam[3];
+    double planeVertical[3];
+    double planeVerticalInB[3];
+    double planeYPR[3]{0,0,0};
+    //double forwardDistance;
+
+    double horizontal[3];
+    double horizontalInB[3];
+
+    double startPeeInB[18];//for case Follow
+    double endPeeInB[18];
+    double realPeeInB[18];
+    const int followCount{2000};
 };
+
+extern PIPE<CM_LAST_PARAM> gaitDataPipe;
+static std::thread gaitDataThread;
 
 /*parse function*/
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params);
@@ -126,3 +160,4 @@ int moveWithRotate(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * 
 int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 
+#endif // MOVE_GAIT_H
