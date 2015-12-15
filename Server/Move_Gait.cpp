@@ -320,6 +320,7 @@ int moveWithRotate(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * 
 	return pMRP->totalCount - pMRP->count - 1;
 }
 
+std::atomic_bool isForce;
 std::atomic_bool isContinue;
 std::atomic_bool moveDir[12];
 std::atomic_bool isPull;
@@ -459,6 +460,7 @@ Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::st
 	}
 
 	isContinue=true;
+	isForce=true;
 
 	Aris::Core::MSG msg;
 	msg.CopyStruct(param);
@@ -481,6 +483,13 @@ Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::st
 				isContinue=true;
             else
                 isContinue=false;
+		}
+		else if(i.first=="isForce")
+		{
+			if(i.second=="1")
+				isForce=true;
+			else
+				isForce=false;
 		}
 		else if(i.first=="u")
 		{
@@ -628,8 +637,8 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 
     double zeros[6];
 
-    double F[6];
-    double C[6]{100,100,100,100,100,100};
+    double F[6]{0,0,0,0,0,0};
+    double C[6]{50,50,50,50,50,50};
     double M[6]{1,1,1,1,1,1};
     double deltaT{0.001};
 
@@ -642,22 +651,85 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
     if(isContinue==true)
 	{
     	//rt_printf("gait continuing\n");
+    	if(isForce==false)
+    	{
+			for (int i=0;i<6;i++)
+			{
+				if (moveDir[2*i+0]==true && moveDir[2*i+1]==false)
+					F[i]=1;
+				else if (moveDir[2*i+0]==false && moveDir[2*i+1]==true)
+					F[i]=-1;
+				else if (moveDir[2*i+0]==false && moveDir[2*i+1]==false)
+					F[i]=0;
+				else
+					rt_printf("parse move diretion wrong!!!\n");
+			}
+    	}
+    	else
+    	{
+    		if(pCMP->count<100)
+    		{
+    			//initialize
+                if (pCMP->count==0)
+                {
+                	for(int i=0;i<3;i++)
+                	{
+                		pCMLP.forceSum[i]=0;
+                		pCMLP.bodyVel_last[i]=0;
+                		pCMLP.bodyVel_last[i+3]=0;
+                		pCMLP.bodyPE_last[i]=0;
+                		pCMLP.bodyPE_last[i+3]=0;
+                	}
+                }
+
+        		pCMLP.forceSum[0]+=pCMP->pForceData->at(0).Fx;
+        		pCMLP.forceSum[1]+=pCMP->pForceData->at(0).Fy;
+        		pCMLP.forceSum[2]+=pCMP->pForceData->at(0).Fz;
+        	}
+        	else if(pCMP->count==100)
+        	{
+        		for(int i=0;i<3;i++)
+        		{
+        			pCMLP.forceAvg[i]=pCMLP.forceSum[i]/100/1000;
+        		}
+        	}
+        	else
+        	{
+    			pCMLP.force[0]=pParam->pForceData->at(0).Fx/1000-pCMLP.forceAvg[0];
+    			pCMLP.force[1]=pParam->pForceData->at(0).Fy/1000-pCMLP.forceAvg[1];
+    			pCMLP.force[2]=pParam->pForceData->at(0).Fz/1000-pCMLP.forceAvg[2];
+
+    			if(fabs(pCMLP.force[0])>=fabs(pCMLP.force[1]) && fabs(pCMLP.force[0])>=fabs(pCMLP.force[2]))
+    			{
+    				if(pCMLP.force[0]>50)
+    					F[2]=1;
+    				else if(pCMLP.force[0]<-50)
+    					F[2]=-1;
+    			}
+    			else if(fabs(pCMLP.force[1])>=fabs(pCMLP.force[0]) && fabs(pCMLP.force[1])>=fabs(pCMLP.force[2]))
+    			{
+    				if(pCMLP.force[1]>50)
+    					F[0]=1;
+    				else if(pCMLP.force[1]<-50)
+    					F[0]=-1;
+    			}
+    			else
+    			{
+    				if(pCMLP.force[2]>50)
+						F[1]=1;
+					else if(pCMLP.force[2]<-50)
+						F[1]=-1;
+    			}
+        	}
+    	}
+
 		for (int i=0;i<6;i++)
 		{
-			if (moveDir[2*i+0]==true && moveDir[2*i+1]==false)
-				F[i]=1;
-			else if (moveDir[2*i+0]==false && moveDir[2*i+1]==true)
-				F[i]=-1;
-			else if (moveDir[2*i+0]==false && moveDir[2*i+1]==false)
-				F[i]=0;
-			else
-				rt_printf("parse move diretion wrong!!!\n");
-
 			// Set Position Limit
 			if (fabs(pCMLP.bodyPE_last[i])>pCMLP.posLimit[i])
 			{
 				F[0]=0;
-				rt_printf("position of direction %d is out of limit",i);
+				rt_printf("position of direction %d is out of limit\n",i);
 			}
 
 			bodyAcc[i]=(F[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
@@ -704,7 +776,7 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 	}
 }
 
-Aris::Core::MSG parseContinueMoveForceBegin(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params)
 {
 	CONTINUEMOVE_PARAM param;
 
@@ -849,7 +921,7 @@ Aris::Core::MSG parseContinueMoveForceBegin(const std::string &cmd, const map<st
 	return msg;
 }
 
-Aris::Core::MSG parseContinueMoveForceJudge(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params)
 {
     //   cmd -u -v -w -r -p -y -iscontinue -isstart
 	//CONTINUEMOVE_PARAM param;
@@ -1061,7 +1133,7 @@ double norm(double * matrix_in)
 	return	sqrt(matrix_in[0]*matrix_in[0]+matrix_in[1]*matrix_in[1]+matrix_in[2]*matrix_in[2]);
 }
 
-int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
+int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
 {
 
     double bodyVel[6];
@@ -1106,10 +1178,6 @@ int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_
 
     if(isContinue==true)
 	{
-    	if(pCMP->count%10==0)
-		{
-    		//rt_printf("gait continuing\n");
-		}
     	if (pCMP->count<100)
     	{
             if (pCMP->count==0)

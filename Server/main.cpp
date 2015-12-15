@@ -52,8 +52,8 @@ int main()
     rs->AddGait("mr",moveWithRotate,parseMoveWithRotate);
     rs->AddGait("cmb",continueMove,parseContinueMoveBegin);
     rs->AddGait("cmj",continueMove,parseContinueMoveJudge);
-    rs->AddGait("cmfb",continueMoveWithForce,parseContinueMoveForceBegin);
-    rs->AddGait("cmfj",continueMoveWithForce,parseContinueMoveForceJudge);
+    rs->AddGait("odb",openDoor,parseOpenDoorBegin);
+    rs->AddGait("odj",openDoor,parseOpenDoorJudge);
 
 	rs->Start();
 	

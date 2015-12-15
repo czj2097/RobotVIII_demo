@@ -544,6 +544,7 @@
       <cmj default="cmj_param">
       	<cmj_param type="group">
       	  <isStop abbreviation="s" type="int" default="0"/>
+      	  <isForce abbreviation="f" type="int" default="0"/>
       	  <u abbreviation="u" type="int" default="0"/>
       	  <v abbreviation="v" type="int" default="0"/>
       	  <w abbreviation="w" type="int" default="0"/>
@@ -552,18 +553,18 @@
       	  <yaw abbreviation="y" type="int" default="0"/>
       	</cmj_param>
       </cmj>
-      <cmfb default="cmfb_param">
-      	<cmfb_param type="group">
+      <odb default="odb_param">
+      	<odb_param type="group">
       	  <u abbreviation="u" type="double" default="0"/>
       	  <v abbreviation="v" type="double" default="0"/>
       	  <w abbreviation="w" type="double" default="0"/>
       	  <roll abbreviation="r" type="double" default="0"/>
       	  <pitch abbreviation="p" type="double" default="0"/>
       	  <yaw abbreviation="y" type="double" default="0"/>
-      	</cmfb_param>
-      </cmfb>
-      <cmfj>
-      	<cmfj_param type="group">
+      	</odb_param>
+      </odb>
+      <odj>
+      	<odj_param type="group">
 	  	  <isPull abbreviation="i" type="int" default="1"/>
       	  <isStop abbreviation="s" type="int" default="0"/>    	  
       	  <isConfirm abbreviation="c" type="int" default="0"/>
@@ -573,8 +574,8 @@
       	  <roll abbreviation="r" type="int" default="0"/>
       	  <pitch abbreviation="p" type="int" default="0"/>
       	  <yaw abbreviation="y" type="int" default="0"/>
-      	</cmfj_param>
-      </cmfj>
+      	</odj_param>
+      </odj>
     </Commands>
     <Connection IP="127.0.0.1" Port="5866"/>
     <Control meter2count="1 / 0.032*4.5 * 65536">

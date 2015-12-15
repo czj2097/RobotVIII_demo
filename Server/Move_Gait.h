@@ -51,7 +51,6 @@ struct MOVEWITHROTATE_PARAM :public Robots::GAIT_PARAM_BASE
 struct CONTINUEMOVE_PARAM :public Robots::GAIT_PARAM_BASE
 {
     std::int8_t move_direction[6];
-	//bool isStart;
 };
 
 enum MoveState
@@ -149,8 +148,8 @@ Aris::Core::MSG parseSwing(const std::string &cmd, const map<std::string, std::s
 Aris::Core::MSG parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params);
 Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params);
 Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params);
-Aris::Core::MSG parseContinueMoveForceBegin(const std::string &cmd, const map<std::string, std::string> &params);
-Aris::Core::MSG parseContinueMoveForceJudge(const std::string &cmd, const map<std::string, std::string> &params);
+Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params);
+Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params);
 
 /*operation function*/
 int move2(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
@@ -158,6 +157,6 @@ int swing(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 int moveWithRotate(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 //int continueMoveBegin(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
-int continueMoveWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
+int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 
 #endif // MOVE_GAIT_H
