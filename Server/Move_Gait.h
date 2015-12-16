@@ -53,6 +53,16 @@ struct CONTINUEMOVE_PARAM :public Robots::GAIT_PARAM_BASE
     std::int8_t move_direction[6];
 };
 
+//CWF
+enum WALK_DIRECTION
+{
+    STOP,
+    FORWARD,
+    BACKWARD,
+    RIGHTWARD,
+    LEFTWARD
+};
+
 enum MoveState
 {
 	None=0,
@@ -150,6 +160,8 @@ Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::st
 Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params);
 Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params);
 Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params);
+Aris::Core::MSG parseCWF(const std::string &cmd, const std::map<std::string, std::string> &params);
+Aris::Core::MSG parseCWFStop(const std::string &cmd, const std::map<std::string, std::string> &params);
 
 /*operation function*/
 int move2(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
@@ -158,5 +170,7 @@ int moveWithRotate(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * 
 //int continueMoveBegin(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
+int continuousWalkWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
+WALK_DIRECTION forceJudge(const double *force, const double *threshold);
 
 #endif // MOVE_GAIT_H

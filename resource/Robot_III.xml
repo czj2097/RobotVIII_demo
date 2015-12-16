@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<RobotVIII>
+<HexapodIII>
   <Model>
     <Variable>
       <PI>3.14159265358979</PI>
       <U1ipe>{ 0, 0,      0,     PI / 2, PI / 2, 0 }</U1ipe>
       <U1jpe>{ 0, 0,      0,     PI / 2, PI / 2, 0 }</U1jpe>
-      <U2ipe>{ 0, 0.232,  0.134, PI / 2, PI / 2, 0 }</U2ipe>
+      <U2ipe>{ 0, 0.234,  0.135, PI / 2, PI / 2, 0 }</U2ipe>
       <U2jpe>{ 0, 0,      0,     PI / 2, PI / 2, 0 }</U2jpe>
-      <U3ipe>{ 0, 0.232, -0.134, PI / 2, PI / 2, 0 }</U3ipe>
+      <U3ipe>{ 0, 0.234, -0.135, PI / 2, PI / 2, 0 }</U3ipe>
       <U3jpe>{ 0, 0,      0,     PI / 2, PI / 2, 0 }</U3jpe>
       <P1ipe>{ 0, 0, 0, PI / 2, PI / 2, -PI / 2 }</P1ipe>
       <P1jpe>{ 0, 0, 0, PI / 2, PI / 2, -PI / 2 }</P1jpe>
@@ -19,14 +19,14 @@
       <S2jpe>{ 0, 0,      0,     0, -PI / 2, 0 }</S2jpe>
       <S3ipe>{ 0, 0.059, -0.034, 0, -PI / 2, 0 }</S3ipe>
       <S3jpe>{ 0, 0,      0,     0, -PI / 2, 0 }</S3jpe>
-      <Sfipe>{ 0.065, 0, 0, 0, 0, 0 }</Sfipe>
+      <Sfipe>{ 0.1, 0, 0, 0, 0, 0 }</Sfipe>
       <Sfjpe>{ 0,   0, 0, 0, 0, 0 }</Sfjpe>
-      <LFpe>{-0.05433 , 0 , -0.3300 + 0.0047, PI/2,  PI* 5/6,   -PI/2-PI*75/180}</LFpe>
-      <LMpe>{-0.10241 , 0 ,  0,         PI/2,  PI* 6/6,   -PI/2-PI*75/180}</LMpe>
-      <LRpe>{-0.05433 , 0 ,  0.3300 - 0.0047, PI/2,  PI* 7/6,   -PI/2-PI*75/180}</LRpe>
-      <RFpe>{ 0.05433 , 0 , -0.3300 + 0.0047, PI/2,  PI* 1/6,   -PI/2-PI*75/180}</RFpe>
-      <RMpe>{ 0.10241 , 0 ,  0,         PI/2,  PI* 0/6,   -PI/2-PI*75/180}</RMpe>
-      <RRpe>{ 0.05433 , 0 ,  0.3300 - 0.0047, PI/2,  PI*11/6,   -PI/2-PI*75/180}</RRpe>
+      <LFpe>{-0.0679295 , 0 , -0.3552145, PI/2,  PI* 5/6,   -PI/2-PI*7/18}</LFpe>
+      <LMpe>{-0.1234141 , 0 ,  0,         PI/2,  PI* 6/6,   -PI/2-PI*7/18}</LMpe>
+      <LRpe>{-0.0679295 , 0 ,  0.3532904, PI/2,  PI* 7/6,   -PI/2-PI*7/18}</LRpe>
+      <RFpe>{ 0.0679295 , 0 , -0.3552145, PI/2,  PI* 1/6,   -PI/2-PI*7/18}</RFpe>
+      <RMpe>{ 0.1234141 , 0 ,  0,         PI/2,  PI* 0/6,   -PI/2-PI*7/18}</RMpe>
+      <RRpe>{ 0.0679295 , 0 ,  0.3532904, PI/2,  PI*11/6,   -PI/2-PI*7/18}</RRpe>
       <BodyGamma>{140,0,0,0,0,0,0,0,0,0}</BodyGamma>
       <P1aGamma>{0,0,0,0,0,0,0,0,0,0}</P1aGamma>
       <P2aGamma>{0,0,0,0,0,0,0,0,0,0}</P2aGamma>
@@ -489,47 +489,17 @@
           <beta abbreviation="b" type="double" default="0"/>
         </wk_param>
       </wk>
-      <fw default="fw_param">
-        <fw_param type="group">
-          <file type="string" abbreviation="f" default="/usr/Robots/resource/Robot_Type_I/Robot_VIII/pIn"/>
-          <n type="int" abbreviation="n" default="1"/>
-        </fw_param>
-      </fw>
-      <move2>
-        <move2_param type="group">
-          <component abbreviation="c" type="string" default="bd"/>
-          <move_pos type="unique" default="relative">
-            <relative type="group">
-              <u abbreviation="u" type="double" default="0"/>
-              <v abbreviation="v" type="double" default="0"/>
-              <w abbreviation="w" type="double" default="0"/>
-            </relative>
-            <absolute type="group">
-              <x abbreviation="x" type="double" default="0"/>
-              <y abbreviation="y" type="double" default="0"/>
-              <z abbreviation="z" type="double" default="0"/>
-            </absolute>
-          </move_pos>
-        </move2_param>
-      </move2>
-      <sw>
-        <sw_param type="group">
-          <y abbreviation="y" type="double" default="0"/>
-          <z abbreviation="z" type="double" default="0"/>
-          <deg abbreviation="d" type="double" default="0"/>
-        </sw_param>
-      </sw>
-      <mr>
-      	<mr_param type="group">
-      	  <u abbreviation="u" type="double" default="0"/>
-      	  <v abbreviation="v" type="double" default="0"/>
-      	  <w abbreviation="w" type="double" default="0"/>
-      	  <roll abbreviation="r" type="double" default="0"/>
-      	  <pitch abbreviation="p" type="double" default="0"/>
-      	  <yaw abbreviation="y" type="double" default="0"/>
-      	  <totalCount abbreviation="t" type="double" default="3000"/>
-      	</mr_param>
-      </mr>
+      <cwf default="cwf_param">
+        <cwf_param type="group">
+          <totalCount abbreviation="t" type="int" default="3000"/>
+          <n abbreviation="n" type="int" default="1"/>
+          <walkDirection abbreviation="w" type="int" default="-3"/>
+          <upDirection abbreviation="u" type="int" default="2"/>
+          <distance abbreviation="d" type="double" default="0.5"/>
+          <height abbreviation="h" type="double" default="0.05"/>
+        </cwf_param>
+      </cwf>
+      <cwfs/>
       <cmb default="cmb_param">
       	<cmb_param type="group">
       	  <u abbreviation="u" type="double" default="0"/>
@@ -543,6 +513,7 @@
       <cmj default="cmj_param">
       	<cmj_param type="group">
       	  <isStop abbreviation="s" type="int" default="0"/>
+      	  <isForce abbreviation="f" type="int" default="0"/>
       	  <u abbreviation="u" type="int" default="0"/>
       	  <v abbreviation="v" type="int" default="0"/>
       	  <w abbreviation="w" type="int" default="0"/>
@@ -551,43 +522,20 @@
       	  <yaw abbreviation="y" type="int" default="0"/>
       	</cmj_param>
       </cmj>
-      <cmfb default="cmfb_param">
-      	<cmfb_param type="group">
-      	  <isPull abbreviation="i" type="int" default="1"/>
-      	  <u abbreviation="u" type="double" default="0"/>
-      	  <v abbreviation="v" type="double" default="0"/>
-      	  <w abbreviation="w" type="double" default="0"/>
-      	  <roll abbreviation="r" type="double" default="0"/>
-      	  <pitch abbreviation="p" type="double" default="0"/>
-      	  <yaw abbreviation="y" type="double" default="0"/>
-      	</cmfb_param>
-      </cmfb>
-      <cmfj>
-      	<cmfj_param type="group">
-      	  <isStop abbreviation="s" type="int" default="0"/>    	  
-      	  <isConfirm abbreviation="c" type="int" default="0"/>
-      	  <u abbreviation="u" type="int" default="0"/>
-      	  <v abbreviation="v" type="int" default="0"/>
-      	  <w abbreviation="w" type="int" default="0"/>
-      	  <roll abbreviation="r" type="int" default="0"/>
-      	  <pitch abbreviation="p" type="int" default="0"/>
-      	  <yaw abbreviation="y" type="int" default="0"/>
-      	</cmfj_param>
-      </cmfj>
     </Commands>
     <Connection IP="127.0.0.1" Port="5866"/>
-    <Control meter2count="1 / 0.032*4.5 * 65536">
+    <Control meter2count="1 / 0.01*3.5 * 65536">
       <MapPhy2Abs>
-        { 1 , 0 , 2, 5 , 3 , 4 , 7 , 6 , 8 , 16 , 15, 17 , 14 , 12 , 13 , 10 , 9 , 11 }
+        { 15 , 17 , 16, 12 , 14 , 13 , 9 , 11 , 10 , 2 , 0, 1 , 3 , 5 , 4 , 7 , 8 , 6 }
       </MapPhy2Abs>
       <homePin>
         {
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
-        0.669, 0.69, 0.69;
+        0.675784824916295,   0.697784816196987,   0.697784816196987;
+        0.675784824916295,   0.697784816196987,   0.697784816196987;
+        0.675784824916295,   0.697784816196987,   0.697784816196987;
+        0.675784824916295,   0.697784816196987,   0.697784816196987;
+        0.675784824916295,   0.697784816196987,   0.697784816196987;
+        0.675784824916295,   0.697784816196987,   0.697784816196987;
         }
       </homePin>
       <AlignPee>
@@ -595,9 +543,9 @@
         -0.3,   -0.75,   -0.65;
         -0.45,  -0.75,   0;
         -0.3,   -0.75,    0.65;
-         0.3,   -0.75,    -0.65;
-         0.45,  -0.75,    0;
-         0.3,   -0.75,     0.65;
+        0.3,   -0.75,    -0.65;
+        0.45,  -0.75,    0;
+        0.3,   -0.75,     0.65;
         }
       </AlignPee>
       <RecoverPee>
@@ -612,9 +560,9 @@
       </RecoverPee>
       <EtherCat>
         <SlaveType>
-          <ElmoSoloWhistle productCode="0x00030924" venderID="0x0000009a" alias="0">
+          <ElmoSoloWhistle productCode="0x00030924" venderID="0x0000009a" alias="0" distributedClock="0x0300">
             <PDO>
-              <index_1605 index="0x1605" number="6" isTx="false">
+              <index_1605 index="0x1605" isTx="false">
                 <TargetPosition index="0x607A" subIndex="0x00" type="int32"/>
                 <TargetVelocity index="0x60FF" subIndex="0x00" type="int32"/>
                 <TargetTorque index="0x6071" subIndex="0x00" type="int16"/>
@@ -622,19 +570,19 @@
                 <ControlWord index="0x6040" subIndex="0x00" type="uint16"/>
                 <ModeOfOperation index="0x6060" subIndex="0x00" type="uint8"/>
               </index_1605>
-              <index_1a03 index="0x1A03" number="4" isTx="true">
+              <index_1a03 index="0x1A03" isTx="true">
                 <PositionActualValue index="0x6064" subIndex="0x00" type="int32"/>
                 <DigitalInputs index="0x60fd" subIndex="0x00" type="uint32"/>
                 <VelocityActualValue index="0x606c" subIndex="0x00" type="int32"/>
                 <StatusWord index="0x6041" subIndex="0x00" type="uint16"/>
               </index_1a03>
-              <index_1a1f index="0x1A1F" number="4" isTx="true">
+              <index_1a1f index="0x1A1F" isTx="true">
                 <CurrentActualValue index="0x6078" subIndex="0x00" type="int16"/>
               </index_1a1f>
-              <index_1a13 index="0x1A13" number="4" isTx="true">
+              <index_1a13 index="0x1A13" isTx="true">
                 <TorqueActualValue index="0x6077" subIndex="0x00" type="int16"/>
               </index_1a13>
-              <index_1a0b index="0x1A0B" number="4" isTx="true">
+              <index_1a0b index="0x1A0B" isTx="true">
                 <ModeOfOperationDisplay index="0x6061" subIndex="0x00" type="uint8"/>
               </index_1a0b>
             </PDO>
@@ -673,31 +621,31 @@
           </AtiForceSensor>
         </SlaveType>
         <Slave>
-          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>        
-          <Motion2 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion3 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion4 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion5 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion6 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion7 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion8 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion9 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion10 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion11 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion12 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion13 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion14 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion15 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion16 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion17 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>  
-          <ForceSensor type="AtiForceSensor"/>           
+          <Motion1 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion2 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion3 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion4 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion5 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion6 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion7 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion8 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion9 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion10 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion11 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion12 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion13 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion14 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion15 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion16 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion17 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <Motion18 type="ElmoSoloWhistle" maxSpeed="5417642"/>
+          <ForceSensor type="AtiForceSensor"/>
         </Slave>
       </EtherCat>
     </Control>
     <Sensors>
-      <IMU active="false" type="xsens_imu" portLinux="/dev/ttyUSB0" baudRate="921600" sampleRate="400" PeImuGround2BodyGound="{0,0,0,0,-PI/2,PI}" PeImu2Body="{0,0,0,0,PI/2,0}"/>
+      <IMU active="true" type="xsens_imu" portLinux="/dev/ttyUSB0" baudRate="921600" sampleRate="400" PeImuGround2BodyGound="{0,0,0,0,-PI/2,PI}" PeImu2Body="{0,0,0,0,PI/2,0}"/>
       <Vision type="kinect2.0"/>
     </Sensors> 
   </Server>
-</RobotVIII>
+</HexapodIII>

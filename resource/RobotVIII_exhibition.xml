@@ -520,6 +520,17 @@
           <deg abbreviation="d" type="double" default="0"/>
         </sw_param>
       </sw>
+      <cwf default="cwf_param">
+        <cwf_param type="group">
+          <totalCount abbreviation="t" type="int" default="3000"/>
+          <n abbreviation="n" type="int" default="1"/>
+          <walkDirection abbreviation="w" type="int" default="-3"/>
+          <upDirection abbreviation="u" type="int" default="2"/>
+          <distance abbreviation="d" type="double" default="0.5"/>
+          <height abbreviation="h" type="double" default="0.05"/>
+        </cwf_param>
+      </cwf>
+      <cwfs/>
       <mr>
       	<mr_param type="group">
       	  <u abbreviation="u" type="double" default="0"/>
