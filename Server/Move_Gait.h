@@ -60,7 +60,11 @@ enum WALK_DIRECTION
     FORWARD,
     BACKWARD,
     RIGHTWARD,
-    LEFTWARD
+    LEFTWARD,
+    TURNLEFT,
+    TURNRIGHT,
+    FAST_TURNLEFT,
+    FAST_TURNRIGHT
 };
 
 enum MoveState
@@ -99,9 +103,9 @@ struct CM_LAST_PARAM
     std::int32_t count;
     std::int32_t countIter{0};
     int pauseCount{0};
-	double forceSum[3];
-	double forceAvg[3]{0,0,0};
-	double force[3];
+	double forceSum[6];
+	double forceAvg[6]{0,0,0,0,0,0};
+	double force[6];
 	double forceYZ;
 
 	const double posLimit[6]{0.3,0.25,0.5,0.524,0.349,0.349};
@@ -149,8 +153,10 @@ struct CM_LAST_PARAM
     const int followCount{2000};
 };
 
-extern PIPE<CM_LAST_PARAM> gaitDataPipe;
-static std::thread gaitDataThread;
+extern PIPE<MOVES_PARAM> move2Pipe;
+extern PIPE<CM_LAST_PARAM> openDoorPipe;
+static std::thread openDoorThread;
+static std::thread move2Thread;
 
 /*parse function*/
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params);

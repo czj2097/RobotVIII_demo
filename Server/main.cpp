@@ -39,21 +39,21 @@ int main()
 
 	auto rs = Robots::ROBOT_SERVER::GetInstance();
 	rs->CreateRobot<Robots::ROBOT_TYPE_I>();
-    rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_III.xml");
+    rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
 
 	rs->AddGait("wk", Robots::walk, Robots::parseWalk);
 	rs->AddGait("ad", Robots::adjust, Robots::parseAdjust);
 	//rs->AddGait("fw", Robots::fastWalk, Robots::parseFastWalk);
 	rs->AddGait("ro", Robots::resetOrigin, Robots::parseResetOrigin);
 
-    //rs->AddGait("move2",move2,parseMove2);
+    rs->AddGait("move2",move2,parseMove2);
     //rs->AddGait("sw",swing,parseSwing);
 
     //rs->AddGait("mr",moveWithRotate,parseMoveWithRotate);
     rs->AddGait("cmb",continueMove,parseContinueMoveBegin);
     rs->AddGait("cmj",continueMove,parseContinueMoveJudge);
-    //rs->AddGait("odb",openDoor,parseOpenDoorBegin);
-    //rs->AddGait("odj",openDoor,parseOpenDoorJudge);
+    rs->AddGait("odb",openDoor,parseOpenDoorBegin);
+    rs->AddGait("odj",openDoor,parseOpenDoorJudge);
     rs->AddGait("cwf",continuousWalkWithForce,parseCWF);
     rs->AddGait("cwfs",continuousWalkWithForce,parseCWFStop);
 
@@ -69,7 +69,8 @@ int main()
 
 void startRecordGaitData()
 {
-	gaitDataThread = std::thread([&]()
+	/*
+	openDoorThread = std::thread([&]()
 	{
 		struct CM_LAST_PARAM param;
 		static std::fstream fileGait;
@@ -80,7 +81,7 @@ void startRecordGaitData()
 		long long count = -1;
 		while (1)
 		{
-			gaitDataPipe.RecvInNRT(param);
+			openDoorPipe.RecvInNRT(param);
 
 			//fileGait << ++count << " ";
 			fileGait << param.count << "  ";
@@ -102,6 +103,31 @@ void startRecordGaitData()
 			{
 				fileGait << param.force[i] << "  ";
 			}
+			fileGait << std::endl;
+		}
+
+		fileGait.close();
+	});*/
+
+
+	move2Thread = std::thread([&]()
+	{
+		struct MOVES_PARAM param;
+		static std::fstream fileGait;
+		std::string name = Aris::Core::logFileName();
+		name.replace(name.rfind("log.txt"), std::strlen("gait.txt"), "gait.txt");
+		fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
+
+		long long count = -1;
+		while (1)
+		{
+			move2Pipe.RecvInNRT(param);
+
+			//fileGait << ++count << " ";
+			fileGait << param.count << "  ";
+			fileGait << param.imuData->roll << "  ";
+			fileGait << param.imuData->pitch << "  ";
+
 			fileGait << std::endl;
 		}
 

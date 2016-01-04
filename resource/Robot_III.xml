@@ -489,6 +489,23 @@
           <beta abbreviation="b" type="double" default="0"/>
         </wk_param>
       </wk>
+      <move2>
+        <move2_param type="group">
+          <component abbreviation="c" type="string" default="bd"/>
+          <move_pos type="unique" default="relative">
+            <relative type="group">
+              <u abbreviation="u" type="double" default="0"/>
+              <v abbreviation="v" type="double" default="0"/>
+              <w abbreviation="w" type="double" default="0"/>
+            </relative>
+            <absolute type="group">
+              <x abbreviation="x" type="double" default="0"/>
+              <y abbreviation="y" type="double" default="0"/>
+              <z abbreviation="z" type="double" default="0"/>
+            </absolute>
+          </move_pos>
+        </move2_param>
+      </move2>
       <cwf default="cwf_param">
         <cwf_param type="group">
           <totalCount abbreviation="t" type="int" default="3000"/>
@@ -639,7 +656,7 @@
           <Motion16 type="ElmoSoloWhistle" maxSpeed="5417642"/>
           <Motion17 type="ElmoSoloWhistle" maxSpeed="5417642"/>
           <Motion18 type="ElmoSoloWhistle" maxSpeed="5417642"/>
-          <ForceSensor type="AtiForceSensor"/>
+          <ForceSensor type="AtiForceSensor"/> 
         </Slave>
       </EtherCat>
     </Control>
