@@ -850,15 +850,16 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 
     double realBodyPE[6];
     double bodyPm[4][4];
+    double deltaPm[4][4];
+    double realPm[4][4];
 
     double zeros[6];
 
     double Fbody[6]{0,0,0,0,0,0};
-    double Fground[6]{0,0,0,0,0,0};
-    double C[6]{50,50,50,50,50,50};
+    double C[6]{30,30,30,30,30,30};
     double M[6]{1,1,1,1,1,1};
     double deltaT{0.001};
-    double forceRange[6]{30,30,30,30,30,30};
+    double forceRange[6]{30,30,30,20,20,20};
     double forceRatio{1};
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
@@ -967,12 +968,6 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
         	}
     	}
 
-    	pRobot->GetBodyPm(*bodyPm);
-    	Aris::DynKer::s_pm_dot_v3(*bodyPm,Fbody,Fground);
-    	Aris::DynKer::s_pm_dot_v3(*bodyPm,Fbody+3,Fground+3);
-
-    	//rt_printf("Fbody:%f,%f,%f,%f,%f,%f\n",Fbody[0],Fbody[1],Fbody[2],Fbody[3],Fbody[4],Fbody[5]);
-    	//rt_printf("Fground:%f,%f,%f,%f,%f,%f\n",Fground[0],Fground[1],Fground[2],Fground[3],Fground[4],Fground[5]);
 		for (int i=0;i<6;i++)
 		{
 			// Set Position Limit
@@ -983,22 +978,26 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 				rt_printf("position of direction %d is out of limit\n",i);
 			}*/
 
-			bodyAcc[i]=(Fground[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
+			bodyAcc[i]=(Fbody[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
 			bodyVel[i]=pCMLP.bodyVel_last[i]+bodyAcc[i]*deltaT;
-			bodyPE[i]=pCMLP.bodyPE_last[i]+bodyVel[i]*deltaT;
+			bodyPE[i]=bodyVel[i]*deltaT;
 		}
+
+		pRobot->GetBodyPm(*bodyPm);
+		double pBody[6];
+		Aris::DynKer::s_pe2pm(bodyPE,*deltaPm,"213");
+		Aris::DynKer::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
+		Aris::DynKer::s_pm2pe(*realPm,realBodyPE,"313");
+		double nowPee[18];
+		pRobot->GetPee(nowPee);
+		pRobot->SetPee(nowPee,realBodyPE);
+
 		if(pCMP->count%100==0)
 		{
 			rt_printf("bodyPm:%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n",bodyPm[0][0],bodyPm[0][1],bodyPm[0][2],bodyPm[0][3],bodyPm[1][0],bodyPm[1][1],bodyPm[1][2],bodyPm[1][3],bodyPm[2][0],bodyPm[2][1],bodyPm[2][2],bodyPm[2][3],bodyPm[3][0],bodyPm[3][1],bodyPm[3][2],bodyPm[3][3]);
 			rt_printf("Fbody:%f,%f,%f,%f,%f,%f\n",Fbody[0],Fbody[1],Fbody[2],Fbody[3],Fbody[4],Fbody[5]);
-			rt_printf("Fground:%f,%f,%f,%f,%f,%f\n",Fground[0],Fground[1],Fground[2],Fground[3],Fground[4],Fground[5]);
-			rt_printf("bodyPE:%f,%f,%f,%f,%f,%f\n\n",bodyPE[0],bodyPE[1],bodyPE[2],bodyPE[3],bodyPE[4],bodyPE[5]);
+			rt_printf("realBodyPE:%f,%f,%f,%f,%f,%f\n\n",realBodyPE[0],realBodyPE[1],realBodyPE[2],realBodyPE[3],realBodyPE[4],realBodyPE[5]);
 		}
-		double pBody[6];
-		//Aris::DynKer::s_pe2pe("213",bodyPE,"313",pBody);
-		double nowPee[18];
-		pRobot->GetPee(nowPee);
-		pRobot->SetPee(nowPee,bodyPE,"G","213");
 
 		memcpy(pCMLP.bodyPE_last,bodyPE,sizeof(double)*6);
 		memcpy(pCMLP.bodyVel_last,bodyVel,sizeof(double)*6);
@@ -1010,16 +1009,18 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 		//rt_printf("gait stopping\n");
 		for (int i=0;i<6;i++)
 		{
-			bodyAcc[i]=(Fground[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
+			bodyAcc[i]=(Fbody[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
 			bodyVel[i]=pCMLP.bodyVel_last[i]+bodyAcc[i]*deltaT;
-			bodyPE[i]=pCMLP.bodyPE_last[i]+bodyVel[i]*deltaT;
+			bodyPE[i]=bodyVel[i]*deltaT;
 		}
 
 		double pBody[6];
-		Aris::DynKer::s_pe2pe("213",bodyPE,"313",pBody);
+		Aris::DynKer::s_pe2pm(bodyPE,*deltaPm,"213");
+		Aris::DynKer::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
+		Aris::DynKer::s_pm2pe(*realPm,realBodyPE,"313");
 		double nowPee[18];
 		pRobot->GetPee(nowPee);
-		pRobot->SetPee(nowPee,pBody);
+		pRobot->SetPee(nowPee,realBodyPE);
 
 		memcpy(pCMLP.bodyPE_last,bodyPE,sizeof(double)*6);
 		memcpy(pCMLP.bodyVel_last,bodyVel,sizeof(double)*6);
