@@ -35,11 +35,11 @@ void startRecordGaitData();
 
 int main()
 {
-    startRecordGaitData();
+    //startRecordGaitData();
 
 	auto rs = Robots::ROBOT_SERVER::GetInstance();
 	rs->CreateRobot<Robots::ROBOT_TYPE_I>();
-    rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_III.xml");
+    rs->LoadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotVIII_exhibition.xml");
 
 	rs->AddGait("wk", Robots::walk, Robots::parseWalk);
 	rs->AddGait("ad", Robots::adjust, Robots::parseAdjust);
@@ -49,11 +49,11 @@ int main()
     rs->AddGait("cmj",continueMove,parseContinueMoveJudge);
     rs->AddGait("cwf",continuousWalkWithForce,parseCWF);
     rs->AddGait("cwfs",continuousWalkWithForce,parseCWFStop);
-    //rs->AddGait("fw", Robots::fastWalk, Robots::parseFastWalk);
+    rs->AddGait("fw", Robots::fastWalk, Robots::parseFastWalk);
     //rs->AddGait("sw",swing,parseSwing);
     //rs->AddGait("mr",moveWithRotate,parseMoveWithRotate);
-    //rs->AddGait("odb",openDoor,parseOpenDoorBegin);
-    //rs->AddGait("odj",openDoor,parseOpenDoorJudge);
+    rs->AddGait("odb",openDoor,parseOpenDoorBegin);
+    rs->AddGait("odj",openDoor,parseOpenDoorJudge);
 
 	rs->Start();
 	
@@ -67,7 +67,6 @@ int main()
 
 void startRecordGaitData()
 {
-	/*
 	openDoorThread = std::thread([&]()
 	{
 		struct CM_LAST_PARAM param;
@@ -105,7 +104,7 @@ void startRecordGaitData()
 		}
 
 		fileGait.close();
-	});*/
+	});
 
 
 	move2Thread = std::thread([&]()

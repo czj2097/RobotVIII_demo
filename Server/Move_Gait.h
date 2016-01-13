@@ -69,88 +69,79 @@ enum WALK_DIRECTION
 
 enum MoveState
 {
-	None=0,
-	PointLocate1=1,
-	PointLocate2=2,
-	LocateAjust=3,
-	Forward=4,
-	Backward=5,
-	Rightward=6,
-	Leftward=7,
-	Follow=8,
-	Downward=9,
-	Upward=10,
-	Pullhandle=11,
-	Pushhandle=12,
-    PrePush=13,
-    Push=14,
+	None,
+	PointLocate1,
+	PointLocate2,
+	LocateAjust,
+	Forward,
+	Backward,
+	Rightward,
+	Leftward,
+	Follow,
+	Downward,
+	Upward,
+	Pullhandle,
+	Pushhandle,
+    PrePush,
+    Push,
 
 };
 
 enum PushState
 {
-    now2Start=0,
-    rightWalk=1,
-    forwardWalk=2,
+    now2Start,
+    rightWalk,
+    forwardWalk,
 };
 
 struct CM_LAST_PARAM
 {
 	MoveState moveState;
-    MoveState moveState_last;
-    PushState pushState;
-
+	PushState pushState;
     std::int32_t count;
     std::int32_t countIter{0};
-    int pauseCount{0};
+	double bodyPE_last[6];
+	double bodyVel_last[6];
+    int ret{0};
+    Robots::WALK_PARAM walkParam;
+
 	double forceSum[6];
 	double forceAvg[6]{0,0,0,0,0,0};
 	double force[6];
-	double forceYZ;
 
-	const double posLimit[6]{0.3,0.25,0.5,0.524,0.349,0.349};
+	//MoveState: PointLocation
+	double pointLocation1[6];
+	double pointLocation2[6];
+	double pointLocation3[6];
+	double planeYPR[3]{0,0,0};
 
-	double bodyPE_last[6];
-	double bodyVel_last[6];
+	//now2Start used twice
+	double nowPE[6]; //used in Follow again
+	double nowPee[18];
+	double startPE[6];
+	const int now2StartCount{2000};
 
-    bool downwardFlag;
-    bool pauseFlag;
-    int forwardWalkFlag{0};
+	//MoveState: Follow
+	double startPeeInB[18];
+	double endPeeInB[18];
+	const int followCount{2000};
 
-    double startPE[6];
-    double startPm[4][4];
-    double handlePE[6];
-    double nowPE[6];
-    double nowPm[4][4];
-    double nowPee[18];
-    double realPE[6];
-    double now2startDistance[3];
-    double now2startDistanceModified[6]{0,0,0,0,0,0};
-    double handle2startDistance[3];
-    double xNowInG[3];
-
-    const int now2StartCount{2000};
+	//MoveState: Downward
+	bool downwardFlag;
     int downwardCount;
-    int ret{0};
 
-    Robots::WALK_PARAM walkParam;
+	//PushState
+	double handlePE[6];
+	double nowPm[4][4];
+	double xNowInG[3];
+	double now2startDistance[3];
+	double now2startDistanceModified[6]{0,0,0,0,0,0};
+	double handle2startDistance[3];
 
-    double pointLocation1[6];
-    double pointLocation2[6];
-    double pointLocation3[6];
-    double planeParam[3];
-    double planeVertical[3];
-    double planeVerticalInB[3];
-    double planeYPR[3]{0,0,0};
-    //double forwardDistance;
-
-    double horizontal[3];
-    double horizontalInB[3];
-
-    double startPeeInB[18];//for case Follow
-    double endPeeInB[18];
-    double realPeeInB[18];
-    const int followCount{2000};
+    //pause
+    MoveState moveState_last;
+    int pauseCount{0};
+    bool pauseFlag;
 };
 
 extern PIPE<MOVES_PARAM> move2Pipe;
