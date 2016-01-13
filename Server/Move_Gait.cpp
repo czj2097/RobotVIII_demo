@@ -1408,7 +1408,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 	double M[6]{1,1,1,1,1,1};
 	double deltaT{0.001};
     double ForceRange[2]{10,90};
-    double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
+    double forceRatio{1000};//1 on RobotIII, 1000 on RobotVIII & single motor
 
     //Position Generetion From Force
     double bodyVel[6];
