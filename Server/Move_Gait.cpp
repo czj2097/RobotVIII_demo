@@ -2,7 +2,7 @@
 #include "rtdk.h"
 
 PIPE<MOVES_PARAM> move2Pipe(11,true);
-PIPE<CM_LAST_PARAM> openDoorPipe(16,true);
+PIPE<ForceTask::OPENDOOR_PARAM> openDoorPipe(16,true);
 
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params)
 {
@@ -544,7 +544,7 @@ std::atomic_int moveDir[6];
 std::atomic_bool isPull;
 std::atomic_bool isConfirm;
 
-Aris::Core::MSG ForceOprt::parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceTask::parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params)
 {
 	CONTINUEMOVE_PARAM param;
 
@@ -592,11 +592,8 @@ Aris::Core::MSG ForceOprt::parseContinueMoveBegin(const std::string &cmd, const 
 	return msg;
 }
 
-Aris::Core::MSG ForceOprt::parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceTask::parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params)
 {
-    //   cmd -u -v -w -r -p -y -iscontinue -ispull -isconfirm
-	//CONTINUEMOVE_PARAM param;
-
 	for(auto &i:params)
 	{
 		if(i.first=="isStop")
@@ -653,7 +650,7 @@ Aris::Core::MSG ForceOprt::parseContinueMoveJudge(const std::string &cmd, const 
 }
 
 /*****C & forceRatio must be adjusted when used on different robots*****/
-int ForceOprt::continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
+int ForceTask::continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
 {
     double bodyVel[6];
     double bodyAcc[6];
@@ -672,7 +669,7 @@ int ForceOprt::continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARA
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
 
-	static CM_RECORD_PARAM CMRP;
+	static ForceTask::CM_RECORD_PARAM CMRP;
 
     if(isContinue==true)
 	{
@@ -817,7 +814,7 @@ int ForceOprt::continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARA
 	}
 }
 
-Aris::Core::MSG ForceOprt::parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceTask::parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params)
 {
 	CONTINUEMOVE_PARAM param;
 
@@ -826,7 +823,7 @@ Aris::Core::MSG ForceOprt::parseOpenDoorBegin(const std::string &cmd, const map<
 
         if(i.first=="u")
 		{
-			moveDir=stoi(i.second);
+			moveDir[0]=stoi(i.second);
 		}
 		else if(i.first=="v")
 		{
@@ -866,7 +863,7 @@ Aris::Core::MSG ForceOprt::parseOpenDoorBegin(const std::string &cmd, const map<
 	return msg;
 }
 
-Aris::Core::MSG ForceOprt::parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceTask::parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params)
 {
 	for(auto &i:params)
 	{
@@ -930,7 +927,7 @@ Aris::Core::MSG ForceOprt::parseOpenDoorJudge(const std::string &cmd, const map<
 	return msg;
 }
 
-void inv3(double * matrix,double * invmatrix)
+void ForceTask::inv3(double * matrix,double * invmatrix)
 {
 	double a1=matrix[0];
 	double b1=matrix[1];
@@ -955,32 +952,32 @@ void inv3(double * matrix,double * invmatrix)
 	invmatrix[8]=(a1*b2-b1*a2)/value_matrix;
 }
 
-void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out)
+void ForceTask::crossMultiply(double * vector_in1, double *vector_in2, double * vector_out)
 {
 	vector_out[0]=vector_in1[1]*vector_in2[2]-vector_in1[2]*vector_in2[1];
 	vector_out[1]=vector_in1[2]*vector_in2[0]-vector_in1[0]*vector_in2[2];
 	vector_out[2]=vector_in1[0]*vector_in2[1]-vector_in1[1]*vector_in2[0];
 }
 
-double dotMultiply(double *vector_in1, double *vector_in2)
+double ForceTask::dotMultiply(double *vector_in1, double *vector_in2)
 {
 	double sum{0};
-
 	for(int i=0;i<3;i++)
 	{
 		sum+=vector_in1[i]*vector_in2[i];
 	}
-
 	return sum;
 }
 
-double norm(double * vector_in)
+double ForceTask::norm(double * vector_in)
 {
 	return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
 }
 
+
+
 //*****only for Robot VIII*****
-int ForceOprt::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
+int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
 {
     //MoveState: PointLocation
     double beginBodyPm[4][4];
@@ -1019,7 +1016,7 @@ int ForceOprt::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
 
-	static OPENDOOR_PARAM ODP;
+	static ForceTask::OPENDOOR_PARAM ODP;
 	ODP.count=pCMP->count;
 
     Aris::DynKer::s_pe2pm(pCMP->beginBodyPE,*beginBodyPm,"313");
@@ -1640,4 +1637,46 @@ int ForceOprt::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 		else
 			return 1;
 	}
+}
+
+void ForceTask::StartRecordData()
+{
+	openDoorThread = std::thread([&]()
+	{
+		struct OPENDOOR_PARAM param;
+		static std::fstream fileGait;
+		std::string name = Aris::Core::logFileName();
+		name.replace(name.rfind("log.txt"), std::strlen("openDoor.txt"), "openDoor.txt");
+		fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
+
+		long long count = -1;
+		while (1)
+		{
+			openDoorPipe.RecvInNRT(param);
+
+			//fileGait << ++count << " ";
+			fileGait << param.count << "  ";
+			fileGait << param.countIter << "  ";
+			fileGait << param.moveState << "  ";
+			fileGait << param.planeYPR[0] << "  ";
+			fileGait << param.walkParam.beta << "  ";
+
+
+			for (int i = 0; i < 6; i++)
+			{
+				fileGait << param.bodyPE_last[i] << "  ";
+			}
+			for (int i = 0; i < 6; i++)
+			{
+				fileGait << param.walkParam.beginBodyPE[i] << "  ";
+			}
+			for (int i = 0; i < 3; i++)
+			{
+				fileGait << param.force[i] << "  ";
+			}
+			fileGait << std::endl;
+		}
+
+		fileGait.close();
+	});
 }

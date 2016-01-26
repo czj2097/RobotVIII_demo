@@ -9,6 +9,7 @@
 #include <map>
 #include <string>
 #include <stdlib.h>
+#include <thread>
 
 #include <Aris_Pipe.h>
 #include <Aris_Core.h>
@@ -63,17 +64,20 @@ enum WALK_DIRECTION
 };
 
 
-class ForceOprt
+namespace ForceTask
 {
-public:
 	Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params);
 	Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params);
 	Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params);
 	Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params);
 	int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
 	int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
+	void StartRecordData();
+	void inv3(double * matrix,double * invmatrix);
+	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
+	double dotMultiply(double *vector_in1, double *vector_in2);
+	double norm(double * vector_in);
 
-private:
 	struct CONTINUEMOVE_PARAM :public Robots::GAIT_PARAM_BASE
 	{
 		std::int32_t move_direction;
@@ -115,7 +119,7 @@ private:
 		double force[6];
 	};
 
-	struct OPENDOOR_PARAM :CM_RECORD_PARAM
+	struct OPENDOOR_PARAM :public CM_RECORD_PARAM
 	{
 		MoveState moveState;
 		PushState pushState;
@@ -158,11 +162,14 @@ private:
 		int pauseCount{0};
 		bool pauseFlag;
 	};
+
+
 };
 
-extern PIPE<MOVES_PARAM> move2Pipe;
-extern PIPE<CM_LAST_PARAM> openDoorPipe;
+
+extern PIPE<ForceTask::OPENDOOR_PARAM> openDoorPipe;
 static std::thread openDoorThread;
+extern PIPE<MOVES_PARAM> move2Pipe;
 static std::thread move2Thread;
 
 /*parse function*/
