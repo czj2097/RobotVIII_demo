@@ -90,7 +90,7 @@ enum MoveState
 enum PushState
 {
     now2Start,
-    rightWalk,
+    leftWalk,
     forwardWalk,
 };
 
@@ -144,10 +144,8 @@ struct CM_LAST_PARAM
     bool pauseFlag;
 };
 
-extern PIPE<MOVES_PARAM> move2Pipe;
 extern PIPE<CM_LAST_PARAM> openDoorPipe;
 static std::thread openDoorThread;
-static std::thread move2Thread;
 
 /*parse function*/
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params);

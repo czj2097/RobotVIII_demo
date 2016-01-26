@@ -72,7 +72,7 @@ void startRecordGaitData()
 		struct CM_LAST_PARAM param;
 		static std::fstream fileGait;
 		std::string name = Aris::Core::logFileName();
-		name.replace(name.rfind("log.txt"), std::strlen("gait.txt"), "gait.txt");
+		name.replace(name.rfind("log.txt"), std::strlen("openDoor.txt"), "openDoor.txt");
 		fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
 
 		long long count = -1;
@@ -105,31 +105,5 @@ void startRecordGaitData()
 
 		fileGait.close();
 	});
-
-
-	move2Thread = std::thread([&]()
-	{
-		struct MOVES_PARAM param;
-		static std::fstream fileGait;
-		std::string name = Aris::Core::logFileName();
-		name.replace(name.rfind("log.txt"), std::strlen("gait.txt"), "gait.txt");
-		fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
-
-		long long count = -1;
-		while (1)
-		{
-			move2Pipe.RecvInNRT(param);
-
-			//fileGait << ++count << " ";
-			fileGait << param.count << "  ";
-			fileGait << param.imuData->roll << "  ";
-			fileGait << param.imuData->pitch << "  ";
-
-			fileGait << std::endl;
-		}
-
-		fileGait.close();
-	});
-
 }
 

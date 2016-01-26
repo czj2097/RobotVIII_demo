@@ -1,7 +1,6 @@
 #include "Move_Gait.h"
 #include "rtdk.h"
 
-PIPE<MOVES_PARAM> move2Pipe(11,true);
 PIPE<CM_LAST_PARAM> openDoorPipe(16,true);
 
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params)
@@ -159,8 +158,6 @@ int move2(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
 
     pRobot->SetPee(pEE, pBody);
 
-    move2Pipe.SendToNRT(*pMP);
-
     /*test*/
 //    if(pMP->count%500==0)
 //    {
@@ -312,8 +309,8 @@ int continuousWalkWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARA
 
     double forceOffsetAvg[3]{0};
     double realForceData[3]{0};
-    const double forceThreshold[3]{40,40,40};//力传感器的触发阈值,单位N或Nm
-    const double forceRatio{1};
+    const double forceThreshold[3]{30,30,10};//力传感器的触发阈值,单位N或Nm
+    const double forceAMFactor=1000;
 
     //力传感器手动清零
     if (pCWFP->count<100)
@@ -339,9 +336,9 @@ int continuousWalkWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARA
         {
             rt_printf("forceOffsetAvg: %f %f %f\n",forceOffsetAvg[0],forceOffsetAvg[1],forceOffsetAvg[2]);
         }
-        realForceData[0]=(pCWFP->pForceData->at(0).Fx-forceOffsetAvg[0])/forceRatio;
-        realForceData[1]=(pCWFP->pForceData->at(0).Fy-forceOffsetAvg[1])/forceRatio;
-        realForceData[2]=(pCWFP->pForceData->at(0).Mz-forceOffsetAvg[2])/forceRatio;
+        realForceData[0]=(pCWFP->pForceData->at(0).Fx-forceOffsetAvg[0])/forceAMFactor;
+        realForceData[1]=(pCWFP->pForceData->at(0).Fy-forceOffsetAvg[1])/forceAMFactor;
+        realForceData[2]=(pCWFP->pForceData->at(0).Mz-forceOffsetAvg[2])/forceAMFactor;
 
         static Robots::WALK_PARAM realParam = *pCWFP;
 
@@ -451,16 +448,16 @@ WALK_DIRECTION forceJudge(const double *force, const double *threshold)
     else if(std::fabs(std::fabs(force[0]) - threshold[0]) > std::fabs(std::fabs(force[1]) - threshold[1]))
     {
         if(force[0] < -threshold[0])
-            walkDir=FORWARD;
-        else if(force[0] > threshold[0])
             walkDir=BACKWARD;
+        else if(force[0] > threshold[0])
+            walkDir=FORWARD;
     }
     else
     {
         if(force[1] < -threshold[1])
-            walkDir=LEFTWARD;
-        else if(force[1] > threshold[1])
             walkDir=RIGHTWARD;
+        else if(force[1] > threshold[1])
+            walkDir=LEFTWARD;
     }
     return walkDir;
 }
@@ -541,6 +538,7 @@ std::atomic_bool isContinue;
 std::atomic_bool moveDir[12];
 std::atomic_bool isPull;
 std::atomic_bool isConfirm;
+//std::atomic_int moveDir;//
 
 Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params)
 {
@@ -858,8 +856,8 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
     double C[6]{30,30,30,30,30,30};
     double M[6]{1,1,1,1,1,1};
     double deltaT{0.001};
-    double forceRange[6]{30,30,30,20,20,20};
-    double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
+    double forceRange[6]{30,30,30,10,5,10};//in the ForceSensor Coordinate
+    double forceRatio{1000};//1 on RobotIII, 1000 on RobotVIII & single motor
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
 
@@ -946,21 +944,33 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 
 				if(pCMLP.force[num2]>forceRange[num2])
 				{
-					Fbody[force2robot[num2]]=1;
+					if(num2==5)
+						Fbody[force2robot[num2]]=1;
+					else
+						Fbody[force2robot[num2]]=-1;
 				}
 				else if(pCMLP.force[num2]<-forceRange[num2])
 				{
-					Fbody[force2robot[num2]]=-1;
+					if(num2==5)
+						Fbody[force2robot[num2]]=-1;
+					else
+						Fbody[force2robot[num2]]=1;
 				}
 				else
 				{
 					if(pCMLP.force[num1]>forceRange[num1])
 					{
-						Fbody[force2robot[num1]]=1;
+						if(num1==2)
+							Fbody[force2robot[num1]]=1;
+						else
+							Fbody[force2robot[num1]]=-1;
 					}
 					else if(pCMLP.force[num1]<-forceRange[num1])
 					{
-						Fbody[force2robot[num1]]=-1;
+						if(num1==2)
+							Fbody[force2robot[num1]]=-1;
+						else
+							Fbody[force2robot[num1]]=1;
 					}
 				}
         	}
@@ -974,7 +984,7 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 		}
 
 		pRobot->GetBodyPm(*bodyPm);
-		pRobot->GetBodyPm(bodyPE);
+		pRobot->GetBodyPe(bodyPE);
 		double pBody[6];
 		Aris::DynKer::s_pe2pm(deltaPE,*deltaPm,"213");
 		Aris::DynKer::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
@@ -1655,7 +1665,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     		{
     			pCMLP.countIter=pCMP->count;
     			pRobot->GetPee(pCMLP.endPeeInB,"B");
-    			if(isPull==true)
+    			if(isPull==false)
     				pCMLP.moveState=MoveState::Rightward;
     			else
     				pCMLP.moveState=MoveState::Leftward;
@@ -1667,7 +1677,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		Fbody[0]=-1;
 
-    		if(isPull==false)
+    		if(isPull==true)
 			{
 				if (fabs(pCMLP.force[1])>ForceRange[0])
 				{
@@ -1700,7 +1710,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		Fbody[0]=1;
 
-    		if(isPull==true)
+    		if(isPull==false)
     		{
     			if (fabs(pCMLP.force[1])>ForceRange[0])
     			{
@@ -1716,7 +1726,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 					pCMLP.moveState=MoveState::Follow;
 				}
     		}
-    		else//Push
+    		else//Pull
     		{
     			if (pCMP->count-pCMLP.countIter>3000)
     			{
@@ -1779,7 +1789,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		if (pCMLP.downwardFlag)
             {
-    			if(isPull==true)
+    			if(isPull==false)
     			{
     				Fbody[1]=-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.downwardCount/2);
     				Fbody[0]=sin((pCMP->count-pCMLP.countIter)*PI/pCMLP.downwardCount/2);
@@ -1813,8 +1823,9 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     		Fbody[2]=1;
 
     		if (pCMP->count-pCMLP.countIter>2500)
+    		{
     			pCMLP.moveState=MoveState::Upward;
-
+    		}
     		break;
 
     	case MoveState::Pushhandle:
@@ -1834,7 +1845,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 			{
 				if (pCMP->count-pCMLP.countIter>5000)
 				{
-					isContinue=false;//Stop here when Pull
+					isContinue=false;//Pull stop here
 				}
 			}
 			else
@@ -1891,11 +1902,11 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
                 {
                     if(isConfirm==true)
                     {
-                        pCMLP.pushState=PushState::rightWalk;
+                        pCMLP.pushState=PushState::leftWalk;
                         pCMLP.countIter=pCMP->count+1;
 
                         pCMLP.walkParam.n=2;
-                        pCMLP.walkParam.alpha=-PI/2;
+                        pCMLP.walkParam.alpha=PI/2;//left
                         pCMLP.walkParam.beta=0;
                         pCMLP.walkParam.totalCount=2000;
                         pCMLP.walkParam.d=(d0-fabs(dotMultiply(pCMLP.handle2startDistance,pCMLP.xNowInG)))/3*2;
@@ -1910,8 +1921,8 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
                 break;
 
-            case PushState::rightWalk:
-                //2.Move rightward to align with the door;
+            case PushState::leftWalk:
+                //2.Move leftward to align with the door;
                 pCMLP.walkParam.count=pCMP->count-pCMLP.countIter;
 
                 pCMLP.ret=Robots::walk(pRobot,& pCMLP.walkParam);
@@ -1951,7 +1962,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
                 {
                     if(isConfirm==true)
                     {
-						return 0;
+						return 0;//Push stop here
                     }
                     else
                     {
