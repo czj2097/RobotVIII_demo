@@ -52,8 +52,8 @@ int main()
     rs->AddGait("fw", Robots::fastWalk, Robots::parseFastWalk);
     //rs->AddGait("sw",swing,parseSwing);
     //rs->AddGait("mr",moveWithRotate,parseMoveWithRotate);
-    rs->AddGait("odb",openDoor,parseOpenDoorBegin);
-    rs->AddGait("odj",openDoor,parseOpenDoorJudge);
+    //rs->AddGait("odb",openDoor,parseOpenDoorBegin);
+    //rs->AddGait("odj",openDoor,parseOpenDoorJudge);
 
 	rs->Start();
 	

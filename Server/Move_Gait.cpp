@@ -536,13 +536,15 @@ int moveWithRotate(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * 
 	return pMRP->totalCount - pMRP->count - 1;
 }
 
+
+
 std::atomic_bool isForce;
 std::atomic_bool isContinue;
-std::atomic_bool moveDir[12];
+std::atomic_int moveDir[6];
 std::atomic_bool isPull;
 std::atomic_bool isConfirm;
 
-Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceOprt::parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params)
 {
 	CONTINUEMOVE_PARAM param;
 
@@ -550,123 +552,27 @@ Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::st
 	{
 		if(i.first=="u")
 		{
-			param.move_direction[0]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[0]=true;
-				moveDir[1]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[0]=false;
-				moveDir[1]=true;
-			}
-			else
-			{
-				moveDir[0]=false;
-				moveDir[1]=false;
-			}
+			moveDir[0]=stoi(i.second);
 		}
 		else if(i.first=="v")
 		{
-			param.move_direction[1]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[2]=true;
-				moveDir[3]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[2]=false;
-				moveDir[3]=true;
-			}
-			else
-			{
-				moveDir[2]=false;
-				moveDir[3]=false;
-			}
+			moveDir[1]=stoi(i.second);
 		}
 		else if(i.first=="w")
 		{
-			param.move_direction[2]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[4]=true;
-				moveDir[5]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[4]=false;
-				moveDir[5]=true;
-			}
-			else
-			{
-				moveDir[4]=false;
-				moveDir[5]=false;
-			}
+			moveDir[2]=stoi(i.second);
 		}
 		else if(i.first=="yaw")
 		{
-			param.move_direction[3]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[6]=true;
-				moveDir[7]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[6]=false;
-				moveDir[7]=true;
-			}
-			else
-			{
-				moveDir[6]=false;
-				moveDir[7]=false;
-			}
+			moveDir[3]=stoi(i.second);
 		}
 		else if(i.first=="pitch")
 		{
-			param.move_direction[4]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[8]=true;
-				moveDir[9]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[8]=false;
-				moveDir[9]=true;
-			}
-			else
-			{
-				moveDir[8]=false;
-				moveDir[9]=false;
-			}
+			moveDir[4]=stoi(i.second);
 		}
 		else if(i.first=="roll")
 		{
-			param.move_direction[5]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[10]=true;
-				moveDir[11]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[10]=false;
-				moveDir[11]=true;
-			}
-			else
-			{
-				moveDir[10]=false;
-				moveDir[11]=false;
-			}
+			moveDir[5]=stoi(i.second);
 		}
 		else
 		{
@@ -676,7 +582,7 @@ Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::st
 	}
 
 	isContinue=true;
-	isForce=true;
+	isForce=false;
 
 	Aris::Core::MSG msg;
 	msg.CopyStruct(param);
@@ -686,7 +592,7 @@ Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::st
 	return msg;
 }
 
-Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceOprt::parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params)
 {
     //   cmd -u -v -w -r -p -y -iscontinue -ispull -isconfirm
 	//CONTINUEMOVE_PARAM param;
@@ -709,123 +615,27 @@ Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::st
 		}
 		else if(i.first=="u")
 		{
-            //param.move_direction[0]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[0]=true;
-				moveDir[1]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[0]=false;
-				moveDir[1]=true;
-			}
-			else
-			{
-				moveDir[0]=false;
-				moveDir[1]=false;
-			}
+            moveDir[0]=stoi(i.second);
 		}
 		else if(i.first=="v")
 		{
-            //param.move_direction[1]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[2]=true;
-				moveDir[3]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[2]=false;
-				moveDir[3]=true;
-			}
-			else
-			{
-				moveDir[2]=false;
-				moveDir[3]=false;
-			}
+            moveDir[1]=stoi(i.second);
 		}
 		else if(i.first=="w")
 		{
-            //param.move_direction[2]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[4]=true;
-				moveDir[5]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[4]=false;
-				moveDir[5]=true;
-			}
-			else
-			{
-				moveDir[4]=false;
-				moveDir[5]=false;
-			}
+            moveDir[2]=stoi(i.second);
 		}
 		else if(i.first=="yaw")
 		{
-            //param.move_direction[3]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[6]=true;
-				moveDir[7]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[6]=false;
-				moveDir[7]=true;
-			}
-			else
-			{
-				moveDir[6]=false;
-				moveDir[7]=false;
-			}
+            moveDir[3]=stoi(i.second);
 		}
 		else if(i.first=="pitch")
 		{
-            //param.move_direction[4]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[8]=true;
-				moveDir[9]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[8]=false;
-				moveDir[9]=true;
-			}
-			else
-			{
-				moveDir[8]=false;
-				moveDir[9]=false;
-			}
+            moveDir[4]=stoi(i.second);
 		}
 		else if(i.first=="roll")
 		{
-            //param.move_direction[5]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[10]=true;
-				moveDir[11]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[10]=false;
-				moveDir[11]=true;
-			}
-			else
-			{
-				moveDir[10]=false;
-				moveDir[11]=false;
-			}
+            moveDir[5]=stoi(i.second);
 		}
 		else
 		{
@@ -843,11 +653,10 @@ Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::st
 }
 
 /*****C & forceRatio must be adjusted when used on different robots*****/
-int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
+int ForceOprt::continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
 {
     double bodyVel[6];
     double bodyAcc[6];
-    double bodyPE[6];
     double bodyPm[4][4];
     double deltaPE[6];
     double deltaPm[4][4];
@@ -863,12 +672,7 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
 
-	static CM_LAST_PARAM pCMLP;
-
-    if(pCMP->count % 200 ==0 ){
-        //rt_printf("Force x=%.3lf y=%.3lf z=%.3lf\n", pCMP->pForceData->at(0).Fx,pCMP->pForceData->at(0).Fy,pCMP->pForceData->at(0).Fz);
-        //rt_printf("FoAct x=%.3lf y=%.3lf z=%.3lf\n", pCMLP.force[0],pCMLP.force[1], pCMLP.force[2]);
-    }
+	static CM_RECORD_PARAM CMRP;
 
     if(isContinue==true)
 	{
@@ -877,14 +681,7 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
     	{
 			for (int i=0;i<6;i++)
 			{
-				if (moveDir[2*i+0]==true && moveDir[2*i+1]==false)
-					Fbody[i]=1;
-				else if (moveDir[2*i+0]==false && moveDir[2*i+1]==true)
-					Fbody[i]=-1;
-				else if (moveDir[2*i+0]==false && moveDir[2*i+1]==false)
-					Fbody[i]=0;
-				else
-					rt_printf("parse move diretion wrong!!!\n");
+				Fbody[i]=moveDir[i];
 			}
     	}
     	else
@@ -896,34 +693,33 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
                 {
                 	for(int i=0;i<6;i++)
                 	{
-                		pCMLP.forceSum[i]=0;
-                		pCMLP.bodyVel_last[i]=0;
+                		CMRP.forceSum[i]=0;
+                		CMRP.bodyVel_last[i]=0;
                 	}
-                	Aris::DynKer::s_pe2pe("313",pCMP->beginBodyPE,"213",pCMLP.bodyPE_last);
                 }
 
-        		pCMLP.forceSum[0]+=pCMP->pForceData->at(0).Fx;
-        		pCMLP.forceSum[1]+=pCMP->pForceData->at(0).Fy;
-        		pCMLP.forceSum[2]+=pCMP->pForceData->at(0).Fz;
-        		pCMLP.forceSum[3]+=pCMP->pForceData->at(0).Mx;
-				pCMLP.forceSum[4]+=pCMP->pForceData->at(0).My;
-				pCMLP.forceSum[5]+=pCMP->pForceData->at(0).Mz;
+                CMRP.forceSum[0]+=pCMP->pForceData->at(0).Fx;
+                CMRP.forceSum[1]+=pCMP->pForceData->at(0).Fy;
+                CMRP.forceSum[2]+=pCMP->pForceData->at(0).Fz;
+                CMRP.forceSum[3]+=pCMP->pForceData->at(0).Mx;
+                CMRP.forceSum[4]+=pCMP->pForceData->at(0).My;
+                CMRP.forceSum[5]+=pCMP->pForceData->at(0).Mz;
         	}
         	else if(pCMP->count==100)
         	{
         		for(int i=0;i<6;i++)
         		{
-        			pCMLP.forceAvg[i]=pCMLP.forceSum[i]/100;
+        			CMRP.forceAvg[i]=CMRP.forceSum[i]/100;
         		}
         	}
         	else
         	{
-    			pCMLP.force[0]=(pParam->pForceData->at(0).Fx-pCMLP.forceAvg[0])/forceRatio;
-    			pCMLP.force[1]=(pParam->pForceData->at(0).Fy-pCMLP.forceAvg[1])/forceRatio;
-    			pCMLP.force[2]=(pParam->pForceData->at(0).Fz-pCMLP.forceAvg[2])/forceRatio;
-    			pCMLP.force[3]=(pParam->pForceData->at(0).Mx-pCMLP.forceAvg[3])/forceRatio;
-				pCMLP.force[4]=(pParam->pForceData->at(0).My-pCMLP.forceAvg[4])/forceRatio;
-				pCMLP.force[5]=(pParam->pForceData->at(0).Mz-pCMLP.forceAvg[5])/forceRatio;
+        		CMRP.force[0]=(pParam->pForceData->at(0).Fx-CMRP.forceAvg[0])/forceRatio;
+        		CMRP.force[1]=(pParam->pForceData->at(0).Fy-CMRP.forceAvg[1])/forceRatio;
+        		CMRP.force[2]=(pParam->pForceData->at(0).Fz-CMRP.forceAvg[2])/forceRatio;
+        		CMRP.force[3]=(pParam->pForceData->at(0).Mx-CMRP.forceAvg[3])/forceRatio;
+        		CMRP.force[4]=(pParam->pForceData->at(0).My-CMRP.forceAvg[4])/forceRatio;
+        		CMRP.force[5]=(pParam->pForceData->at(0).Mz-CMRP.forceAvg[5])/forceRatio;
 
 				int force2robot[6]={2,0,1,5,4,3};
 				int num1;
@@ -932,33 +728,33 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 				double mmax{0};
 				for (int i=0;i<3;i++)
 				{
-					if (fabs(pCMLP.force[i])>fabs(fmax))
+					if (fabs(CMRP.force[i])>fabs(fmax))
 					{
-						fmax=pCMLP.force[i];
+						fmax=CMRP.force[i];
 						num1=i;
 					}
-					if (fabs(pCMLP.force[i+3])>fabs(mmax))
+					if (fabs(CMRP.force[i+3])>fabs(mmax))
 					{
-						mmax=pCMLP.force[i+3];
+						mmax=CMRP.force[i+3];
 						num2=i+3;
 					}
 				}
 
-				if(pCMLP.force[num2]>forceRange[num2])
+				if(CMRP.force[num2]>forceRange[num2])
 				{
 					Fbody[force2robot[num2]]=1;
 				}
-				else if(pCMLP.force[num2]<-forceRange[num2])
+				else if(CMRP.force[num2]<-forceRange[num2])
 				{
 					Fbody[force2robot[num2]]=-1;
 				}
 				else
 				{
-					if(pCMLP.force[num1]>forceRange[num1])
+					if(CMRP.force[num1]>forceRange[num1])
 					{
 						Fbody[force2robot[num1]]=1;
 					}
-					else if(pCMLP.force[num1]<-forceRange[num1])
+					else if(CMRP.force[num1]<-forceRange[num1])
 					{
 						Fbody[force2robot[num1]]=-1;
 					}
@@ -968,13 +764,12 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 
 		for (int i=0;i<6;i++)
 		{
-			bodyAcc[i]=(Fbody[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
-			bodyVel[i]=pCMLP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+			bodyAcc[i]=(Fbody[i]-C[i]*CMRP.bodyVel_last[i])/M[i];
+			bodyVel[i]=CMRP.bodyVel_last[i]+bodyAcc[i]*deltaT;
 			deltaPE[i]=bodyVel[i]*deltaT;
 		}
 
 		pRobot->GetBodyPm(*bodyPm);
-		pRobot->GetBodyPm(bodyPE);
 		double pBody[6];
 		Aris::DynKer::s_pe2pm(deltaPE,*deltaPm,"213");
 		Aris::DynKer::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
@@ -987,11 +782,10 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 		{
 			rt_printf("bodyPm:%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n",bodyPm[0][0],bodyPm[0][1],bodyPm[0][2],bodyPm[0][3],bodyPm[1][0],bodyPm[1][1],bodyPm[1][2],bodyPm[1][3],bodyPm[2][0],bodyPm[2][1],bodyPm[2][2],bodyPm[2][3],bodyPm[3][0],bodyPm[3][1],bodyPm[3][2],bodyPm[3][3]);
 			rt_printf("Fbody:%f,%f,%f,%f,%f,%f\n",Fbody[0],Fbody[1],Fbody[2],Fbody[3],Fbody[4],Fbody[5]);
-			rt_printf("realBodyPE:%f,%f,%f,%f,%f,%f\n\n",realPE[0],realPE[1],realPE[2],realPE[3],realPE[4],realPE[5]);
+			rt_printf("realPE:%f,%f,%f,%f,%f,%f\n\n",realPE[0],realPE[1],realPE[2],realPE[3],realPE[4],realPE[5]);
 		}
 
-		memcpy(pCMLP.bodyPE_last,bodyPE,sizeof(double)*6);
-		memcpy(pCMLP.bodyVel_last,bodyVel,sizeof(double)*6);
+		memcpy(CMRP.bodyVel_last,bodyVel,sizeof(double)*6);
 		return 1;
 	}
 
@@ -1000,13 +794,12 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 		//rt_printf("gait stopping\n");
 		for (int i=0;i<6;i++)
 		{
-			bodyAcc[i]=(Fbody[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
-			bodyVel[i]=pCMLP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+			bodyAcc[i]=(Fbody[i]-C[i]*CMRP.bodyVel_last[i])/M[i];
+			bodyVel[i]=CMRP.bodyVel_last[i]+bodyAcc[i]*deltaT;
 			deltaPE[i]=bodyVel[i]*deltaT;
 		}
 
 		pRobot->GetBodyPm(*bodyPm);
-		pRobot->GetBodyPe(bodyPE);
 		double pBody[6];
 		Aris::DynKer::s_pe2pm(deltaPE,*deltaPm,"213");
 		Aris::DynKer::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
@@ -1015,8 +808,7 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 		pRobot->GetPee(nowPee);
 		pRobot->SetPee(nowPee,realPE);
 
-		memcpy(pCMLP.bodyPE_last,bodyPE,sizeof(double)*6);
-		memcpy(pCMLP.bodyVel_last,bodyVel,sizeof(double)*6);
+		memcpy(CMRP.bodyVel_last,bodyVel,sizeof(double)*6);
 
 		if ( fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10 && fabs(bodyVel[3])<1e-10 && fabs(bodyVel[4])<1e-10 && fabs(bodyVel[5])<1e-10)
 			return 0;
@@ -1025,7 +817,7 @@ int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pP
 	}
 }
 
-Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceOprt::parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params)
 {
 	CONTINUEMOVE_PARAM param;
 
@@ -1034,123 +826,27 @@ Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string
 
         if(i.first=="u")
 		{
-			param.move_direction[0]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[0]=true;
-				moveDir[1]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[0]=false;
-				moveDir[1]=true;
-			}
-			else
-			{
-				moveDir[0]=false;
-				moveDir[1]=false;
-			}
+			moveDir=stoi(i.second);
 		}
 		else if(i.first=="v")
 		{
-			param.move_direction[1]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[2]=true;
-				moveDir[3]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[2]=false;
-				moveDir[3]=true;
-			}
-			else
-			{
-				moveDir[2]=false;
-				moveDir[3]=false;
-			}
+			moveDir[1]=stoi(i.second);
 		}
 		else if(i.first=="w")
 		{
-			param.move_direction[2]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[4]=true;
-				moveDir[5]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[4]=false;
-				moveDir[5]=true;
-			}
-			else
-			{
-				moveDir[4]=false;
-				moveDir[5]=false;
-			}
+			moveDir[2]=stoi(i.second);
 		}
 		else if(i.first=="yaw")
 		{
-			param.move_direction[3]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[6]=true;
-				moveDir[7]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[6]=false;
-				moveDir[7]=true;
-			}
-			else
-			{
-				moveDir[6]=false;
-				moveDir[7]=false;
-			}
+			moveDir[3]=stoi(i.second);
 		}
 		else if(i.first=="pitch")
 		{
-			param.move_direction[4]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[8]=true;
-				moveDir[9]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[8]=false;
-				moveDir[9]=true;
-			}
-			else
-			{
-				moveDir[8]=false;
-				moveDir[9]=false;
-			}
+			moveDir[4]=stoi(i.second);
 		}
 		else if(i.first=="roll")
 		{
-			param.move_direction[5]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[10]=true;
-				moveDir[11]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[10]=false;
-				moveDir[11]=true;
-			}
-			else
-			{
-				moveDir[10]=false;
-				moveDir[11]=false;
-			}
+			moveDir[5]=stoi(i.second);
 		}
 		else
 		{
@@ -1170,11 +866,8 @@ Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string
 	return msg;
 }
 
-Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params)
+Aris::Core::MSG ForceOprt::parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params)
 {
-    //   cmd -u -v -w -r -p -y -iscontinue -isstart
-	//CONTINUEMOVE_PARAM param;
-
 	for(auto &i:params)
 	{
         if(i.first=="isPull")
@@ -1200,123 +893,27 @@ Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string
 		}
 		else if(i.first=="u")
 		{
-            //param.move_direction[0]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[0]=true;
-				moveDir[1]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[0]=false;
-				moveDir[1]=true;
-			}
-			else
-			{
-				moveDir[0]=false;
-				moveDir[1]=false;
-			}
+            moveDir[0]=stoi(i.second);
 		}
 		else if(i.first=="v")
 		{
-            //param.move_direction[1]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[2]=true;
-				moveDir[3]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[2]=false;
-				moveDir[3]=true;
-			}
-			else
-			{
-				moveDir[2]=false;
-				moveDir[3]=false;
-			}
+            moveDir[1]=stoi(i.second);
 		}
 		else if(i.first=="w")
 		{
-            //param.move_direction[2]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[4]=true;
-				moveDir[5]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[4]=false;
-				moveDir[5]=true;
-			}
-			else
-			{
-				moveDir[4]=false;
-				moveDir[5]=false;
-			}
+            moveDir[2]=stoi(i.second);
 		}
 		else if(i.first=="yaw")
 		{
-            //param.move_direction[3]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[6]=true;
-				moveDir[7]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[6]=false;
-				moveDir[7]=true;
-			}
-			else
-			{
-				moveDir[6]=false;
-				moveDir[7]=false;
-			}
+            moveDir[3]=stoi(i.second);
 		}
 		else if(i.first=="pitch")
 		{
-            //param.move_direction[4]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[8]=true;
-				moveDir[9]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[8]=false;
-				moveDir[9]=true;
-			}
-			else
-			{
-				moveDir[8]=false;
-				moveDir[9]=false;
-			}
+            moveDir[4]=stoi(i.second);
 		}
 		else if(i.first=="roll")
 		{
-            //param.move_direction[5]=stoi(i.second);
-
-			if(i.second=="1")
-			{
-				moveDir[10]=true;
-				moveDir[11]=false;
-			}
-			else if(i.second=="-1")
-			{
-				moveDir[10]=false;
-				moveDir[11]=true;
-			}
-			else
-			{
-				moveDir[10]=false;
-				moveDir[11]=false;
-			}
+            moveDir[5]=stoi(i.second);
 		}
 		else
 		{
@@ -1382,8 +979,8 @@ double norm(double * vector_in)
 	return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
 }
 
-/*****only for Robot VIII*****/
-int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
+//*****only for Robot VIII*****
+int ForceOprt::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam)
 {
     //MoveState: PointLocation
     double beginBodyPm[4][4];
@@ -1422,8 +1019,8 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
 	const CONTINUEMOVE_PARAM * pCMP = static_cast<const CONTINUEMOVE_PARAM *>(pParam);
 
-	static CM_LAST_PARAM pCMLP;
-	pCMLP.count=pCMP->count;
+	static OPENDOOR_PARAM ODP;
+	ODP.count=pCMP->count;
 
     Aris::DynKer::s_pe2pm(pCMP->beginBodyPE,*beginBodyPm,"313");
 
@@ -1436,71 +1033,64 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
             	//initialize
             	for(int i=0;i<6;i++)
             	{
-            		pCMLP.forceSum[i]=0;
-            		pCMLP.bodyVel_last[i]=0;
+            		ODP.forceSum[i]=0;
+            		ODP.bodyVel_last[i]=0;
             	}
-            	Aris::DynKer::s_pe2pe("313",pCMP->beginBodyPE,"213",pCMLP.bodyPE_last);
-            	pCMLP.pauseFlag=false;
-            	pCMLP.moveState_last=MoveState::None;
+            	Aris::DynKer::s_pe2pe("313",pCMP->beginBodyPE,"213",ODP.bodyPE_last);
+            	ODP.pauseFlag=false;
+            	ODP.moveState_last=MoveState::None;
 
             	//start param of now2start in LocateAjust
-    			pRobot->GetBodyPe(pCMLP.startPE);
+    			pRobot->GetBodyPe(ODP.startPE);
             }
 
-    		pCMLP.moveState=MoveState::None;
+            ODP.moveState=MoveState::None;
 
-    		pCMLP.forceSum[0]+=pCMP->pForceData->at(0).Fx;
-    		pCMLP.forceSum[1]+=pCMP->pForceData->at(0).Fy;
-    		pCMLP.forceSum[2]+=pCMP->pForceData->at(0).Fz;
-    		pCMLP.forceSum[3]+=pCMP->pForceData->at(0).Mx;
-			pCMLP.forceSum[4]+=pCMP->pForceData->at(0).My;
-			pCMLP.forceSum[5]+=pCMP->pForceData->at(0).Mz;
+            ODP.forceSum[0]+=pCMP->pForceData->at(0).Fx;
+            ODP.forceSum[1]+=pCMP->pForceData->at(0).Fy;
+            ODP.forceSum[2]+=pCMP->pForceData->at(0).Fz;
+            ODP.forceSum[3]+=pCMP->pForceData->at(0).Mx;
+            ODP.forceSum[4]+=pCMP->pForceData->at(0).My;
+            ODP.forceSum[5]+=pCMP->pForceData->at(0).Mz;
 
     	}
     	else if(pCMP->count==100)
     	{
     		for(int i=0;i<6;i++)
     		{
-    			pCMLP.forceAvg[i]=pCMLP.forceSum[i]/100;
+    			ODP.forceAvg[i]=ODP.forceSum[i]/100;
     		}
     	}
     	else
     	{
-			pCMLP.force[0]=(pParam->pForceData->at(0).Fx-pCMLP.forceAvg[0])/forceRatio;
-			pCMLP.force[1]=(pParam->pForceData->at(0).Fy-pCMLP.forceAvg[1])/forceRatio;
-			pCMLP.force[2]=(pParam->pForceData->at(0).Fz-pCMLP.forceAvg[2])/forceRatio;
-			pCMLP.force[3]=(pParam->pForceData->at(0).Mx-pCMLP.forceAvg[3])/forceRatio;
-			pCMLP.force[4]=(pParam->pForceData->at(0).My-pCMLP.forceAvg[4])/forceRatio;
-			pCMLP.force[5]=(pParam->pForceData->at(0).Mz-pCMLP.forceAvg[5])/forceRatio;
+    		ODP.force[0]=(pParam->pForceData->at(0).Fx-ODP.forceAvg[0])/forceRatio;
+    		ODP.force[1]=(pParam->pForceData->at(0).Fy-ODP.forceAvg[1])/forceRatio;
+    		ODP.force[2]=(pParam->pForceData->at(0).Fz-ODP.forceAvg[2])/forceRatio;
+    		ODP.force[3]=(pParam->pForceData->at(0).Mx-ODP.forceAvg[3])/forceRatio;
+    		ODP.force[4]=(pParam->pForceData->at(0).My-ODP.forceAvg[4])/forceRatio;
+    		ODP.force[5]=(pParam->pForceData->at(0).Mz-ODP.forceAvg[5])/forceRatio;
     	}
 
-    	switch(pCMLP.moveState)
+    	switch(ODP.moveState)
     	{
     	case MoveState::None:
             for (int i=0;i<6;i++)
             {
-                if (moveDir[2*i+0]==true && moveDir[2*i+1]==false)
-                    Fbody[i]=1;
-                else if (moveDir[2*i+0]==false && moveDir[2*i+1]==true)
-                    Fbody[i]=-1;
-                else if (moveDir[2*i+0]==false && moveDir[2*i+1]==false)
-                    Fbody[i]=0;
-                else
-                    rt_printf("parse move diretion wrong!!!\n");
+            	Fbody[i]=moveDir[i];
             }
 
-            if (fabs(pCMLP.force[0])>ForceRange[0] && pCMP->count>200 && pCMLP.pauseFlag==false)
+            if (fabs(ODP.force[0])>ForceRange[0] && pCMP->count>200 && ODP.pauseFlag==false)
             {
-                pCMLP.countIter=pCMP->count;
-                pRobot->GetBodyPe(pCMLP.pointLocation1);
-                memcpy(*location,pCMLP.pointLocation1,sizeof(double)*3);
-                pCMLP.moveState=MoveState::PointLocate1;
+                ODP.countIter=pCMP->count;
+                pRobot->GetBodyPe(ODP.pointLocation1);
+                memcpy(*location,ODP.pointLocation1,sizeof(double)*3);
+                ODP.moveState=MoveState::PointLocate1;
             }
 
     		break;
 
     	case MoveState::PointLocate1:
-    		if (pCMP->count-pCMLP.countIter<5000)
+    		if (pCMP->count-ODP.countIter<5000)
     		{
     			Fbody[2]=1;
     			if(isPull==true)
@@ -1513,18 +1103,18 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     			Fbody[2]=-1;
     		}
 
-    		if (fabs(pCMLP.force[0])>ForceRange[0] && (pCMP->count-pCMLP.countIter)>5000)
+    		if (fabs(ODP.force[0])>ForceRange[0] && (pCMP->count-ODP.countIter)>5000)
 			{
-				pCMLP.countIter=pCMP->count;
-				pRobot->GetBodyPe(pCMLP.pointLocation2);
-				memcpy(*location+3,pCMLP.pointLocation2,sizeof(double)*3);
-				pCMLP.moveState=MoveState::PointLocate2;
+				ODP.countIter=pCMP->count;
+				pRobot->GetBodyPe(ODP.pointLocation2);
+				memcpy(*location+3,ODP.pointLocation2,sizeof(double)*3);
+				ODP.moveState=MoveState::PointLocate2;
 			}
 
     		break;
 
     	case MoveState::PointLocate2:
-    		if (pCMP->count-pCMLP.countIter<5000)
+    		if (pCMP->count-ODP.countIter<5000)
 			{
 				Fbody[2]=1;
 				Fbody[1]=1;
@@ -1534,100 +1124,85 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 				Fbody[2]=-1;
 			}
 
-			if (fabs(pCMLP.force[0])>ForceRange[0] && (pCMP->count-pCMLP.countIter)>5000)
+			if (fabs(ODP.force[0])>ForceRange[0] && (pCMP->count-ODP.countIter)>5000)
 			{
-				pCMLP.countIter=pCMP->count+1;
-				pRobot->GetBodyPe(pCMLP.pointLocation3);
-				memcpy(*location+6,pCMLP.pointLocation3,sizeof(double)*3);
-				pCMLP.moveState=MoveState::LocateAjust;
+				ODP.countIter=pCMP->count+1;
+				pRobot->GetBodyPe(ODP.pointLocation3);
+				memcpy(*location+6,ODP.pointLocation3,sizeof(double)*3);
+				ODP.moveState=MoveState::LocateAjust;
 
 				//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
 				inv3(*location,*invLocation);
 				Aris::DynKer::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 				Aris::DynKer::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 				Aris::DynKer::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
-				pCMLP.planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
-				pCMLP.planeYPR[1]=-asin(planeVerticalInB[1]/norm(planeVerticalInB));
-				pCMLP.planeYPR[2]=0;
-				/*
-				if(pCMLP.planeVerticalInB[2]<0)
-				{
-					for (int i=0;i<3;i++)
-					{
-						pCMLP.planeVertical[i]=-pCMLP.planeVertical[i];
-						pCMLP.planeVerticalInB[i]=-pCMLP.planeVerticalInB[i];
-					}
-				}
-				pCMLP.planeVerticalInB[1]=0;
-				pCMLP.planeYPR[0]=acos(pCMLP.planeVerticalInB[2]/norm(pCMLP.planeVerticalInB));
-				if(pCMLP.planeVerticalInB[0]<0)
-				{
-					pCMLP.planeYPR[0]=-pCMLP.planeYPR[0];
-				}*/
+				ODP.planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
+				ODP.planeYPR[1]=-asin(planeVerticalInB[1]/norm(planeVerticalInB));
+				ODP.planeYPR[2]=0;
 
 				//Set now param of now2start in LocateAjust
-				pRobot->GetBodyPe(pCMLP.nowPE);
-				pRobot->GetPee(pCMLP.nowPee);
+				pRobot->GetBodyPe(ODP.nowPE);
+				pRobot->GetPee(ODP.nowPee);
 
 				//Set rotate param
-				if(fabs(pCMLP.planeYPR[0])>PI/9)
+				if(fabs(ODP.planeYPR[0])>PI/9)
 				{
-					pCMLP.walkParam.n=2;
-					pCMLP.walkParam.beta=pCMLP.planeYPR[0]*0.88/3*2;
+					ODP.walkParam.n=2;
+					ODP.walkParam.beta=ODP.planeYPR[0]*0.88/3*2;
 				}
 				else
 				{
-					pCMLP.walkParam.n=1;
-					pCMLP.walkParam.beta=pCMLP.planeYPR[0]*0.88*2;
+					ODP.walkParam.n=1;
+					ODP.walkParam.beta=ODP.planeYPR[0]*0.88*2;
 				}
-				pCMLP.walkParam.d=0;
-				pCMLP.walkParam.alpha=0;
-				pCMLP.walkParam.totalCount=2000;
+				ODP.walkParam.d=0;
+				ODP.walkParam.alpha=0;
+				ODP.walkParam.totalCount=2000;
 
-				rt_printf("location1:%f,%f,%f\n",pCMLP.pointLocation1[0],pCMLP.pointLocation1[1],pCMLP.pointLocation1[2]);
-				rt_printf("location2:%f,%f,%f\n",pCMLP.pointLocation2[0],pCMLP.pointLocation2[1],pCMLP.pointLocation2[2]);
-				rt_printf("location3:%f,%f,%f\n",pCMLP.pointLocation3[0],pCMLP.pointLocation3[1],pCMLP.pointLocation3[2]);
+				rt_printf("location1:%f,%f,%f\n",ODP.pointLocation1[0],ODP.pointLocation1[1],ODP.pointLocation1[2]);
+				rt_printf("location2:%f,%f,%f\n",ODP.pointLocation2[0],ODP.pointLocation2[1],ODP.pointLocation2[2]);
+				rt_printf("location3:%f,%f,%f\n",ODP.pointLocation3[0],ODP.pointLocation3[1],ODP.pointLocation3[2]);
 				rt_printf("Vertical:%f,%f,%f\n",planeVertical[0],planeVertical[1],planeVertical[2]);
 				rt_printf("VerticalInB:%f,%f,%f\n",planeVerticalInB[0],planeVerticalInB[1],planeVerticalInB[2]);
-				rt_printf("yaw:%f,%f,%f\n",pCMLP.planeYPR[0],pCMLP.planeYPR[1],pCMLP.planeYPR[2]);
+				rt_printf("yaw:%f,%f,%f\n",ODP.planeYPR[0],ODP.planeYPR[1],ODP.planeYPR[2]);
 			}
 
     		break;
 
     	case MoveState::LocateAjust:
     		//1.now2start
-    		if(pCMP->count-pCMLP.countIter<pCMLP.now2StartCount)
+    		if(pCMP->count-ODP.countIter<ODP.now2StartCount)
     		{
 				for (int i=0;i<6;i++)
 				{
-					now2StartPE[i]=pCMLP.nowPE[i]+(pCMLP.startPE[i]-pCMLP.nowPE[i])/2*(1-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.now2StartCount));
+					now2StartPE[i]=ODP.nowPE[i]+(ODP.startPE[i]-ODP.nowPE[i])/2*(1-cos((pCMP->count-ODP.countIter)*PI/ODP.now2StartCount));
 				}
 
-				pRobot->SetPee(pCMLP.nowPee,now2StartPE);
+				pRobot->SetPee(ODP.nowPee,now2StartPE);
 
-				if(pCMP->count-pCMLP.countIter+1==pCMLP.now2StartCount)
+				if(pCMP->count-ODP.countIter+1==ODP.now2StartCount)
 				{
-					pRobot->GetPee(pCMLP.walkParam.beginPee);
-					pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+					pRobot->GetPee(ODP.walkParam.beginPee);
+					pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
 				}
     		}
     		//2.rotate
     		else
     		{
-				pCMLP.walkParam.count=pCMP->count-pCMLP.countIter-pCMLP.now2StartCount;
-				pCMLP.ret=Robots::walk(pRobot,& pCMLP.walkParam);
+				ODP.walkParam.count=pCMP->count-ODP.countIter-ODP.now2StartCount;
+				ODP.ret=Robots::walk(pRobot,& ODP.walkParam);
 
-				if(pCMLP.ret==0)
+				if(ODP.ret==0)
 				{
-					pCMLP.countIter=pCMP->count;
-					pCMLP.moveState=MoveState::Forward;
+					ODP.countIter=pCMP->count;
+					ODP.moveState=MoveState::Forward;
 				}
     		}
 
     		pRobot->GetBodyPe(bodyPE,"213");
 			for(int i=0;i<6;i++)
 			{
-				bodyVel[i]=bodyPE[i]-pCMLP.bodyPE_last[i];
+				bodyVel[i]=bodyPE[i]-ODP.bodyPE_last[i];
 			}
 
     		break;
@@ -1635,15 +1210,15 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     	case MoveState::Forward:
     		Fbody[2]=-1;
 
-    		if(pCMP->count==pCMLP.countIter+1)
+    		if(pCMP->count==ODP.countIter+1)
     		{
-    			pRobot->GetBodyPe(pCMLP.startPE);
+    			pRobot->GetBodyPe(ODP.startPE);
     		}
 
-    		if(fabs(pCMLP.force[0])>ForceRange[0])
+    		if(fabs(ODP.force[0])>ForceRange[0])
     		{
-    			pCMLP.countIter=pCMP->count;
-    			pCMLP.moveState=MoveState::Backward;
+    			ODP.countIter=pCMP->count;
+    			ODP.moveState=MoveState::Backward;
     		}
 
     		break;
@@ -1651,14 +1226,14 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     	case MoveState::Backward:
     		Fbody[2]=1;
 
-    		if (pCMP->count-pCMLP.countIter>750)
+    		if (pCMP->count-ODP.countIter>750)
     		{
-    			pCMLP.countIter=pCMP->count;
-    			pRobot->GetPee(pCMLP.endPeeInB,"B");
+    			ODP.countIter=pCMP->count;
+    			pRobot->GetPee(ODP.endPeeInB,"B");
     			if(isPull==true)
-    				pCMLP.moveState=MoveState::Rightward;
+    				ODP.moveState=MoveState::Rightward;
     			else
-    				pCMLP.moveState=MoveState::Leftward;
+    				ODP.moveState=MoveState::Leftward;
     		}
 
     		break;
@@ -1669,28 +1244,28 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		if(isPull==false)
 			{
-				if (fabs(pCMLP.force[1])>ForceRange[0])
+				if (fabs(ODP.force[1])>ForceRange[0])
 				{
-					pCMLP.countIter=pCMP->count;
-					pRobot->GetBodyPe(pCMLP.handlePE);//for PushState: rightWalk
-					pCMLP.moveState=MoveState::Rightward;
+					ODP.countIter=pCMP->count;
+					pRobot->GetBodyPe(ODP.handlePE);//for PushState: rightWalk
+					ODP.moveState=MoveState::Rightward;
 				}
-				else if (fabs(pCMLP.force[1])<=ForceRange[0] && pCMP->count-pCMLP.countIter>7500)
+				else if (fabs(ODP.force[1])<=ForceRange[0] && pCMP->count-ODP.countIter>7500)
 				{
-					pCMLP.countIter=pCMP->count+1;
-					pRobot->GetPee(pCMLP.startPeeInB,"B");
-					pRobot->GetBodyPe(pCMLP.nowPE);
-					pCMLP.moveState=MoveState::Follow;
+					ODP.countIter=pCMP->count+1;
+					pRobot->GetPee(ODP.startPeeInB,"B");
+					pRobot->GetBodyPe(ODP.nowPE);
+					ODP.moveState=MoveState::Follow;
 				}
 			}
 			else//Pull
 			{
-				if (pCMP->count-pCMLP.countIter>3000)
+				if (pCMP->count-ODP.countIter>3000)
 				{
-					pCMLP.countIter=pCMP->count;
-					pCMLP.moveState=MoveState::Downward;
-					pCMLP.downwardCount=(int)(PI/2*2500);
-				    pCMLP.downwardFlag = false;
+					ODP.countIter=pCMP->count;
+					ODP.moveState=MoveState::Downward;
+					ODP.downwardCount=(int)(PI/2*2500);
+				    ODP.downwardFlag = false;
 				}
 			}
 
@@ -1702,74 +1277,74 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		if(isPull==true)
     		{
-    			if (fabs(pCMLP.force[1])>ForceRange[0])
+    			if (fabs(ODP.force[1])>ForceRange[0])
     			{
-    				pCMLP.countIter=pCMP->count;
-    				pRobot->GetBodyPe(pCMLP.handlePE);
-    				pCMLP.moveState=MoveState::Leftward;
+    				ODP.countIter=pCMP->count;
+    				pRobot->GetBodyPe(ODP.handlePE);
+    				ODP.moveState=MoveState::Leftward;
     			}
-    			else if (fabs(pCMLP.force[1])<ForceRange[0] && pCMP->count-pCMLP.countIter>7500)
+    			else if (fabs(ODP.force[1])<ForceRange[0] && pCMP->count-ODP.countIter>7500)
 				{
-					pCMLP.countIter=pCMP->count+1;
-					pRobot->GetPee(pCMLP.startPeeInB,"B");
-					pRobot->GetBodyPe(pCMLP.nowPE);
-					pCMLP.moveState=MoveState::Follow;
+					ODP.countIter=pCMP->count+1;
+					pRobot->GetPee(ODP.startPeeInB,"B");
+					pRobot->GetBodyPe(ODP.nowPE);
+					ODP.moveState=MoveState::Follow;
 				}
     		}
     		else//Push
     		{
-    			if (pCMP->count-pCMLP.countIter>3000)
+    			if (pCMP->count-ODP.countIter>3000)
     			{
-    				pCMLP.countIter=pCMP->count;
-    				pCMLP.moveState=MoveState::Downward;
-    				pCMLP.downwardCount=(int)(PI/2*2500);
-    				pCMLP.downwardFlag = false;
+    				ODP.countIter=pCMP->count;
+    				ODP.moveState=MoveState::Downward;
+    				ODP.downwardCount=(int)(PI/2*2500);
+    				ODP.downwardFlag = false;
     			}
     		}
 
     		break;
 
     	case MoveState::Follow:
-    		if(pCMP->count-pCMLP.countIter<pCMLP.followCount)
+    		if(pCMP->count-ODP.countIter<ODP.followCount)
 			{
     			for(int i=0;i<3;i++)
     			{
     				//leg 0,2,4
-    				followPeeInB[6*i]=pCMLP.startPeeInB[6*i]+(pCMLP.endPeeInB[6*i]-pCMLP.startPeeInB[6*i])/2*(1-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.followCount));
-    				followPeeInB[6*i+1]=pCMLP.startPeeInB[6*i+1]+0.05*(1-cos((pCMP->count-pCMLP.countIter)*2*PI/pCMLP.followCount));
-					followPeeInB[6*i+2]=pCMLP.startPeeInB[6*i+2];
+    				followPeeInB[6*i]=ODP.startPeeInB[6*i]+(ODP.endPeeInB[6*i]-ODP.startPeeInB[6*i])/2*(1-cos((pCMP->count-ODP.countIter)*PI/ODP.followCount));
+    				followPeeInB[6*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((pCMP->count-ODP.countIter)*2*PI/ODP.followCount));
+					followPeeInB[6*i+2]=ODP.startPeeInB[6*i+2];
 					//leg 1,3,5
-					followPeeInB[6*i+3]=pCMLP.startPeeInB[6*i+3];
-					followPeeInB[6*i+4]=pCMLP.startPeeInB[6*i+4];
-					followPeeInB[6*i+5]=pCMLP.startPeeInB[6*i+5];
+					followPeeInB[6*i+3]=ODP.startPeeInB[6*i+3];
+					followPeeInB[6*i+4]=ODP.startPeeInB[6*i+4];
+					followPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
     			}
 			}
-    		else if(pCMP->count-pCMLP.countIter<2*pCMLP.followCount)
+    		else if(pCMP->count-ODP.countIter<2*ODP.followCount)
     		{
     			for(int i=0;i<3;i++)
 				{
 					//leg 1,3,5
-					followPeeInB[6*i+3]=pCMLP.startPeeInB[6*i+3]+(pCMLP.endPeeInB[6*i+3]-pCMLP.startPeeInB[6*i+3])/2*(1-cos((pCMP->count-pCMLP.countIter-pCMLP.followCount)*PI/pCMLP.followCount));
-					followPeeInB[6*i+4]=pCMLP.startPeeInB[6*i+4]+0.05*(1-cos((pCMP->count-pCMLP.countIter-pCMLP.followCount)*2*PI/pCMLP.followCount));
-					followPeeInB[6*i+5]=pCMLP.startPeeInB[6*i+5];
+					followPeeInB[6*i+3]=ODP.startPeeInB[6*i+3]+(ODP.endPeeInB[6*i+3]-ODP.startPeeInB[6*i+3])/2*(1-cos((pCMP->count-ODP.countIter-ODP.followCount)*PI/ODP.followCount));
+					followPeeInB[6*i+4]=ODP.startPeeInB[6*i+4]+0.05*(1-cos((pCMP->count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
+					followPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
 					//leg 0,2,4
-					followPeeInB[6*i]=pCMLP.endPeeInB[6*i];
-					followPeeInB[6*i+1]=pCMLP.endPeeInB[6*i+1];
-					followPeeInB[6*i+2]=pCMLP.endPeeInB[6*i+2];
+					followPeeInB[6*i]=ODP.endPeeInB[6*i];
+					followPeeInB[6*i+1]=ODP.endPeeInB[6*i+1];
+					followPeeInB[6*i+2]=ODP.endPeeInB[6*i+2];
 				}
     		}
-    		pRobot->SetPee(followPeeInB,pCMLP.nowPE,"B");
+    		pRobot->SetPee(followPeeInB,ODP.nowPE,"B");
 
-    		if(pCMP->count-pCMLP.countIter+1==2*pCMLP.followCount)
+    		if(pCMP->count-ODP.countIter+1==2*ODP.followCount)
     		{
-    			pCMLP.countIter=pCMP->count;
-    			pCMLP.moveState=MoveState::Forward;
+    			ODP.countIter=pCMP->count;
+    			ODP.moveState=MoveState::Forward;
     		}
 
     		pRobot->GetBodyPe(bodyPE,"213");
 			for(int i=0;i<6;i++)
 			{
-				bodyVel[i]=bodyPE[i]-pCMLP.bodyPE_last[i];
+				bodyVel[i]=bodyPE[i]-ODP.bodyPE_last[i];
 			}
 
     		break;
@@ -1777,33 +1352,33 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     	case MoveState::Downward:
     		Fbody[1]=-1;
 
-    		if (pCMLP.downwardFlag)
+    		if (ODP.downwardFlag)
             {
     			if(isPull==true)
     			{
-    				Fbody[1]=-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.downwardCount/2);
-    				Fbody[0]=sin((pCMP->count-pCMLP.countIter)*PI/pCMLP.downwardCount/2);
+    				Fbody[1]=-cos((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
+    				Fbody[0]=sin((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
     			else
     			{
-    				Fbody[1]=-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.downwardCount/2);
-    				Fbody[0]=-sin((pCMP->count-pCMLP.countIter)*PI/pCMLP.downwardCount/2);
+    				Fbody[1]=-cos((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
+    				Fbody[0]=-sin((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
             }
 
-            if(pCMLP.downwardFlag==false && fabs(pCMLP.force[2])>ForceRange[0])
+            if(ODP.downwardFlag==false && fabs(ODP.force[2])>ForceRange[0])
             {
-            	pCMLP.downwardFlag = true;
-            	pCMLP.countIter=pCMP->count;
+            	ODP.downwardFlag = true;
+            	ODP.countIter=pCMP->count;
             }
 
-    		if (fabs(pCMLP.force[1])>ForceRange[1] && pCMP->count-pCMLP.countIter>pCMLP.downwardCount/2)
+    		if (fabs(ODP.force[1])>ForceRange[1] && pCMP->count-ODP.countIter>ODP.downwardCount/2)
     		{
-    			pCMLP.countIter=pCMP->count;
+    			ODP.countIter=pCMP->count;
     			if(isPull==true)
-    				pCMLP.moveState=MoveState::Pullhandle;
+    				ODP.moveState=MoveState::Pullhandle;
     			else
-    				pCMLP.moveState=MoveState::Pushhandle;
+    				ODP.moveState=MoveState::Pushhandle;
     		}
 
     		break;
@@ -1812,8 +1387,8 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		Fbody[2]=1;
 
-    		if (pCMP->count-pCMLP.countIter>2500)
-    			pCMLP.moveState=MoveState::Upward;
+    		if (pCMP->count-ODP.countIter>2500)
+    			ODP.moveState=MoveState::Upward;
 
     		break;
 
@@ -1821,9 +1396,9 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     		Fbody[2]=-1;
 
-    		if (pCMP->count-pCMLP.countIter>2500)
+    		if (pCMP->count-ODP.countIter>2500)
             {
-                pCMLP.moveState=MoveState::Upward;
+                ODP.moveState=MoveState::Upward;
             }
     		break;
 
@@ -1832,16 +1407,16 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 			Fbody[1]=1;
 			if(isPull==true)
 			{
-				if (pCMP->count-pCMLP.countIter>5000)
+				if (pCMP->count-ODP.countIter>5000)
 				{
 					isContinue=false;//Stop here when Pull
 				}
 			}
 			else
 			{
-				if (pCMP->count-pCMLP.countIter>10500)
+				if (pCMP->count-ODP.countIter>10500)
 				{
-					pCMLP.moveState=MoveState::PrePush;
+					ODP.moveState=MoveState::PrePush;
 				}
 			}
 			break;
@@ -1850,25 +1425,25 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
             if ( fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10 && fabs(bodyVel[3])<1e-10 && fabs(bodyVel[4])<1e-10 && fabs(bodyVel[5])<1e-10)
             {
-                pCMLP.countIter=pCMP->count+1;
-                pCMLP.moveState=MoveState::Push;
-                pCMLP.pushState=PushState::now2Start;
+                ODP.countIter=pCMP->count+1;
+                ODP.moveState=MoveState::Push;
+                ODP.pushState=PushState::now2Start;
 
                 //now2start param
-                pRobot->GetBodyPe(pCMLP.nowPE);
-				pRobot->GetBodyPm(* pCMLP.nowPm);
-				pRobot->GetPee(pCMLP.nowPee);
+                pRobot->GetBodyPe(ODP.nowPE);
+				pRobot->GetBodyPm(* ODP.nowPm);
+				pRobot->GetPee(ODP.nowPee);
 				for(int i=0;i<3;i++)
 				{
-					pCMLP.now2startDistance[i]=pCMLP.startPE[i]-pCMLP.nowPE[i]; //startPE recorded at last forward
-					pCMLP.handle2startDistance[i]=pCMLP.startPE[i]-pCMLP.handlePE[i];
+					ODP.now2startDistance[i]=ODP.startPE[i]-ODP.nowPE[i]; //startPE recorded at last forward
+					ODP.handle2startDistance[i]=ODP.startPE[i]-ODP.handlePE[i];
 				}
-				Aris::DynKer::s_pm_dot_v3(*pCMLP.nowPm,xBodyInB,pCMLP.xNowInG);
+				Aris::DynKer::s_pm_dot_v3(*ODP.nowPm,xBodyInB,ODP.xNowInG);
 				for(int i=0;i<3;i++)
 				{
 					//now2startDistanceModified is value of delta, so the euler will be 0
-					pCMLP.now2startDistanceModified[i]=dotMultiply(pCMLP.now2startDistance,pCMLP.xNowInG)*pCMLP.xNowInG[i];
-					pCMLP.now2startDistanceModified[i+3]=pCMLP.startPE[i+3]-pCMLP.nowPE[i+3];
+					ODP.now2startDistanceModified[i]=dotMultiply(ODP.now2startDistance,ODP.xNowInG)*ODP.xNowInG[i];
+					ODP.now2startDistanceModified[i+3]=ODP.startPE[i+3]-ODP.nowPE[i+3];
 				}
             }
 
@@ -1876,35 +1451,35 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
     	case MoveState::Push:
             //Three Step using position control
-            switch(pCMLP.pushState)
+            switch(ODP.pushState)
             {
             case PushState::now2Start:
                 //1.Move back to startPE;
                 for (int i=0;i<6;i++)
                 {
-                    now2StartPE[i]=pCMLP.nowPE[i]+(pCMLP.now2startDistanceModified[i])/2*(1-cos((pCMP->count-pCMLP.countIter)*PI/pCMLP.now2StartCount));
+                    now2StartPE[i]=ODP.nowPE[i]+(ODP.now2startDistanceModified[i])/2*(1-cos((pCMP->count-ODP.countIter)*PI/ODP.now2StartCount));
                 }
 
-                pRobot->SetPee(pCMLP.nowPee,now2StartPE);
+                pRobot->SetPee(ODP.nowPee,now2StartPE);
 
-                if(pCMP->count-pCMLP.countIter+1==pCMLP.now2StartCount)
+                if(pCMP->count-ODP.countIter+1==ODP.now2StartCount)
                 {
                     if(isConfirm==true)
                     {
-                        pCMLP.pushState=PushState::rightWalk;
-                        pCMLP.countIter=pCMP->count+1;
+                        ODP.pushState=PushState::rightWalk;
+                        ODP.countIter=pCMP->count+1;
 
-                        pCMLP.walkParam.n=2;
-                        pCMLP.walkParam.alpha=-PI/2;
-                        pCMLP.walkParam.beta=0;
-                        pCMLP.walkParam.totalCount=2000;
-                        pCMLP.walkParam.d=(d0-fabs(dotMultiply(pCMLP.handle2startDistance,pCMLP.xNowInG)))/3*2;
-                        pRobot->GetPee(pCMLP.walkParam.beginPee);
-                        pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                        ODP.walkParam.n=2;
+                        ODP.walkParam.alpha=-PI/2;
+                        ODP.walkParam.beta=0;
+                        ODP.walkParam.totalCount=2000;
+                        ODP.walkParam.d=(d0-fabs(dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
+                        pRobot->GetPee(ODP.walkParam.beginPee);
+                        pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
                     }
                     else//pause
                     {
-                        pRobot->SetPee(pCMLP.nowPee,pCMLP.startPE);
+                        pRobot->SetPee(ODP.nowPee,ODP.startPE);
                     }
                 }
 
@@ -1912,24 +1487,24 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
             case PushState::rightWalk:
                 //2.Move rightward to align with the door;
-                pCMLP.walkParam.count=pCMP->count-pCMLP.countIter;
+                ODP.walkParam.count=pCMP->count-ODP.countIter;
 
-                pCMLP.ret=Robots::walk(pRobot,& pCMLP.walkParam);
+                ODP.ret=Robots::walk(pRobot,& ODP.walkParam);
 
-                if(pCMLP.ret==0)
+                if(ODP.ret==0)
                 {
                     if(isConfirm==true)
                     {
-                        pCMLP.pushState=PushState::forwardWalk;
-                        pCMLP.countIter=pCMP->count+1;
+                        ODP.pushState=PushState::forwardWalk;
+                        ODP.countIter=pCMP->count+1;
 
-                        pCMLP.walkParam.totalCount=2000;
-                        pCMLP.walkParam.n=4;
-                        pCMLP.walkParam.alpha=0;
-                        pCMLP.walkParam.beta=0;
-                        pCMLP.walkParam.d=0.5;
-                        pRobot->GetPee(pCMLP.walkParam.beginPee);
-                        pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
+                        ODP.walkParam.totalCount=2000;
+                        ODP.walkParam.n=4;
+                        ODP.walkParam.alpha=0;
+                        ODP.walkParam.beta=0;
+                        ODP.walkParam.d=0.5;
+                        pRobot->GetPee(ODP.walkParam.beginPee);
+                        pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
                     }
                     else
                     {
@@ -1943,11 +1518,11 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 
             case PushState::forwardWalk:
                 //3.Move through the door
-                pCMLP.walkParam.count=pCMP->count-pCMLP.countIter;
+                ODP.walkParam.count=pCMP->count-ODP.countIter;
 
-                pCMLP.ret=Robots::walk(pRobot,& pCMLP.walkParam);
+                ODP.ret=Robots::walk(pRobot,& ODP.walkParam);
 
-                if(pCMLP.ret==0)
+                if(ODP.ret==0)
                 {
                     if(isConfirm==true)
                     {
@@ -1970,7 +1545,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
             pRobot->GetBodyPe(bodyPE,"213");
             for(int i=0;i<6;i++)
             {
-                bodyVel[i]=bodyPE[i]-pCMLP.bodyPE_last[i];
+                bodyVel[i]=bodyPE[i]-ODP.bodyPE_last[i];
             }
 
     		break;
@@ -1979,37 +1554,37 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
     		break;
     	}
 
-        if(pCMLP.moveState!=MoveState::Push && pCMLP.moveState!=MoveState::LocateAjust && pCMLP.moveState!=MoveState::Follow)
+        if(ODP.moveState!=MoveState::Push && ODP.moveState!=MoveState::LocateAjust && ODP.moveState!=MoveState::Follow)
         {
-            if (isConfirm==false && pCMLP.pauseFlag==false)
+            if (isConfirm==false && ODP.pauseFlag==false)
             {
-                pCMLP.moveState_last=pCMLP.moveState;
-                pCMLP.moveState=MoveState::None;
-                pCMLP.pauseFlag=true;
+                ODP.moveState_last=ODP.moveState;
+                ODP.moveState=MoveState::None;
+                ODP.pauseFlag=true;
             }
-            else if(isConfirm==false && pCMLP.pauseFlag==true)
+            else if(isConfirm==false && ODP.pauseFlag==true)
             {
-                pCMLP.moveState=MoveState::None;
-                pCMLP.pauseCount++;
+                ODP.moveState=MoveState::None;
+                ODP.pauseCount++;
                 //Do not change F to zeros here, so that we can move the robot manually when paused
             }
-            else if(isConfirm==true && pCMLP.pauseFlag==true)
+            else if(isConfirm==true && ODP.pauseFlag==true)
             {
-                pCMLP.moveState=pCMLP.moveState_last;
-                pCMLP.pauseFlag=false;
-                pCMLP.pauseCount++;
+                ODP.moveState=ODP.moveState_last;
+                ODP.pauseFlag=false;
+                ODP.pauseCount++;
             }
             else//isConfirm=true && pauseFlag=false
             {
-                pCMLP.countIter+=pCMLP.pauseCount;
-                pCMLP.pauseCount=0;
+                ODP.countIter+=ODP.pauseCount;
+                ODP.pauseCount=0;
             }
 
 
             for (int i=0;i<6;i++)
             {
-                bodyAcc[i]=(Fbody[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
-                bodyVel[i]=pCMLP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+                bodyAcc[i]=(Fbody[i]-C[i]*ODP.bodyVel_last[i])/M[i];
+                bodyVel[i]=ODP.bodyVel_last[i]+bodyAcc[i]*deltaT;
                 deltaPE[i]=bodyVel[i]*deltaT;
             }
 
@@ -2024,15 +1599,15 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 			pRobot->SetPee(nowPee,realPE);
         }
 
-        memcpy(pCMLP.bodyPE_last,bodyPE,sizeof(double)*6);
-        memcpy(pCMLP.bodyVel_last,bodyVel,sizeof(double)*6);
+        memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
+        memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
 
         if(pCMP->count%1000==0)
         {
-            rt_printf("count:%d,countIter:%d,state:%d,Fz:%f,Fy:%f,Fx:%f\n",pCMP->count,pCMLP.countIter,pCMLP.moveState,fabs(pCMP->pForceData->at(0).Fz/1000-pCMLP.forceAvg[2]),fabs(pCMP->pForceData->at(0).Fy/1000-pCMLP.forceAvg[1]),fabs(pCMP->pForceData->at(0).Fx/1000-pCMLP.forceAvg[0]));
+            rt_printf("count:%d,countIter:%d,state:%d,Fz:%f,Fy:%f,Fx:%f\n",pCMP->count,ODP.countIter,ODP.moveState,fabs(pCMP->pForceData->at(0).Fz/1000-ODP.forceAvg[2]),fabs(pCMP->pForceData->at(0).Fy/1000-ODP.forceAvg[1]),fabs(pCMP->pForceData->at(0).Fx/1000-ODP.forceAvg[0]));
         }
 
-		openDoorPipe.SendToNRT(pCMLP);
+		openDoorPipe.SendToNRT(ODP);
 
 		return 1;
 	}
@@ -2042,8 +1617,8 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 		//rt_printf("gait stopping\n");
 		for (int i=0;i<6;i++)
 		{
-			bodyAcc[i]=(Fbody[i]-C[i]*pCMLP.bodyVel_last[i])/M[i];
-			bodyVel[i]=pCMLP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+			bodyAcc[i]=(Fbody[i]-C[i]*ODP.bodyVel_last[i])/M[i];
+			bodyVel[i]=ODP.bodyVel_last[i]+bodyAcc[i]*deltaT;
 			deltaPE[i]=bodyVel[i]*deltaT;
 		}
 
@@ -2057,8 +1632,8 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 		pRobot->GetPee(nowPee);
 		pRobot->SetPee(nowPee,realPE);
 
-		memcpy(pCMLP.bodyPE_last,bodyPE,sizeof(double)*6);
-		memcpy(pCMLP.bodyVel_last,bodyVel,sizeof(double)*6);
+		memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
+		memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
 
 		if ( fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10 && fabs(bodyVel[3])<1e-10 && fabs(bodyVel[4])<1e-10 && fabs(bodyVel[5])<1e-10)
 			return 0;
