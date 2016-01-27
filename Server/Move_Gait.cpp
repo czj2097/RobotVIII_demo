@@ -1129,12 +1129,12 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 				ODP.moveState=MoveState::LocateAjust;
 
 				//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-				inv3(*location,*invLocation);
+				ForceTask::inv3(*location,*invLocation);
 				Aris::DynKer::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 				Aris::DynKer::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 				Aris::DynKer::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
 				ODP.planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
-				ODP.planeYPR[1]=-asin(planeVerticalInB[1]/norm(planeVerticalInB));
+				ODP.planeYPR[1]=-asin(planeVerticalInB[1]/ForceTask::norm(planeVerticalInB));
 				ODP.planeYPR[2]=0;
 
 				//Set now param of now2start in LocateAjust
@@ -1439,7 +1439,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 				for(int i=0;i<3;i++)
 				{
 					//now2startDistanceModified is value of delta, so the euler will be 0
-					ODP.now2startDistanceModified[i]=dotMultiply(ODP.now2startDistance,ODP.xNowInG)*ODP.xNowInG[i];
+					ODP.now2startDistanceModified[i]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.xNowInG)*ODP.xNowInG[i];
 					ODP.now2startDistanceModified[i+3]=ODP.startPE[i+3]-ODP.nowPE[i+3];
 				}
             }
@@ -1470,7 +1470,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                         ODP.walkParam.alpha=-PI/2;
                         ODP.walkParam.beta=0;
                         ODP.walkParam.totalCount=2000;
-                        ODP.walkParam.d=(d0-fabs(dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
+                        ODP.walkParam.d=(d0-fabs(ForceTask::dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
                         pRobot->GetPee(ODP.walkParam.beginPee);
                         pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
                     }
