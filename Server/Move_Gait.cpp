@@ -988,13 +988,17 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     double planeVertical[3]{0,0,0};
     double planeVerticalInB[3]{0,0,0};
 
+    double touchPE[6];
+
     //PushState
     double followPeeInB[18];
     double now2StartPE[6];
     double xBodyInB[3]{1,0,0};
+    double yBodyInB[3]{0,1,0};
     double pushBodyPE313[6];//for pause
     double pushPee[18];//for pause
     double d0=0.42;//distance from the handle to the middle of the door
+    double h0=0.05;//height from the start position to the walk through position
 
     //Force Control
     double Fbody[6]{0,0,0,0,0,0};
@@ -1156,12 +1160,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 				ODP.walkParam.alpha=0;
 				ODP.walkParam.totalCount=2000;
 
-				rt_printf("location1:%f,%f,%f\n",ODP.pointLocation1[0],ODP.pointLocation1[1],ODP.pointLocation1[2]);
-				rt_printf("location2:%f,%f,%f\n",ODP.pointLocation2[0],ODP.pointLocation2[1],ODP.pointLocation2[2]);
-				rt_printf("location3:%f,%f,%f\n",ODP.pointLocation3[0],ODP.pointLocation3[1],ODP.pointLocation3[2]);
-				rt_printf("Vertical:%f,%f,%f\n",planeVertical[0],planeVertical[1],planeVertical[2]);
-				rt_printf("VerticalInB:%f,%f,%f\n",planeVerticalInB[0],planeVerticalInB[1],planeVerticalInB[2]);
-				rt_printf("yaw:%f,%f,%f\n",ODP.planeYPR[0],ODP.planeYPR[1],ODP.planeYPR[2]);
+				rt_printf("yaw:%f,pitch:%f,roll:%f\n",ODP.planeYPR[0],ODP.planeYPR[1],ODP.planeYPR[2]);
 			}
 
     		break;
@@ -1196,6 +1195,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 				}
     		}
 
+    		pRobot->GetBodyPm(*bodyPm);
     		pRobot->GetBodyPe(bodyPE,"213");
 			for(int i=0;i<6;i++)
 			{
@@ -1209,13 +1209,19 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		if(pCMP->count==ODP.countIter+1)
     		{
-    			pRobot->GetBodyPe(ODP.startPE);
+    			pRobot->GetBodyPe(ODP.startPE);//Used in PrePush for now2Start
     		}
 
     		if(fabs(ODP.force[0])>ForceRange[0])
     		{
     			ODP.countIter=pCMP->count;
     			ODP.moveState=MoveState::Backward;
+    			pRobot->GetBodyPe(touchPE);//For calculation of DoorLocation
+
+    			for (int i=0;i<3;i++)
+    			{
+    				ODP.vector0[i]=touchPE[i]-ODP.startPE[i];
+    			}
     		}
 
     		break;
@@ -1227,7 +1233,8 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     		{
     			ODP.countIter=pCMP->count;
     			pRobot->GetPee(ODP.endPeeInB,"B");
-    			if(isPull==true)
+    			pRobot->GetBodyPe(ODP.beginPE);//For calculation of DoorLocation
+    			if(isPull==false)
     				ODP.moveState=MoveState::Rightward;
     			else
     				ODP.moveState=MoveState::Leftward;
@@ -1239,13 +1246,18 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		Fbody[0]=-1;
 
-    		if(isPull==false)
+    		if(isPull==true)
 			{
 				if (fabs(ODP.force[1])>ForceRange[0])
 				{
 					ODP.countIter=pCMP->count;
-					pRobot->GetBodyPe(ODP.handlePE);//for PushState: rightWalk
+					pRobot->GetBodyPe(ODP.handlePE);//for PushState: leftWalk
 					ODP.moveState=MoveState::Rightward;
+
+					for (int i=0;i<3;i++)
+					{
+						ODP.vector1[i]=ODP.handlePE[i]-ODP.beginPE[i];
+					}
 				}
 				else if (fabs(ODP.force[1])<=ForceRange[0] && pCMP->count-ODP.countIter>7500)
 				{
@@ -1255,7 +1267,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 					ODP.moveState=MoveState::Follow;
 				}
 			}
-			else//Pull
+			else//Push
 			{
 				if (pCMP->count-ODP.countIter>3000)
 				{
@@ -1263,6 +1275,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 					ODP.moveState=MoveState::Downward;
 					ODP.downwardCount=(int)(PI/2*2500);
 				    ODP.downwardFlag = false;
+				    pRobot->GetBodyPe(ODP.beginPE);//For calculation of DoorLocation
 				}
 			}
 
@@ -1272,7 +1285,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		Fbody[0]=1;
 
-    		if(isPull==true)
+    		if(isPull==false)
     		{
     			if (fabs(ODP.force[1])>ForceRange[0])
     			{
@@ -1288,7 +1301,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 					ODP.moveState=MoveState::Follow;
 				}
     		}
-    		else//Push
+    		else//Pull
     		{
     			if (pCMP->count-ODP.countIter>3000)
     			{
@@ -1338,6 +1351,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     			ODP.moveState=MoveState::Forward;
     		}
 
+    		pRobot->GetBodyPm(*bodyPm);
     		pRobot->GetBodyPe(bodyPE,"213");
 			for(int i=0;i<6;i++)
 			{
@@ -1351,7 +1365,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		if (ODP.downwardFlag)
             {
-    			if(isPull==true)
+    			if(isPull==false)
     			{
     				Fbody[1]=-cos((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     				Fbody[0]=sin((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
@@ -1361,12 +1375,26 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     				Fbody[1]=-cos((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     				Fbody[0]=-sin((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
+    			Fbody[2]=(fabs(ODP.force[0])-50)/50;
             }
 
             if(ODP.downwardFlag==false && fabs(ODP.force[2])>ForceRange[0])
             {
             	ODP.downwardFlag = true;
             	ODP.countIter=pCMP->count;
+            	pRobot->GetBodyPe(touchPE);//For calculation of DoorLocation
+
+            	for (int i=0;i<3;i++)
+				{
+					ODP.vector2[i]=touchPE[i]-ODP.beginPE[i];
+				}
+            	pRobot->GetBodyPm(* ODP.nowPm);
+
+            	ODP.handleLocation[2]=-ForceTask::norm(ODP.vector0);
+            	ODP.handleLocation[0]=ForceTask::norm(ODP.vector1);
+            	ODP.handleLocation[1]=-ForceTask::norm(ODP.vector2);
+
+            	rt_printf("handleLocation:%f,%f,%f\n",ODP.handleLocation[0],ODP.handleLocation[1],ODP.handleLocation[2]);
             }
 
     		if (fabs(ODP.force[1])>ForceRange[1] && pCMP->count-ODP.countIter>ODP.downwardCount/2)
@@ -1389,16 +1417,6 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		break;
 
-    	case MoveState::Pushhandle:
-
-    		Fbody[2]=-1;
-
-    		if (pCMP->count-ODP.countIter>2500)
-            {
-                ODP.moveState=MoveState::Upward;
-            }
-    		break;
-
     	case MoveState::Upward:
 
 			Fbody[1]=1;
@@ -1409,14 +1427,18 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 					isContinue=false;//Stop here when Pull
 				}
 			}
-			else
-			{
-				if (pCMP->count-ODP.countIter>10500)
-				{
-					ODP.moveState=MoveState::PrePush;
-				}
-			}
+
 			break;
+
+    	case MoveState::Pushhandle:
+
+    		Fbody[2]=-1;
+
+    		if (pCMP->count-ODP.countIter>2500)
+            {
+                ODP.moveState=MoveState::PrePush;
+            }
+    		break;
 
         case MoveState::PrePush:
 
@@ -1428,20 +1450,20 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
                 //now2start param
                 pRobot->GetBodyPe(ODP.nowPE);
-				pRobot->GetBodyPm(* ODP.nowPm);
 				pRobot->GetPee(ODP.nowPee);
 				for(int i=0;i<3;i++)
 				{
-					ODP.now2startDistance[i]=ODP.startPE[i]-ODP.nowPE[i]; //startPE recorded at last forward
+					ODP.now2startDistance[i]=ODP.startPE[i]-ODP.nowPE[i]; //startPE recorded at the last forward
 					ODP.handle2startDistance[i]=ODP.startPE[i]-ODP.handlePE[i];
 				}
 				Aris::DynKer::s_pm_dot_v3(*ODP.nowPm,xBodyInB,ODP.xNowInG);
-				for(int i=0;i<3;i++)
-				{
-					//now2startDistanceModified is value of delta, so the euler will be 0
-					ODP.now2startDistanceModified[i]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.xNowInG)*ODP.xNowInG[i];
-					ODP.now2startDistanceModified[i+3]=ODP.startPE[i+3]-ODP.nowPE[i+3];
-				}
+				Aris::DynKer::s_pm_dot_v3(*ODP.nowPm,yBodyInB,ODP.yNowInG);
+
+				ODP.now2startDistanceModified[0]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.xNowInG);
+				ODP.now2startDistanceModified[1]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.yNowInG)+h0;
+				ODP.now2startDistanceModified[2]=0;
+
+				Aris::DynKer::s_inv_pm_dot_v3(*ODP.nowPm,ODP.now2startDistanceModified,ODP.now2startDistanceReal);
             }
 
             break;
@@ -1454,7 +1476,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                 //1.Move back to startPE;
                 for (int i=0;i<6;i++)
                 {
-                    now2StartPE[i]=ODP.nowPE[i]+(ODP.now2startDistanceModified[i])/2*(1-cos((pCMP->count-ODP.countIter)*PI/ODP.now2StartCount));
+                    now2StartPE[i]=ODP.nowPE[i]+(ODP.now2startDistanceReal[i])/2*(1-cos((pCMP->count-ODP.countIter)*PI/ODP.now2StartCount));
                 }
 
                 pRobot->SetPee(ODP.nowPee,now2StartPE);
@@ -1463,11 +1485,11 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                 {
                     if(isConfirm==true)
                     {
-                        ODP.pushState=PushState::rightWalk;
+                        ODP.pushState=PushState::leftWalk;
                         ODP.countIter=pCMP->count+1;
 
                         ODP.walkParam.n=2;
-                        ODP.walkParam.alpha=-PI/2;
+                        ODP.walkParam.alpha=PI/2;
                         ODP.walkParam.beta=0;
                         ODP.walkParam.totalCount=2000;
                         ODP.walkParam.d=(d0-fabs(ForceTask::dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
@@ -1482,7 +1504,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
                 break;
 
-            case PushState::rightWalk:
+            case PushState::leftWalk:
                 //2.Move rightward to align with the door;
                 ODP.walkParam.count=pCMP->count-ODP.countIter;
 
@@ -1539,6 +1561,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                 break;
             }
 
+            pRobot->GetBodyPm(*bodyPm);
             pRobot->GetBodyPe(bodyPE,"213");
             for(int i=0;i<6;i++)
             {
@@ -1596,13 +1619,10 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 			pRobot->SetPee(nowPee,realPE);
         }
 
+        Aris::DynKer::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
+
         memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
         memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
-
-        if(pCMP->count%1000==0)
-        {
-            rt_printf("count:%d,countIter:%d,state:%d,Fz:%f,Fy:%f,Fx:%f\n",pCMP->count,ODP.countIter,ODP.moveState,fabs(pCMP->pForceData->at(0).Fz/1000-ODP.forceAvg[2]),fabs(pCMP->pForceData->at(0).Fy/1000-ODP.forceAvg[1]),fabs(pCMP->pForceData->at(0).Fx/1000-ODP.forceAvg[0]));
-        }
 
 		openDoorPipe.SendToNRT(ODP);
 
@@ -1656,24 +1676,21 @@ void ForceTask::StartRecordData()
 
 			//fileGait << ++count << " ";
 			fileGait << param.count << "  ";
-			fileGait << param.countIter << "  ";
 			fileGait << param.moveState << "  ";
-			fileGait << param.planeYPR[0] << "  ";
-			fileGait << param.walkParam.beta << "  ";
-
 
 			for (int i = 0; i < 6; i++)
 			{
 				fileGait << param.bodyPE_last[i] << "  ";
 			}
-			for (int i = 0; i < 6; i++)
+			for (int i = 0; i < 3; i++)
 			{
-				fileGait << param.walkParam.beginBodyPE[i] << "  ";
+				fileGait << param.toolInG[i] << "  ";
 			}
 			for (int i = 0; i < 3; i++)
 			{
 				fileGait << param.force[i] << "  ";
 			}
+
 			fileGait << std::endl;
 		}
 

@@ -105,7 +105,7 @@ namespace ForceTask
 	enum PushState
 	{
 		now2Start,
-		rightWalk,
+		leftWalk,
 		forwardWalk,
 	};
 
@@ -128,11 +128,22 @@ namespace ForceTask
 		std::int32_t countIter{0};
 		Robots::WALK_PARAM walkParam;
 
+		const double toolInR[3]{0,0.08,-0.385};
+		double toolInG[3];
+
 		//MoveState: PointLocation
 		double pointLocation1[6];
 		double pointLocation2[6];
 		double pointLocation3[6];
+
+		//Door Location
 		double planeYPR[3]{0,0,0};
+		double handleLocation[3]{0,0,0};
+		//startPE
+		double beginPE[6];
+		double vector0[3];
+		double vector1[3];
+		double vector2[3];
 
 		//now2Start used twice
 		double nowPE[6]; //used in Follow again
@@ -153,8 +164,10 @@ namespace ForceTask
 		double handlePE[6];
 		double nowPm[4][4];
 		double xNowInG[3];
+		double yNowInG[3];
 		double now2startDistance[3];
 		double now2startDistanceModified[6]{0,0,0,0,0,0};
+		double now2startDistanceReal[6]{0,0,0,0,0,0};
 		double handle2startDistance[3];
 
 		//pause
