@@ -1503,7 +1503,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
             {
                 pCMLP.countIter=pCMP->count;
                 pRobot->GetBodyPe(pCMLP.pointLocation1);
-                memcpy(*location,pCMLP.pointLocation1,sizeof(double)*3);
+                memcpy(*pCMLP.location,pCMLP.pointLocation1,sizeof(double)*3);
                 pCMLP.moveState=MoveState::PointLocate1;
             }
 
@@ -1527,7 +1527,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 			{
 				pCMLP.countIter=pCMP->count;
 				pRobot->GetBodyPe(pCMLP.pointLocation2);
-				memcpy(*location+3,pCMLP.pointLocation2,sizeof(double)*3);
+				memcpy(*pCMLP.location+3,pCMLP.pointLocation2,sizeof(double)*3);
 				pCMLP.moveState=MoveState::PointLocate2;
 			}
 
@@ -1548,11 +1548,11 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 			{
 				pCMLP.countIter=pCMP->count+1;
 				pRobot->GetBodyPe(pCMLP.pointLocation3);
-				memcpy(*location+6,pCMLP.pointLocation3,sizeof(double)*3);
+				memcpy(*pCMLP.location+6,pCMLP.pointLocation3,sizeof(double)*3);
 				pCMLP.moveState=MoveState::LocateAjust;
 
 				//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-				inv3(*location,*invLocation);
+				inv3(*pCMLP.location,*invLocation);
 				Aris::DynKer::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 				Aris::DynKer::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 				Aris::DynKer::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
@@ -1597,6 +1597,7 @@ int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam
 				rt_printf("location1:%f,%f,%f\n",pCMLP.pointLocation1[0],pCMLP.pointLocation1[1],pCMLP.pointLocation1[2]);
 				rt_printf("location2:%f,%f,%f\n",pCMLP.pointLocation2[0],pCMLP.pointLocation2[1],pCMLP.pointLocation2[2]);
 				rt_printf("location3:%f,%f,%f\n",pCMLP.pointLocation3[0],pCMLP.pointLocation3[1],pCMLP.pointLocation3[2]);
+				//rt_printf("location:%f,%f,%f\n         %f,%f,%f\n         %f,%f,%f\n",location[0][0],location[0][1],location[0][2],location[1][0],location[1][1],location[1][2],location[2][0],location[2][1],location[2][2]);
 				rt_printf("Vertical:%f,%f,%f\n",planeVertical[0],planeVertical[1],planeVertical[2]);
 				rt_printf("VerticalInB:%f,%f,%f\n",planeVerticalInB[0],planeVerticalInB[1],planeVerticalInB[2]);
 				rt_printf("yaw:%f,%f,%f\n",pCMLP.planeYPR[0],pCMLP.planeYPR[1],pCMLP.planeYPR[2]);

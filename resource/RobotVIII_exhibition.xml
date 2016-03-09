@@ -686,7 +686,7 @@
           </AtiForceSensor>
         </SlaveType>
         <Slave>
-          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>              
+          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>          
           <Motion2 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion3 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion4 type="ElmoSoloWhistle" maxSpeed="8738133"/>
@@ -703,8 +703,8 @@
           <Motion15 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion16 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion17 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-          <ForceSensor type="AtiForceSensor"/>                              
+          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>  
+          <ForceSensor type="AtiForceSensor"/>                         
         </Slave>
       </EtherCat>
     </Control>

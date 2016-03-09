@@ -113,6 +113,7 @@ struct CM_LAST_PARAM
 	double pointLocation1[6];
 	double pointLocation2[6];
 	double pointLocation3[6];
+	double location[3][3];
 	double planeYPR[3]{0,0,0};
 
 	//now2Start used twice
