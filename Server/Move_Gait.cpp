@@ -1375,7 +1375,12 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     				Fbody[1]=-cos((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     				Fbody[0]=-sin((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
-    			Fbody[2]=(fabs(ODP.force[0])-50)/50;
+    			Fbody[2]=(fabs(ODP.force[0])-80)/80;
+    			if(ODP.force[0]>10)
+    			{
+    				C[2]=100;
+    				M[2]=0.5;
+    			}
             }
 
             if(ODP.downwardFlag==false && fabs(ODP.force[2])>ForceRange[0])
@@ -1618,8 +1623,10 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 			pRobot->GetPee(nowPee);
 			pRobot->SetPee(nowPee,realPE);
         }
-
-        rt_printf("moveState:%d,force:%f,%f,%f\n",ODP.moveState,ODP.force[0],ODP.force[1],ODP.force[2]);
+        if (pCMP->count%100==0)
+        {
+        	rt_printf("moveState:%d,force:%f,%f,%f\n",ODP.moveState,ODP.force[0],ODP.force[1],ODP.force[2]);
+        }
 
         Aris::DynKer::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
 
