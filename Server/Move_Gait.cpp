@@ -1619,6 +1619,8 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 			pRobot->SetPee(nowPee,realPE);
         }
 
+        rt_printf("moveState:%d,force:%f,%f,%f\n",ODP.moveState,ODP.force[0],ODP.force[1],ODP.force[2]);
+
         Aris::DynKer::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
 
         memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
