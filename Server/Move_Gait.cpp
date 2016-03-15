@@ -997,7 +997,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     double yBodyInB[3]{0,1,0};
     double pushBodyPE313[6];//for pause
     double pushPee[18];//for pause
-    double d0=0.42;//distance from the handle to the middle of the door
+    double d0=0.43;//distance from the handle to the middle of the door
     double h0=0.05;//height from the start position to the walk through position
 
     //Force Control
@@ -1375,7 +1375,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     				Fbody[1]=-cos((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     				Fbody[0]=-sin((pCMP->count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
-    			Fbody[2]=(fabs(ODP.force[0])-80)/80;
+    			Fbody[2]=(fabs(ODP.force[0])-50)/50;
     			if(ODP.force[0]>10)
     			{
     				C[2]=100;
