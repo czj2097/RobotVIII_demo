@@ -982,7 +982,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
     //MoveState: PointLocation
     double beginBodyPm[4][4];
     double invBeginBodyPm[4][4];
-    double location[3][3];
+    //double location[3][3];
     double invLocation[3][3];
     double planeConst[3]{1,1,1};
     double planeVertical[3]{0,0,0};
@@ -1084,7 +1084,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
             {
                 ODP.countIter=pCMP->count;
                 pRobot->GetBodyPe(ODP.pointLocation1);
-                memcpy(*location,ODP.pointLocation1,sizeof(double)*3);
+                memcpy(*ODP.location,ODP.pointLocation1,sizeof(double)*3);
                 ODP.moveState=MoveState::PointLocate1;
             }
 
@@ -1108,7 +1108,7 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 			{
 				ODP.countIter=pCMP->count;
 				pRobot->GetBodyPe(ODP.pointLocation2);
-				memcpy(*location+3,ODP.pointLocation2,sizeof(double)*3);
+				memcpy(*ODP.location+3,ODP.pointLocation2,sizeof(double)*3);
 				ODP.moveState=MoveState::PointLocate2;
 			}
 
@@ -1129,11 +1129,11 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 			{
 				ODP.countIter=pCMP->count+1;
 				pRobot->GetBodyPe(ODP.pointLocation3);
-				memcpy(*location+6,ODP.pointLocation3,sizeof(double)*3);
+				memcpy(*ODP.location+6,ODP.pointLocation3,sizeof(double)*3);
 				ODP.moveState=MoveState::LocateAjust;
 
 				//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-				ForceTask::inv3(*location,*invLocation);
+				ForceTask::inv3(*ODP.location,*invLocation);
 				Aris::DynKer::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 				Aris::DynKer::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 				Aris::DynKer::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
