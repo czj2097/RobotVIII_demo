@@ -130,7 +130,7 @@ void ForceTask::parseContinueMoveBegin(const std::string &cmd, const map<std::st
 	}
 
 	isContinue=true;
-	isForce=false;
+	isForce=true;
 
 	msg.copyStruct(param);
 
@@ -208,7 +208,7 @@ int ForceTask::continueMove(Aris::Dynamic::Model &model, const Aris::Dynamic::Pl
     double M[6]{1,1,1,1,1,1};
     double deltaT{0.001};
     double forceRange[6]{30,30,30,20,20,20};
-    double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
+    double forceRatio{1000};//1 on RobotIII, 1000 on RobotVIII & single motor
 
 	static ForceTask::CM_RecordParam CMRP;
 
@@ -318,10 +318,14 @@ int ForceTask::continueMove(Aris::Dynamic::Model &model, const Aris::Dynamic::Pl
 		robot.SetPeb(realPE);
 		robot.SetPee(nowPee);
 
-		if(param.count%100==0)
+		if(param.count%1000==0)
 		{
-			rt_printf("bodyPm:%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n",bodyPm[0][0],bodyPm[0][1],bodyPm[0][2],bodyPm[0][3],bodyPm[1][0],bodyPm[1][1],bodyPm[1][2],bodyPm[1][3],bodyPm[2][0],bodyPm[2][1],bodyPm[2][2],bodyPm[2][3],bodyPm[3][0],bodyPm[3][1],bodyPm[3][2],bodyPm[3][3]);
-			rt_printf("Fbody:%f,%f,%f,%f,%f,%f\n",Fbody[0],Fbody[1],Fbody[2],Fbody[3],Fbody[4],Fbody[5]);
+			rt_printf("count:%d\n",param.count);
+			//rt_printf("bodyPm:%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n",bodyPm[0][0],bodyPm[0][1],bodyPm[0][2],bodyPm[0][3],bodyPm[1][0],bodyPm[1][1],bodyPm[1][2],bodyPm[1][3],bodyPm[2][0],bodyPm[2][1],bodyPm[2][2],bodyPm[2][3],bodyPm[3][0],bodyPm[3][1],bodyPm[3][2],bodyPm[3][3]);
+			rt_printf("RawForce:%f,%f,%f\n",param.force_data->at(0).Fx,param.force_data->at(0).Fy,param.force_data->at(0).Fz);
+			rt_printf("ForceSum:%f,%f,%f\n",CMRP.forceSum[0],CMRP.forceSum[1],CMRP.forceSum[2]);
+			rt_printf("ForceAvg:%f,%f,%f\n",CMRP.forceAvg[0],CMRP.forceAvg[1],CMRP.forceAvg[2]);
+			rt_printf("Force:%f,%f,%f,%f,%f,%f\n",CMRP.force[0],CMRP.force[1],CMRP.force[2],CMRP.force[3],CMRP.force[4],CMRP.force[5]);
 			rt_printf("realPE:%f,%f,%f,%f,%f,%f\n\n",realPE[0],realPE[1],realPE[2],realPE[3],realPE[4],realPE[5]);
 		}
 

@@ -72,7 +72,7 @@ namespace ForceTask
 		double bodyPE_last[6];
 		double bodyVel_last[6];
 
-		double forceSum[6];
+		double forceSum[6]{0,0,0,0,0,0};
 		double forceAvg[6]{0,0,0,0,0,0};
 		double force[6];
 	};
