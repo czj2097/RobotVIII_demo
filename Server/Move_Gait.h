@@ -1,84 +1,42 @@
 #ifndef MOVE_GAIT_H
 #define MOVE_GAIT_H
 
-#include <iostream>
-#include <memory>
-#include <cstring>
-#include <iomanip>
-#include <bitset>
-#include <map>
-#include <string>
-#include <stdlib.h>
 #include <thread>
+#include <functional>
+#include <cstdint>
+#include <map>
 
-#include <Aris_Pipe.h>
-#include <Aris_Core.h>
-#include <Aris_Message.h>
-#include <Aris_DynKer.h>
-#include <Aris_Motion.h>
-#include <Robot_Server.h>
-#include <Robot_Gait.h>
+#include <aris.h>
+#include <aris_control_pipe.h>
 #include <Robot_Base.h>
+#include <Robot_Gait.h>
 
-using namespace Aris::Core;
 using namespace std;
 using namespace Aris::Control;
 
-
 //static const double PI = 3.141592653589793;
 
-struct MOVES_PARAM :public Robots::GAIT_PARAM_BASE
-{
-    double targetPee[18]{0};
-    double targetBodyPE[6]{0};
-    std::int32_t periodCount;
-    int comID; //移动的部件（component）序号
-    bool isAbsolute{false}; //用于判断移动命令是绝对坐标还是相对坐标
-};
-
-struct SWING_PARAM :public Robots::GAIT_PARAM_BASE
-{
-    double centreP[3]{0};
-    double swingRad;
-    std::int32_t periodCount;
-};
-
-struct MOVEWITHROTATE_PARAM :public Robots::GAIT_PARAM_BASE
+struct MoveRotateParam final :public Aris::Server::GaitParamBase
 {
 	double targetBodyPE213[6]{0};
 	std::int32_t totalCount;
 };
 
-//CWF
-enum WALK_DIRECTION
-{
-	STOP,
-	FORWARD,
-	BACKWARD,
-	RIGHTWARD,
-	LEFTWARD,
-	TURNLEFT,
-	TURNRIGHT,
-	FAST_TURNLEFT,
-	FAST_TURNRIGHT
-};
-
-
 namespace ForceTask
 {
-	Aris::Core::MSG parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params);
-	Aris::Core::MSG parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params);
-	Aris::Core::MSG parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params);
-	Aris::Core::MSG parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params);
-	int continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
-	int openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
+	void parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, Aris::Core::Msg &msg);
+	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, Aris::Core::Msg &msg);
+	void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, Aris::Core::Msg &msg);
+	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, Aris::Core::Msg &msg);
+	int continueMove(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanParamBase &param_in);
+	int openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanParamBase &param_in);
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
 	double dotMultiply(double *vector_in1, double *vector_in2);
 	double norm(double * vector_in);
 
-	struct CONTINUEMOVE_PARAM :public Robots::GAIT_PARAM_BASE
+	struct ContinueMoveParam final :public Aris::Server::GaitParamBase
 	{
 		std::int32_t move_direction;
 	};
@@ -109,7 +67,7 @@ namespace ForceTask
 		forwardWalk,
 	};
 
-	struct CM_RECORD_PARAM
+	struct CM_RecordParam
 	{
 		double bodyPE_last[6];
 		double bodyVel_last[6];
@@ -119,14 +77,14 @@ namespace ForceTask
 		double force[6];
 	};
 
-	struct OPENDOOR_PARAM :public CM_RECORD_PARAM
+	struct OpenDoorParam :public CM_RecordParam
 	{
 		MoveState moveState;
 		PushState pushState;
 		int ret{0};
 		std::int32_t count;
 		std::int32_t countIter{0};
-		Robots::WALK_PARAM walkParam;
+		Robots::WalkParam walkParam;
 
 		const double toolInR[3]{0,0.08,-0.385};
 		double toolInG[3];
@@ -176,28 +134,12 @@ namespace ForceTask
 		int pauseCount{0};
 		bool pauseFlag;
 	};
-
-
 };
 
-
-extern PIPE<ForceTask::OPENDOOR_PARAM> openDoorPipe;
+extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
 static std::thread openDoorThread;
-extern PIPE<MOVES_PARAM> move2Pipe;
-static std::thread move2Thread;
 
-/*parse function*/
-Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params);
-Aris::Core::MSG parseSwing(const std::string &cmd, const map<std::string, std::string> &params);
-Aris::Core::MSG parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params);
-Aris::Core::MSG parseCWF(const std::string &cmd, const std::map<std::string, std::string> &params);
-Aris::Core::MSG parseCWFStop(const std::string &cmd, const std::map<std::string, std::string> &params);
-
-/*operation function*/
-int move2(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
-int swing(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
-int moveWithRotate(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
-int continuousWalkWithForce(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BASE * pParam);
-WALK_DIRECTION forceJudge(const double *force, const double *threshold);
+void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, Aris::Core::Msg &msg);
+int moveWithRotate(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanParamBase &param_in);
 
 #endif // MOVE_GAIT_H
