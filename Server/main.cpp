@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
 	rs.addCmd("hm", Robots::basicParse, nullptr);
 	rs.addCmd("rc", Robots::recoverParse, Robots::recoverGait);
 	rs.addCmd("wk", Robots::walkParse, Robots::walkGait);
+	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
 
 	rs.addCmd("mr",parseMoveWithRotate,moveWithRotate);
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);

@@ -71,6 +71,7 @@ namespace ForceTask
 	{
 		double bodyPE_last[6];
 		double bodyVel_last[6];
+		double pEE_last[18];
 
 		double forceSum[6]{0,0,0,0,0,0};
 		double forceAvg[6]{0,0,0,0,0,0};
@@ -88,6 +89,7 @@ namespace ForceTask
 
 		const double toolInR[3]{0,0.08,-0.385};
 		double toolInG[3];
+		double toolVel[3]{0,0,0};
 
 		//MoveState: PointLocation
 		double pointLocation1[6];
@@ -125,8 +127,8 @@ namespace ForceTask
 		double xNowInG[3];
 		double yNowInG[3];
 		double now2startDistance[3];
-		double now2startDistanceModified[6]{0,0,0,0,0,0};
-		double now2startDistanceReal[6]{0,0,0,0,0,0};
+		double now2startDistanceInB[6]{0,0,0,0,0,0};
+		double now2startDistanceInG[6]{0,0,0,0,0,0};
 		double handle2startDistance[3];
 
 		//pause

@@ -66,9 +66,11 @@ int moveWithRotate(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanParamBa
 	auto &param = static_cast<const MoveRotateParam &>(param_in);
 
 	static double beginBodyPE213[6];
+	static double pEE[18];
 	if(param.count==0)
 	{
 		robot.GetPeb(beginBodyPE213,"213");
+		robot.GetPee(pEE);
 	}
 
 	double realBodyPE213[6];
@@ -81,6 +83,7 @@ int moveWithRotate(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanParamBa
 	double pBody[6];
 
 	robot.SetPeb(realBodyPE213,"213");
+	robot.SetPee(pEE);
 
 	return param.totalCount - param.count - 1;
 }
@@ -518,6 +521,10 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 	auto &robot = static_cast<Robots::RobotBase &>(model);
 	auto &param = static_cast<const ContinueMoveParam &>(param_in);
 
+	//for data record
+	double pEE[18];
+	double bodyVel123[6]{0,0,0,0,0,0};
+
     //MoveState: PointLocation
 	static double beginBodyPE[6];
     static double beginBodyPm[4][4];
@@ -549,7 +556,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
     double forceRatio{1000};//1 on RobotIII, 1000 on RobotVIII & single motor
 
     //Position Generetion From Force
-    double bodyVel[6];
+    double bodyVel[6]{0,0,0,0,0,0};
     double bodyAcc[6];
     double bodyPE[6];//delta PE every ms
     double bodyPm[4][4];//bodyPm to Ground every ms
@@ -718,12 +725,6 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 
 				robot.SetPeb(now2StartPE);
 				robot.SetPee(ODP.nowPee);
-
-				//if(param.count-ODP.countIter+1==ODP.now2StartCount)
-				//{
-				//	robot.GetPee(ODP.walkParam.beginPee);
-				//	pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
-				//}
     		}
     		//2.rotate
     		else
@@ -919,12 +920,6 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
     				Fbody[1]=-cos((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
     				Fbody[0]=-sin((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
-    			Fbody[2]=(fabs(ODP.force[0])-50)/50;
-    			if(ODP.force[0]>10)
-    			{
-    				C[2]=100;
-    				M[2]=0.5;
-    			}
             }
 
             if(ODP.downwardFlag==false && fabs(ODP.force[2])>ForceRange[0])
@@ -937,7 +932,6 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 				{
 					ODP.vector2[i]=touchPE[i]-ODP.beginPE[i];
 				}
-            	robot.GetPmb(* ODP.nowPm);
 
             	ODP.handleLocation[2]=-ForceTask::norm(ODP.vector0);
             	ODP.handleLocation[0]=ForceTask::norm(ODP.vector1);
@@ -999,6 +993,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 
                 //now2start param
                 robot.GetPeb(ODP.nowPE);
+                robot.GetPmb(*ODP.nowPm);
 				robot.GetPee(ODP.nowPee);
 				for(int i=0;i<3;i++)
 				{
@@ -1008,11 +1003,11 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 				Aris::Dynamic::s_pm_dot_v3(*ODP.nowPm,xBodyInB,ODP.xNowInG);
 				Aris::Dynamic::s_pm_dot_v3(*ODP.nowPm,yBodyInB,ODP.yNowInG);
 
-				ODP.now2startDistanceModified[0]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.xNowInG);
-				ODP.now2startDistanceModified[1]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.yNowInG)+h0;
-				ODP.now2startDistanceModified[2]=0;
+				ODP.now2startDistanceInB[0]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.xNowInG);
+				ODP.now2startDistanceInB[1]=ForceTask::dotMultiply(ODP.now2startDistance,ODP.yNowInG)+h0;
+				ODP.now2startDistanceInB[2]=0;
 
-				Aris::Dynamic::s_inv_pm_dot_v3(*ODP.nowPm,ODP.now2startDistanceModified,ODP.now2startDistanceReal);
+				Aris::Dynamic::s_pm_dot_v3(*ODP.nowPm,ODP.now2startDistanceInB,ODP.now2startDistanceInG);
             }
 
             break;
@@ -1025,7 +1020,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
                 //1.Move back to startPE;
                 for (int i=0;i<6;i++)
                 {
-                    now2StartPE[i]=ODP.nowPE[i]+(ODP.now2startDistanceReal[i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
+                    now2StartPE[i]=ODP.nowPE[i]+(ODP.now2startDistanceInG[i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
                 }
 
                 robot.SetPeb(now2StartPE);
@@ -1043,10 +1038,8 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
                         ODP.walkParam.beta=0;
                         ODP.walkParam.totalCount=2000;
                         ODP.walkParam.d=(d0-fabs(ForceTask::dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
-                        //pRobot->GetPee(ODP.walkParam.beginPee);
-                        //pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
                     }
-                    else//pause
+                    else//pause, tested useless
                     {
                         robot.SetPeb(ODP.startPE);
                     	robot.SetPee(ODP.nowPee);
@@ -1073,10 +1066,8 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
                         ODP.walkParam.alpha=0;
                         ODP.walkParam.beta=0;
                         ODP.walkParam.d=0.5;
-                        //pRobot->GetPee(ODP.walkParam.beginPee);
-                        //pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
                     }
-                    else
+                    else//for pause, teseted useless
                     {
                         robot.GetPee(pushPee);
                         robot.GetPeb(pushBodyPE313);
@@ -1099,7 +1090,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
                     {
 						return 0;
                     }
-                    else
+                    else//for pause, teseted useless
                     {
                         robot.GetPee(pushPee);
                         robot.GetPeb(pushBodyPE313);
@@ -1129,7 +1120,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 
         if(ODP.moveState!=MoveState::Push && ODP.moveState!=MoveState::LocateAjust && ODP.moveState!=MoveState::Follow)
         {
-            if (isConfirm==false && ODP.pauseFlag==false)
+           if (isConfirm==false && ODP.pauseFlag==false)
             {
                 ODP.moveState_last=ODP.moveState;
                 ODP.moveState=MoveState::None;
@@ -1167,18 +1158,27 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 			Aris::Dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
 			Aris::Dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
 			Aris::Dynamic::s_pm2pe(*realPm,realPE,"313");
-			double nowPee[18];
-			robot.GetPee(nowPee);
+
+			robot.GetPee(pEE);
 			robot.SetPeb(realPE);
-			robot.SetPee(nowPee);
+			robot.SetPee(pEE);
         }
         if (param.count%100==0)
         {
-        	rt_printf("moveState:%d,force:%f,%f,%f\n",ODP.moveState,ODP.force[0],ODP.force[1],ODP.force[2]);
+        	rt_printf("moveState:%d,forceRaw:%f,%f,%f,force:%f,%f,%f\n",ODP.moveState,param.force_data->at(0).Fx,param.force_data->at(0).Fy,param.force_data->at(0).Fz,ODP.force[0],ODP.force[1],ODP.force[2]);
         }
 
-        Aris::Dynamic::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
+        //Aris::Dynamic::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
+        bodyVel123[0]=bodyVel[0];
+        bodyVel123[1]=bodyVel[1];
+        bodyVel123[2]=bodyVel[2];
+        bodyVel123[3]=bodyVel[4];
+        bodyVel123[4]=bodyVel[3];
+        bodyVel123[5]=bodyVel[5];
+        Aris::Dynamic::s_vp2vp(*bodyPm,bodyVel123,ODP.toolInR,nullptr,ODP.toolInG,ODP.toolVel);
 
+        robot.GetPee(pEE);
+        memcpy(ODP.pEE_last,pEE,sizeof(double)*18);
         memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
         memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
 
@@ -1208,6 +1208,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
 		robot.SetPeb(realPE);
 		robot.SetPee(nowPee);
 
+		memcpy(ODP.pEE_last,nowPee,sizeof(double)*18);
 		memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
 		memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
 
@@ -1237,13 +1238,17 @@ void ForceTask::StartRecordData()
 			fileGait << param.count << "  ";
 			fileGait << param.moveState << "  ";
 
-			for (int i = 0; i < 6; i++)
+			for (int i = 0; i < 18; i++)
 			{
-				fileGait << param.bodyPE_last[i] << "  ";
+				fileGait << param.pEE_last[i] << "  ";
 			}
 			for (int i = 0; i < 3; i++)
 			{
 				fileGait << param.toolInG[i] << "  ";
+			}
+			for (int i = 0; i < 3; i++)
+			{
+				fileGait << param.toolVel[i] << "  ";
 			}
 			for (int i = 0; i < 3; i++)
 			{
