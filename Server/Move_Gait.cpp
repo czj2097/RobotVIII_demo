@@ -922,7 +922,7 @@ int ForceTask::openDoor(Aris::Dynamic::Model &model, const Aris::Dynamic::PlanPa
     			}
             }
 
-            if(ODP.downwardFlag==false && fabs(ODP.force[2])>ForceRange[0])
+            if(ODP.downwardFlag==false && fabs(ODP.force[2])>20)
             {
             	ODP.downwardFlag = true;
             	ODP.countIter=param.count;
