@@ -21,11 +21,11 @@
 							<builder id="cdt.managedbuild.target.gnu.builder.base.1061165262" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.581533586" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.221307193" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
-								<option id="gnu.cpp.compiler.option.include.paths.438424189" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/usr/Aris/include"/>
+								<option id="gnu.cpp.compiler.option.include.paths.438424189" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/Robots/include"/>
 									<listOptionValue builtIn="false" value="/usr/xenomai/include"/>
 									<listOptionValue builtIn="false" value="/opt/etherlab/include"/>
+									<listOptionValue builtIn="false" value="/usr/aris/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1601169218" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
