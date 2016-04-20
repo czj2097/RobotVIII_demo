@@ -621,16 +621,16 @@
                         </index_1a0b>
                     </PDO>
                     <SDO>
-                        <homeMode index="0x6098" subindex="0" value="-1" type="int8"/>
-                        <homeAcc index="0x609A" subindex="0" value="200000" type="uint32"/>
-                        <homeHighSpeed index="0x6099" subindex="1" value="200000" type="uint32"/>
-                        <homeLowSpeed index="0x6099" subindex="2" value="100000" type="uint32"/>
-                        <RatioOfPosDivVel_Numerator index="0x6096" subindex="1" value="1" type="uint32"/>
-                        <RatioOfPosDivVel_Divisor index="0x6096" subindex="2" value="1" type="uint32"/>
-                        <homeTorqueLimit index="0x2020" subindex="1" value="950" type="int32"/>
-                        <p2pMaxSpeed index="0x607F" subindex="0" value="2560" type="uint32"/>
-                        <p2pSpeed index="0x6081" subindex="0" value="1792" type="uint32"/>
-                        <homeOffset index="0x607C" subindex="0" value="0" type="int32"/>
+                        <homeMode index="0x6098" subindex="0" type="int8" config="-1"/>
+                        <homeAcc index="0x609A" subindex="0" type="uint32" config="200000"/>
+                        <homeHighSpeed index="0x6099" subindex="1" type="uint32" config="200000"/>
+                        <homeLowSpeed index="0x6099" subindex="2" type="uint32" config="100000"/>
+                        <RatioOfPosDivVel_Numerator index="0x6096" subindex="1" type="uint32" config="1"/>
+                        <RatioOfPosDivVel_Divisor index="0x6096" subindex="2" type="uint32" config="1"/>
+                        <homeTorqueLimit index="0x2020" subindex="1" type="int32" config="950"/>
+                        <p2pMaxSpeed index="0x607F" subindex="0" type="uint32" config="2560"/>
+                        <p2pSpeed index="0x6081" subindex="0" type="uint32" config="1792"/>
+                        <homeOffset index="0x607C" subindex="0" type="int32" config="0"/>
                     </SDO>
                 </ElmoSoloWhistle>
                 <AtiForceSensor product_code="0x26483052" vender_id="0x00000732" alias="0">
@@ -651,31 +651,31 @@
                         </index_1601>
                     </PDO>
                     <SDO>
-                    	<ForceUnit index="0x2040" subindex="0x31" type="int32" write="false"/>
+                        <ForceUnit index="0x2040" subindex="0x31" type="int32" write="false"/>
                         <TorqueUnit index="0x2040" subindex="0x32" type="int32" write="false"/>
                     </SDO>
                 </AtiForceSensor>
             </SlaveType>
             <Slave>
-                <Motion1 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 1"/>
-                <Motion2 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="2.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="0"/>
-                <Motion3 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 2"/>
-                <Motion4 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 5"/>
-                <Motion5 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="2.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="3"/>
-                <Motion6 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 4"/>
-                <Motion7 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 7"/>
-                <Motion8 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="2.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="6"/>
-                <Motion9 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 8"/>
-                <Motion10 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="16"/>
-                <Motion11 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="2.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="15"/>
-                <Motion12 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="17"/>
-                <Motion13 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="14"/>
-                <Motion14 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="2.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="12"/>
-                <Motion15 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="13"/>
-                <Motion16 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="10"/>
-                <Motion17 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="2.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="9"/>
-                <Motion18 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="2.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="11"/>
-				<ForceSensor type="AtiForceSensor"/>
+                <Motion1 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 1"/>
+                <Motion2 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="0"/>
+                <Motion3 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 2"/>
+                <Motion4 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 5"/>
+                <Motion5 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="3"/>
+                <Motion6 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 4"/>
+                <Motion7 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 7"/>
+                <Motion8 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="6"/>
+                <Motion9 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 8"/>
+                <Motion10 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="16"/>
+                <Motion11 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="15"/>
+                <Motion12 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="17"/>
+                <Motion13 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="14"/>
+                <Motion14 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="12"/>
+                <Motion15 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="13"/>
+                <Motion16 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="10"/>
+                <Motion17 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="9"/>
+                <Motion18 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="11"/>
+            	<ForceSensor type="AtiForceSensor"/>
             </Slave>
         </EtherCat>
     </Controller>
@@ -684,3 +684,4 @@
         <Vision type="kinect2.0"/>
     </Sensors>
 </RobotVIII>
+

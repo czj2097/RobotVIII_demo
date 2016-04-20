@@ -211,7 +211,7 @@ int ForceTask::continueMove(aris::dynamic::Model &model, const aris::dynamic::Pl
     double M[6]{1,1,1,1,1,1};
     double deltaT{0.001};
     double forceRange[6]{30,30,30,20,20,20};
-    double forceRatio{1000};//1 on RobotIII, 1000 on RobotVIII & single motor
+    double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
 
 	static ForceTask::CM_RecordParam CMRP;
 
@@ -553,7 +553,7 @@ int ForceTask::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPa
 	double M[6]{1,1,1,1,1,1};
 	double deltaT{0.001};
     double ForceRange[2]{10,90};
-    double forceRatio{1000};//1 on RobotIII, 1000 on RobotVIII & single motor
+    double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
 
     //Position Generetion From Force
     double bodyVel[6]{0,0,0,0,0,0};

@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
 
 	if (argc <= 1)
 	{
-		std::cout << "you did not type in robot name, in this case ROBOT-III will start" << std::endl;
-		xml_address = "/usr/Robots/resource/Robot_Type_I/Robot_III/Robot_III.xml";
+		std::cout << "you did not type in robot name, in this case ROBOT-VIII will start" << std::endl;
+		xml_address = "/usr/Robots/resource/Robot_Type_I/Robot_VIII/Robot_VIII.xml";
 	}
 	else if (std::string(argv[1]) == "III")
 	{
