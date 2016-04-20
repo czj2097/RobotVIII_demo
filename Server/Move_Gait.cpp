@@ -1,12 +1,8 @@
 #include "Move_Gait.h"
 #include "rtdk.h"
 
-<<<<<<< HEAD
-PIPE<CM_LAST_PARAM> openDoorPipe(16,true);
-=======
 PIPE<MOVES_PARAM> move2Pipe(11,true);
 PIPE<ForceTask::OPENDOOR_PARAM> openDoorPipe(16,true);
->>>>>>> dev
 
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params)
 {
@@ -782,10 +778,7 @@ int ForceTask::continueMove(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARA
 		}
 
 		pRobot->GetBodyPm(*bodyPm);
-<<<<<<< HEAD
-		pRobot->GetBodyPe(bodyPE);
-=======
->>>>>>> dev
+
 		double pBody[6];
 		Aris::DynKer::s_pe2pm(deltaPE,*deltaPm,"213");
 		Aris::DynKer::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
@@ -1101,17 +1094,10 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
             if (fabs(ODP.force[0])>ForceRange[0] && pCMP->count>200 && ODP.pauseFlag==false)
             {
-<<<<<<< HEAD
-                pCMLP.countIter=pCMP->count;
-                pRobot->GetBodyPe(pCMLP.pointLocation1);
-                memcpy(*pCMLP.location,pCMLP.pointLocation1,sizeof(double)*3);
-                pCMLP.moveState=MoveState::PointLocate1;
-=======
                 ODP.countIter=pCMP->count;
                 pRobot->GetBodyPe(ODP.pointLocation1);
                 memcpy(*ODP.location,ODP.pointLocation1,sizeof(double)*3);
                 ODP.moveState=MoveState::PointLocate1;
->>>>>>> dev
             }
 
     		break;
@@ -1132,17 +1118,10 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		if (fabs(ODP.force[0])>ForceRange[0] && (pCMP->count-ODP.countIter)>5000)
 			{
-<<<<<<< HEAD
-				pCMLP.countIter=pCMP->count;
-				pRobot->GetBodyPe(pCMLP.pointLocation2);
-				memcpy(*pCMLP.location+3,pCMLP.pointLocation2,sizeof(double)*3);
-				pCMLP.moveState=MoveState::PointLocate2;
-=======
 				ODP.countIter=pCMP->count;
 				pRobot->GetBodyPe(ODP.pointLocation2);
 				memcpy(*ODP.location+3,ODP.pointLocation2,sizeof(double)*3);
 				ODP.moveState=MoveState::PointLocate2;
->>>>>>> dev
 			}
 
     		break;
@@ -1160,15 +1139,6 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
 			if (fabs(ODP.force[0])>ForceRange[0] && (pCMP->count-ODP.countIter)>5000)
 			{
-<<<<<<< HEAD
-				pCMLP.countIter=pCMP->count+1;
-				pRobot->GetBodyPe(pCMLP.pointLocation3);
-				memcpy(*pCMLP.location+6,pCMLP.pointLocation3,sizeof(double)*3);
-				pCMLP.moveState=MoveState::LocateAjust;
-
-				//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-				inv3(*pCMLP.location,*invLocation);
-=======
 				ODP.countIter=pCMP->count+1;
 				pRobot->GetBodyPe(ODP.pointLocation3);
 				memcpy(*ODP.location+6,ODP.pointLocation3,sizeof(double)*3);
@@ -1176,7 +1146,6 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
 				//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
 				ForceTask::inv3(*ODP.location,*invLocation);
->>>>>>> dev
 				Aris::DynKer::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 				Aris::DynKer::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 				Aris::DynKer::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
@@ -1199,25 +1168,12 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 					ODP.walkParam.n=1;
 					ODP.walkParam.beta=ODP.planeYPR[0]*0.88*2;
 				}
-<<<<<<< HEAD
-				pCMLP.walkParam.d=0;
-				pCMLP.walkParam.alpha=0;
-				pCMLP.walkParam.totalCount=2000;
 
-				rt_printf("location1:%f,%f,%f\n",pCMLP.pointLocation1[0],pCMLP.pointLocation1[1],pCMLP.pointLocation1[2]);
-				rt_printf("location2:%f,%f,%f\n",pCMLP.pointLocation2[0],pCMLP.pointLocation2[1],pCMLP.pointLocation2[2]);
-				rt_printf("location3:%f,%f,%f\n",pCMLP.pointLocation3[0],pCMLP.pointLocation3[1],pCMLP.pointLocation3[2]);
-				//rt_printf("location:%f,%f,%f\n         %f,%f,%f\n         %f,%f,%f\n",location[0][0],location[0][1],location[0][2],location[1][0],location[1][1],location[1][2],location[2][0],location[2][1],location[2][2]);
-				rt_printf("Vertical:%f,%f,%f\n",planeVertical[0],planeVertical[1],planeVertical[2]);
-				rt_printf("VerticalInB:%f,%f,%f\n",planeVerticalInB[0],planeVerticalInB[1],planeVerticalInB[2]);
-				rt_printf("yaw:%f,%f,%f\n",pCMLP.planeYPR[0],pCMLP.planeYPR[1],pCMLP.planeYPR[2]);
-=======
 				ODP.walkParam.d=0;
 				ODP.walkParam.alpha=0;
 				ODP.walkParam.totalCount=2000;
 
 				rt_printf("yaw:%f,pitch:%f,roll:%f\n",ODP.planeYPR[0],ODP.planeYPR[1],ODP.planeYPR[2]);
->>>>>>> dev
 			}
 
     		break;
@@ -1288,18 +1244,11 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		if (pCMP->count-ODP.countIter>750)
     		{
-<<<<<<< HEAD
-    			pCMLP.countIter=pCMP->count;
-    			pRobot->GetPee(pCMLP.endPeeInB,"B");
-    			if(isPull==false)
-    				pCMLP.moveState=MoveState::Rightward;
-=======
     			ODP.countIter=pCMP->count;
     			pRobot->GetPee(ODP.endPeeInB,"B");
     			pRobot->GetBodyPe(ODP.beginPE);//For calculation of DoorLocation
     			if(isPull==false)
     				ODP.moveState=MoveState::Rightward;
->>>>>>> dev
     			else
     				ODP.moveState=MoveState::Leftward;
     		}
@@ -1481,16 +1430,9 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
 
     		Fbody[2]=1;
 
-<<<<<<< HEAD
-    		if (pCMP->count-pCMLP.countIter>2500)
-    		{
-    			pCMLP.moveState=MoveState::Upward;
-    		}
-=======
     		if (pCMP->count-ODP.countIter>2500)
     			ODP.moveState=MoveState::Upward;
 
->>>>>>> dev
     		break;
 
     	case MoveState::Upward:
@@ -1561,18 +1503,6 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                 {
                     if(isConfirm==true)
                     {
-<<<<<<< HEAD
-                        pCMLP.pushState=PushState::leftWalk;
-                        pCMLP.countIter=pCMP->count+1;
-
-                        pCMLP.walkParam.n=2;
-                        pCMLP.walkParam.alpha=PI/2;//left
-                        pCMLP.walkParam.beta=0;
-                        pCMLP.walkParam.totalCount=2000;
-                        pCMLP.walkParam.d=(d0-fabs(dotMultiply(pCMLP.handle2startDistance,pCMLP.xNowInG)))/3*2;
-                        pRobot->GetPee(pCMLP.walkParam.beginPee);
-                        pRobot->GetBodyPe(pCMLP.walkParam.beginBodyPE);
-=======
                         ODP.pushState=PushState::leftWalk;
                         ODP.countIter=pCMP->count+1;
 
@@ -1583,7 +1513,6 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                         ODP.walkParam.d=(d0-fabs(ForceTask::dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
                         pRobot->GetPee(ODP.walkParam.beginPee);
                         pRobot->GetBodyPe(ODP.walkParam.beginBodyPE);
->>>>>>> dev
                     }
                     else//pause
                     {
@@ -1594,13 +1523,8 @@ int ForceTask::openDoor(Robots::ROBOT_BASE * pRobot, const Robots::GAIT_PARAM_BA
                 break;
 
             case PushState::leftWalk:
-<<<<<<< HEAD
-                //2.Move leftward to align with the door;
-                pCMLP.walkParam.count=pCMP->count-pCMLP.countIter;
-=======
                 //2.Move rightward to align with the door;
                 ODP.walkParam.count=pCMP->count-ODP.countIter;
->>>>>>> dev
 
                 ODP.ret=Robots::walk(pRobot,& ODP.walkParam);
 

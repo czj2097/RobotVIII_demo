@@ -176,70 +176,6 @@ namespace ForceTask
 		int pauseCount{0};
 		bool pauseFlag;
 	};
-
-
-<<<<<<< HEAD
-enum PushState
-{
-    now2Start,
-    leftWalk,
-    forwardWalk,
-};
-
-struct CM_LAST_PARAM
-{
-	MoveState moveState;
-	PushState pushState;
-    std::int32_t count;
-    std::int32_t countIter{0};
-	double bodyPE_last[6];
-	double bodyVel_last[6];
-    int ret{0};
-    Robots::WALK_PARAM walkParam;
-
-	double forceSum[6];
-	double forceAvg[6]{0,0,0,0,0,0};
-	double force[6];
-
-	//MoveState: PointLocation
-	double pointLocation1[6];
-	double pointLocation2[6];
-	double pointLocation3[6];
-	double location[3][3];
-	double planeYPR[3]{0,0,0};
-
-	//now2Start used twice
-	double nowPE[6]; //used in Follow again
-	double nowPee[18];
-	double startPE[6];
-	const int now2StartCount{2000};
-
-	//MoveState: Follow
-	double startPeeInB[18];
-	double endPeeInB[18];
-	const int followCount{2000};
-
-	//MoveState: Downward
-	bool downwardFlag;
-    int downwardCount;
-
-	//PushState
-	double handlePE[6];
-	double nowPm[4][4];
-	double xNowInG[3];
-	double now2startDistance[3];
-	double now2startDistanceModified[6]{0,0,0,0,0,0};
-	double handle2startDistance[3];
-
-    //pause
-    MoveState moveState_last;
-    int pauseCount{0};
-    bool pauseFlag;
-};
-
-extern PIPE<CM_LAST_PARAM> openDoorPipe;
-static std::thread openDoorThread;
-=======
 };
 
 
@@ -247,7 +183,6 @@ extern PIPE<ForceTask::OPENDOOR_PARAM> openDoorPipe;
 static std::thread openDoorThread;
 extern PIPE<MOVES_PARAM> move2Pipe;
 static std::thread move2Thread;
->>>>>>> dev
 
 /*parse function*/
 Aris::Core::MSG parseMove2(const std::string &cmd, const map<std::string, std::string> &params);

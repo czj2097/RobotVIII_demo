@@ -686,11 +686,7 @@
           </AtiForceSensor>
         </SlaveType>
         <Slave>
-<<<<<<< HEAD:resource/RobotVIII_exhibition.xml
-          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>          
-=======
-          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>        
->>>>>>> dev:resource/Robot_VIII.xml
+          <Motion1 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion2 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion3 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion4 type="ElmoSoloWhistle" maxSpeed="8738133"/>
@@ -707,13 +703,8 @@
           <Motion15 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion16 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <Motion17 type="ElmoSoloWhistle" maxSpeed="8738133"/>
-<<<<<<< HEAD:resource/RobotVIII_exhibition.xml
-          <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>  
-          <ForceSensor type="AtiForceSensor"/>                         
-=======
           <Motion18 type="ElmoSoloWhistle" maxSpeed="8738133"/>
           <ForceSensor type="AtiForceSensor"/>                            
->>>>>>> dev:resource/Robot_VIII.xml
         </Slave>
       </EtherCat>
     </Control>
