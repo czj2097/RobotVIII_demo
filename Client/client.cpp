@@ -2,7 +2,7 @@
 
 int sendRequest(int argc, char *argv[], const char *xmlFileName)
 {
-	/*��Ҫȥ���������·������չ��*/
+	// ��Ҫȥ���������·������չ�� //
 	std::string cmdName(argv[0]);
 
 #ifdef WIN32
@@ -23,30 +23,25 @@ int sendRequest(int argc, char *argv[], const char *xmlFileName)
 		cmdName = cmdName.substr(0, cmdName.rfind('.'));
 	}
 
-	/*�����������в���*/
+	// �����������в��� //
 	for (int i = 1; i < argc; ++i)
 	{
 		cmdName = cmdName + " " + argv[i];
 	}
 
-
-
-	/*����msg��������Ҫ��copy������ƣ�Ȼ������copy��������*/
-	Aris::Core::Msg msg;
+	// ����msg��������Ҫ��copy������ƣ�Ȼ������copy�������� //
+	aris::core::Msg msg;
 	msg.copy(cmdName.c_str());
 
+	// ���Ӳ�����msg //
+	aris::core::XmlDocument doc;
 
-
-	/*���Ӳ�����msg*/
-	Aris::Core::XmlDocument doc;
-
-	if (doc.LoadFile(xmlFileName) != 0)
-		throw std::logic_error("failed to read configuration xml file");
+	if (doc.LoadFile(xmlFileName) != 0)	throw std::logic_error("failed to read configuration xml file");
 
 	std::string ip = doc.RootElement()->FirstChildElement("Server")->Attribute("ip");
 	std::string port = doc.RootElement()->FirstChildElement("Server")->Attribute("port");
 
-	Aris::Core::Socket conn;
+	aris::core::Socket conn;
 
 	while (true)
 	{
@@ -58,12 +53,12 @@ int sendRequest(int argc, char *argv[], const char *xmlFileName)
 		catch (std::exception &)
 		{
 			std::cout << "failed to connect server, will retry in 1 second" << std::endl;
-			Aris::Core::msSleep(1000);
+			aris::core::msSleep(1000);
 		}
 
 	}
 
-	Aris::Core::Msg ret = conn.sendRequest(msg);
+	aris::core::Msg ret = conn.sendRequest(msg);
 
 	/*������*/
 	if (ret.size() > 0)
