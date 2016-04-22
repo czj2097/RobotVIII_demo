@@ -15,30 +15,21 @@ using namespace aris::control;
 
 //static const double PI = 3.141592653589793;
 
-struct MoveRotateParam final :public aris::server::GaitParamBase
-{
-	double targetBodyPE213[6]{0};
-	std::int32_t totalCount;
-};
-
 namespace ForceTask
 {
 	void parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+	void forceInit(int count, const double* forceRaw_in, const double* forcePm, double* forceInB_out);
 	int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+	int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
 	double dotMultiply(double *vector_in1, double *vector_in2);
 	double norm(double * vector_in);
-
-	struct ContinueMoveParam final :public aris::server::GaitParamBase
-	{
-		std::int32_t move_direction;
-	};
 
 	enum MoveState
 	{
@@ -66,18 +57,21 @@ namespace ForceTask
 		forwardWalk,
 	};
 
-	struct CM_RecordParam
+	struct ContinueMoveParam final :public aris::server::GaitParamBase
+	{
+		std::int32_t move_direction;
+	};
+
+	struct ForceTaskParamBase
 	{
 		double bodyPE_last[6];
 		double bodyVel_last[6];
 		double pEE_last[18];
 
-		double forceSum[6]{0,0,0,0,0,0};
-		double forceAvg[6]{0,0,0,0,0,0};
-		double force[6];
+		double forceInB[6];
 	};
 
-	struct OpenDoorParam :public CM_RecordParam
+	struct OpenDoorParam :public ForceTaskParamBase
 	{
 		MoveState moveState;
 		PushState pushState;
@@ -139,6 +133,13 @@ namespace ForceTask
 
 extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
 static std::thread openDoorThread;
+
+
+struct MoveRotateParam final :public aris::server::GaitParamBase
+{
+	double targetBodyPE213[6]{0};
+	std::int32_t totalCount;
+};
 
 void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);

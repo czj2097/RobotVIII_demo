@@ -57,11 +57,12 @@ int main(int argc, char *argv[])
 	rs.addCmd("wk", Robots::walkParse, Robots::walkGait);
 	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
 
-	rs.addCmd("mr",parseMoveWithRotate,moveWithRotate);
+	rs.addCmd("mwr",parseMoveWithRotate,moveWithRotate);
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
     rs.addCmd("odb",ForceTask::parseOpenDoorBegin,ForceTask::openDoor);
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
+    rs.addCmd("fwk",Robots::walkParse, ForceTask::forceWalk);
 
 	rs.open();
 

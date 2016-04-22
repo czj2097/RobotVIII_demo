@@ -28,7 +28,7 @@
             <RFpe type="matrix">{ 0.05433 , 0 , -0.3300 + 0.0047, PI/2,  PI* 1/6,   -PI/2-PI*75/180}</RFpe>
             <RMpe type="matrix">{ 0.10241 , 0 ,  0,         PI/2,  PI* 0/6,   -PI/2-PI*75/180}</RMpe>
             <RRpe type="matrix">{ 0.05433 , 0 ,  0.3300 - 0.0047, PI/2,  PI*11/6,   -PI/2-PI*75/180}</RRpe>
-            <ForceSensorMakPe type="matrix">{ 0,0,0,0,0,0 }</ForceSensorMakPe>
+            <ForceSensorMakPe type="matrix">{ 0,0,0,0,-PI / 2,PI / 2 }</ForceSensorMakPe>
             <BodyGamma type="matrix">{140,0,0,0,0,0,0,0,0,0}</BodyGamma>
             <P1aGamma type="matrix">{0,0,0,0,0,0,0,0,0,0}</P1aGamma>
             <P2aGamma type="matrix">{0,0,0,0,0,0,0,0,0,0}</P2aGamma>
@@ -532,8 +532,8 @@
                     <beta abbreviation="b" type="double" default="0"/>
                 </wk_param>
             </wk>
-            <mr>
-				<mr_param type="group">
+            <mwr>
+				<mwr_param type="group">
 					<u abbreviation="u" type="double" default="0"/>
 					<v abbreviation="v" type="double" default="0"/>
 					<w abbreviation="w" type="double" default="0"/>
@@ -541,8 +541,18 @@
 					<pitch abbreviation="p" type="double" default="0"/>
 					<yaw abbreviation="y" type="double" default="0"/>
 					<totalCount abbreviation="t" type="double" default="3000"/>
-				</mr_param>
-			</mr>
+				</mwr_param>
+			</mwr>
+			<fwk default="fwk_param">
+                <fwk_param type="group">
+                    <totalCount abbreviation="t" type="int" default="3000"/>
+                    <n abbreviation="n" type="int" default="1"/>
+                    <distance abbreviation="d" type="double" default="0.5"/>
+                    <height abbreviation="h" type="double" default="0.05"/>
+                    <alpha abbreviation="a" type="double" default="0"/>
+                    <beta abbreviation="b" type="double" default="0"/>
+                </fwk_param>
+            </fwk>
 			<cmb default="cmb_param">
 				<cmb_param type="group">
 					<u abbreviation="u" type="double" default="0"/>
@@ -658,6 +668,7 @@
             </SlaveType>
             <Slave>
                 <Motion1 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 1"/>
+                <ForceSensor type="AtiForceSensor"/>
                 <Motion2 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="0"/>
                 <Motion3 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 2"/>
                 <Motion4 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 5"/>
@@ -675,7 +686,6 @@
                 <Motion16 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="10"/>
                 <Motion17 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="9"/>
                 <Motion18 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="11"/>
-            	<ForceSensor type="AtiForceSensor"/>
             </Slave>
         </EtherCat>
     </Controller>
