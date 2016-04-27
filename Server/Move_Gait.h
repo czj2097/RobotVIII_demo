@@ -25,6 +25,7 @@ namespace ForceTask
 	int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+	void getMaxPe(aris::dynamic::Model &model, ForceTaskParamBase &param_in, const char *activeMotion = "111111111111111111");
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);

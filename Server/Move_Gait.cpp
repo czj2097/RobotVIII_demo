@@ -182,6 +182,26 @@ namespace ForceTask
 		}
 	}
 
+	void getMaxPe(aris::dynamic::Model &model,ForceTaskParamBase &param_in,const char* activeMotion = "111111111111111111")
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		//param not casted? problems may appear
+
+		int dim = 0;
+		for (int i = 0; i < 18; i++)
+		{
+			if (activeMotion[i] != '0')
+			{
+				++dim;
+			}
+		}
+
+		double Jvi[dim][6];
+
+		robot.GetJvi(*Jvi,activeMotion);
+
+	}
+
 	std::atomic_bool isForce;
 	std::atomic_bool isContinue;
 	std::atomic_int moveDir[6];
