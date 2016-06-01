@@ -24,6 +24,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+	fastTg();
 	ForceTask::StartRecordData();
 
 	std::string xml_address;
@@ -77,7 +78,6 @@ int main(int argc, char *argv[])
 		aris::core::stopMsgLoop();
 	});
 	aris::core::runMsgLoop();
-
 
 
 	return 0;

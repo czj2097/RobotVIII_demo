@@ -88,6 +88,98 @@ int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBa
 	return param.totalCount - param.count - 1;
 }
 
+void fastTg()
+{
+	timeval tpstart,tpend;
+	float tused;
+	gettimeofday(&tpstart,NULL);
+
+
+	Robots::RobotTypeI rbt;
+	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+	double fs[18];
+	double dfs[18];
+	double vEE[18];
+	double ddfs[18];
+	double Jvi[3][3];
+	double DifJvi[3][3];
+	double h=0.05;
+	double d=0.15;
+	double initPeb[6]{0,0,0,0,0,0};
+	double initVeb[6]{0,0,0,0,0,0};
+	double initPee[18]{ -0.3, -0.85, -0.65,
+					   -0.45, -0.85, 0,
+					    -0.3, -0.85, 0.65,
+					     0.3, -0.85, -0.65,
+					    0.45, -0.85, 0,
+					     0.3, -0.85, 0.65};
+	double vLmt[2]{-0.9,0.9};
+	double aLmt[2]{-3.2,3.2};
+	double s[2001];
+	double ds[2001];
+
+	double Jviddfs[2001][18];//for min ds^2
+	double dJvidfs[2001][18];//for min ds
+	double Jvidfs[2001][18];//for dds
+
+	double u1iPm[4][4];
+
+	for (int i=0;i<2001;i++)
+	{
+		s[i]=(2.0*i/2000-1)*PI;
+		if (i==0)
+			ds[i]=0;
+		else
+			ds[i]=(s[i]-s[i-1])*1000;
+		for(int j=0;j<6;j++)
+		{
+			fs[3*j]=d/2*cos(s[i])+initPee[3*j]-d/2;
+			fs[3*j+1]=h*sin(s[i])+initPee[3*j+1];
+			fs[3*j+2]=0+initPee[3*j+2];
+
+			dfs[3*j]=-d/2*sin(s[i]);
+			dfs[3*j+1]=h*cos(s[i]);
+			dfs[3*j+2]=0;
+
+			vEE[3*j]=dfs[3*j]*ds[i];
+			vEE[3*j+1]=dfs[3*j+1]*ds[i];
+			vEE[3*j+2]=dfs[3*j+2]*ds[i];
+
+			ddfs[3*j]=-d/2*cos(s[i]);
+			ddfs[3*j+1]=-h*sin(s[i]);
+			ddfs[3*j+2]=0;
+		}
+
+		rbt.SetPeb(initPeb);
+		rbt.SetPee(fs);
+		rbt.SetVb(initVeb);
+		rbt.SetVee(vEE);
+
+		for(int j=0;j<6;j++)
+		{
+			rbt.pLegs[j]->GetJvi(*Jvi);
+			rbt.pLegs[j]->GetDifJvi(*DifJvi);
+
+			rbt.pLegs[j]->u1i().getPm(*u1iPm);
+
+			ForceTask::s_admdm(3,3,1,-1,*Jvi,ddfs+3*j,*Jviddfs+3*j+18*i);
+			ForceTask::s_admdm(3,3,1,-1,*DifJvi,dfs+3*j,*dJvidfs+3*j+18*i);
+			ForceTask::s_admdm(3,3,1,1,*Jvi,dfs+3*j,*Jvidfs+3*j+18*i);
+		}
+
+	}
+
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/alpha_a.txt",*Jviddfs,2001,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/alpha_b.txt",*dJvidfs,2001,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/a.txt",*Jvidfs,2001,18);
+
+
+	gettimeofday(&tpend,NULL);
+	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+	printf("UsedTime:%f\n",tused);
+}
+
 
 namespace ForceTask
 {
@@ -182,23 +274,25 @@ namespace ForceTask
 		}
 	}
 
-	void getMaxPe(aris::dynamic::Model &model,ForceTaskParamBase &param_in,const char* activeMotion = "111111111111111111")
+	//when this function called, make sure that the robot model is at the state set in last ms.
+	void getMaxPin(double* maxPin,aris::dynamic::Model &model,ForceTask::maxVelParam &param_in)
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		//param not casted? problems may appear
 
-		int dim = 0;
-		for (int i = 0; i < 18; i++)
-		{
-			if (activeMotion[i] != '0')
-			{
-				++dim;
-			}
-		}
+		double Jvi[9][6];
+		double difJvi[9][6];
+		double bodyVel_spatial[6];
+		double bodyAcc_spatial[6];
+		double aIn[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		double vIn[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-		double Jvi[dim][6];
+		//if(param_in.legState==false)
 
-		robot.GetJvi(*Jvi,activeMotion);
+		robot.GetJvi(*Jvi,"000111000111000111");
+		robot.GetDifJvi(*difJvi,"000111000111000111");
+		robot.GetVb(bodyVel_spatial);//cannot get
+		robot.GetAb(bodyAcc_spatial);//cannot get
 
 	}
 
@@ -590,6 +684,22 @@ namespace ForceTask
 			sum+=vector_in1[i]*vector_in2[i];
 		}
 		return sum;
+	}
+
+	void s_admdm(int m, int n, int k, double alpha, double *matrix_in1, double *matrix_in2,double *matrix_out)
+	{
+		for(int i=0;i<m;i++)
+		{
+			for (int j=0;j<k;j++)
+			{
+				matrix_out[i+j]=0;
+				for (int h=0;h<n;h++)
+				{
+					matrix_out[i+j]+=matrix_in1[i+h]*matrix_in2[h+j];
+				}
+				matrix_out[i+j]*=alpha;
+			}
+		}
 	}
 
 	double norm(double * vector_in)

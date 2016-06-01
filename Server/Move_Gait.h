@@ -8,8 +8,9 @@
 
 #include <aris.h>
 #include <aris_control_pipe.h>
-#include <Robot_Base.h>
 #include <Robot_Gait.h>
+#include <Robot_Type_I.h>
+#include <sys/time.h>
 
 using namespace aris::control;
 
@@ -25,10 +26,11 @@ namespace ForceTask
 	int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-	void getMaxPe(aris::dynamic::Model &model, ForceTaskParamBase &param_in, const char *activeMotion = "111111111111111111");
+
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
+	void s_admdm(int m, int n, int k, double alpha, double *matrix_in1, double *matrix_in2, double *matrix_out);
 	double dotMultiply(double *vector_in1, double *vector_in2);
 	double norm(double * vector_in);
 
@@ -58,6 +60,13 @@ namespace ForceTask
 		forwardWalk,
 	};
 
+	struct maxVelParam
+	{
+		double bodyVel_last_spatial[6]{0,0,0,0,0,0};
+		bool legState{false};
+	};
+	void getMaxPin(double* maxPin, aris::dynamic::Model &model, ForceTask::maxVelParam &param_in);
+
 	struct ContinueMoveParam final :public aris::server::GaitParamBase
 	{
 		std::int32_t move_direction;
@@ -65,8 +74,8 @@ namespace ForceTask
 
 	struct ForceTaskParamBase
 	{
-		double bodyPE_last[6];
-		double bodyVel_last[6];
+		double bodyPE_last[6];//213 euler angle
+		double bodyVel_last[6];//derivative of 213 euler angle, not spatial velocity
 		double pEE_last[18];
 
 		double forceInB[6];
@@ -144,5 +153,6 @@ struct MoveRotateParam final :public aris::server::GaitParamBase
 
 void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+void fastTg();
 
 #endif // MOVE_GAIT_H
