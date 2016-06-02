@@ -98,14 +98,20 @@ void fastTg()
 	Robots::RobotTypeI rbt;
 	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
-	double fs[18];
-	double dfs[18];
-	double vEE[18];
-	double ddfs[18];
+	double f[18];
+	double df[18];
+	double ddf[18];
+	double s[2001];
+	double ds[2001];
+	double dds[2001];
+	//double vEE[18];
 	double Jvi[3][3];
-	double DifJvi[3][3];
-	double h=0.05;
-	double d=0.15;
+	double dJvi[3][3]{0,0,0,0,0,0,0,0,0};
+	double dJvi_x[3][3];
+	double dJvi_y[3][3];
+	double dJvi_z[3][3];
+	double stepH=0.05;
+	double stepD=0.15;
 	double initPeb[6]{0,0,0,0,0,0};
 	double initVeb[6]{0,0,0,0,0,0};
 	double initPee[18]{ -0.3, -0.85, -0.65,
@@ -116,14 +122,10 @@ void fastTg()
 					     0.3, -0.85, 0.65};
 	double vLmt[2]{-0.9,0.9};
 	double aLmt[2]{-3.2,3.2};
-	double s[2001];
-	double ds[2001];
-
-	double Jviddfs[2001][18];//for min ds^2
-	double dJvidfs[2001][18];//for min ds
-	double Jvidfs[2001][18];//for dds
-
-	double u1iPm[4][4];
+	double paramJ[3]{0,0,0};
+	double paramK[3]{0,0,0};
+	double outputJ[2001][18];
+	double outputK[2001][18];
 
 	for (int i=0;i<2001;i++)
 	{
@@ -132,47 +134,50 @@ void fastTg()
 			ds[i]=0;
 		else
 			ds[i]=(s[i]-s[i-1])*1000;
+
 		for(int j=0;j<6;j++)
 		{
-			fs[3*j]=d/2*cos(s[i])+initPee[3*j]-d/2;
-			fs[3*j+1]=h*sin(s[i])+initPee[3*j+1];
-			fs[3*j+2]=0+initPee[3*j+2];
+			f[3*j]=stepD/2*cos(s[i])+initPee[3*j]-stepD/2;
+			f[3*j+1]=stepH*sin(s[i])+initPee[3*j+1];
+			f[3*j+2]=0+initPee[3*j+2];
 
-			dfs[3*j]=-d/2*sin(s[i]);
-			dfs[3*j+1]=h*cos(s[i]);
-			dfs[3*j+2]=0;
+			df[3*j]=-stepD/2*sin(s[i]);
+			df[3*j+1]=stepH*cos(s[i]);
+			df[3*j+2]=0;
 
-			vEE[3*j]=dfs[3*j]*ds[i];
-			vEE[3*j+1]=dfs[3*j+1]*ds[i];
-			vEE[3*j+2]=dfs[3*j+2]*ds[i];
+			//vEE[3*j]=df[3*j]*ds[i];
+			//vEE[3*j+1]=df[3*j+1]*ds[i];
+			//vEE[3*j+2]=df[3*j+2]*ds[i];
 
-			ddfs[3*j]=-d/2*cos(s[i]);
-			ddfs[3*j+1]=-h*sin(s[i]);
-			ddfs[3*j+2]=0;
+			ddf[3*j]=-stepD/2*cos(s[i]);
+			ddf[3*j+1]=-stepH*sin(s[i]);
+			ddf[3*j+2]=0;
 		}
 
 		rbt.SetPeb(initPeb);
-		rbt.SetPee(fs);
-		rbt.SetVb(initVeb);
-		rbt.SetVee(vEE);
+		rbt.SetPee(f);
+		//rbt.SetVb(initVeb);
+		//rbt.SetVee(vEE);
 
 		for(int j=0;j<6;j++)
 		{
 			rbt.pLegs[j]->GetJvi(*Jvi);
-			rbt.pLegs[j]->GetDifJvi(*DifJvi);
+			rbt.pLegs[j]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"G");
 
-			rbt.pLegs[j]->u1i().getPm(*u1iPm);
+			aris::dynamic::s_daxpy(9,ds[3*j],*dJvi_x,1,*dJvi,1);
+			aris::dynamic::s_daxpy(9,ds[3*j+1],*dJvi_y,1,*dJvi,1);
+			aris::dynamic::s_daxpy(9,ds[3*j+2],*dJvi_z,1,*dJvi,1);
 
-			ForceTask::s_admdm(3,3,1,-1,*Jvi,ddfs+3*j,*Jviddfs+3*j+18*i);
-			ForceTask::s_admdm(3,3,1,-1,*DifJvi,dfs+3*j,*dJvidfs+3*j+18*i);
-			ForceTask::s_admdm(3,3,1,1,*Jvi,dfs+3*j,*Jvidfs+3*j+18*i);
+			aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,ddf+3*j,1,0,paramJ,1);
+			aris::dynamic::s_dgemm(3,1,3,1,*dJvi,3,df+3*j,1,0,paramJ,1);
+			aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,df+3*j,1,0,paramK,1);
+			memcpy(*outputJ+3*j+18*i,paramJ,3*sizeof(double));
+			memcpy(*outputK+3*j+18*i,paramK,3*sizeof(double));
 		}
-
 	}
 
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/alpha_a.txt",*Jviddfs,2001,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/alpha_b.txt",*dJvidfs,2001,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/a.txt",*Jvidfs,2001,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/paramJ.txt",*outputJ,2001,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/paramK.txt",*outputK,2001,18);
 
 
 	gettimeofday(&tpend,NULL);
