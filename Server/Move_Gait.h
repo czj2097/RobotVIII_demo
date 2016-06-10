@@ -8,7 +8,7 @@
 
 #include <aris.h>
 #include <aris_control_pipe.h>
-#include <Robot_Base.h>
+#include <Robot_Type_I.h>
 #include <Robot_Gait.h>
 
 using namespace aris::control;
@@ -20,6 +20,13 @@ struct MoveRotateParam final :public aris::server::GaitParamBase
 	double targetBodyPE213[6]{0};
 	std::int32_t totalCount;
 };
+void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+struct SpecialParam final :public aris::server::GaitParamBase {};
+void specialParse(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+int specialHome(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+int specialRecover(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 namespace ForceTask
 {
@@ -139,8 +146,5 @@ namespace ForceTask
 
 extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
 static std::thread openDoorThread;
-
-void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 #endif // MOVE_GAIT_H

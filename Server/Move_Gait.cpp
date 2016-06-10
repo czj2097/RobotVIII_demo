@@ -88,6 +88,74 @@ int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBa
 	return param.totalCount - param.count - 1;
 }
 
+static double homePos;
+void specialParse(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+{
+	SpecialParam param;
+
+	msg.copyStruct(param);
+
+	std::cout<<"finished parse"<<std::endl;
+}
+
+int specialHome(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+	auto &robot = static_cast<Robots::RobotBase &>(model);
+	auto &param = static_cast<const SpecialParam &>(param_in);
+
+	auto fdback_pos=param.motion_raw_data->at(18).feedback_pos;
+	auto fdback_dgi=param.motion_raw_data->at(18).feedback_dgi;
+
+	static int initPos;
+
+	double motPos;
+	int homeVel=20;//count
+	if(param.count==0)
+	{
+		initPos=fdback_pos;
+	}
+	motPos=(double)(initPos+homeVel*param.count)/9216000;//m
+
+	robot.motionPool().at(18).setMotPos(motPos);
+
+
+	if((fdback_dgi & 0x00300000) == 0)
+	{
+		homePos=robot.motionPool().at(18).motPos();//m
+		rt_printf("homePos:%f\n",homePos);
+		return 0;
+	}
+
+	if(param_in.count % 50 == 0)
+	{
+		rt_printf("condition:%x\t",fdback_dgi & 0x00300000);
+		rt_printf("motPos:%d\t",motPos);
+		rt_printf("feedback_dgi:%x\t",fdback_dgi);
+		rt_printf("feedback_pos:%d\n",fdback_pos);
+	}
+
+	return 1;
+
+}
+
+int specialRecover(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+	auto &robot = static_cast<Robots::RobotBase &>(model);
+	auto &param = static_cast<const SpecialParam &>(param_in);
+
+	double angle=90;//degree
+	double totalCount=5000;//fastest:4000
+	double motPos;
+
+	double deltaPos=-angle*3.7*2000/9216000;//m
+
+	motPos=homePos+(cos(((double)param.count/totalCount-1)*PI)+1)*deltaPos/2;
+
+	robot.motionPool().at(18).setMotPos(motPos);
+
+	return totalCount - param.count - 1;
+}
+
 
 
 std::atomic_bool isForce;
@@ -329,7 +397,6 @@ int ForceTask::continueMove(aris::dynamic::Model &model, const aris::dynamic::Pl
 		aris::dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
 		aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
 		aris::dynamic::s_pm2pe(*realPm,realPE,"313");
-
 
 		robot.SetPeb(realPE);
 		robot.SetPee(nowPee);

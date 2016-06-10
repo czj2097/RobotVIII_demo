@@ -63,6 +63,9 @@ int main(int argc, char *argv[])
     rs.addCmd("odb",ForceTask::parseOpenDoorBegin,ForceTask::openDoor);
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
 
+    rs.addCmd("shm",specialParse,specialHome);
+    rs.addCmd("src",specialParse,specialRecover);
+
 	rs.open();
 
 	rs.setOnExit([&]()
