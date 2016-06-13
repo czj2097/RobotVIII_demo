@@ -109,7 +109,7 @@ int specialHome(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase 
 	static int initPos;
 
 	double motPos;
-	int homeVel=20;//count
+	int homeVel=-20;//count
 	if(param.count==0)
 	{
 		initPos=fdback_pos;
@@ -119,7 +119,7 @@ int specialHome(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase 
 	robot.motionPool().at(18).setMotPos(motPos);
 
 
-	if((fdback_dgi & 0x00300000) == 0)
+	if((fdback_dgi & 0x00300000) == 0x00200000)
 	{
 		homePos=robot.motionPool().at(18).motPos();//m
 		rt_printf("homePos:%f\n",homePos);
@@ -138,23 +138,50 @@ int specialHome(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase 
 
 }
 
+void specialRecoverParse(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+{
+	SpecialRecoverParam param;
+
+	for(auto &i:params)
+    {
+        if(i.first=="angle")
+        {
+            param.angle=stod(i.second);
+        }
+        else
+        {
+            std::cout<<"parse failed"<<std::endl;
+        }
+    }
+
+	msg.copyStruct(param);
+
+	std::cout<<"finished parse"<<std::endl;
+}
+
 int specialRecover(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 {
 	auto &robot = static_cast<Robots::RobotBase &>(model);
-	auto &param = static_cast<const SpecialParam &>(param_in);
+	auto &param = static_cast<const SpecialRecoverParam &>(param_in);
 
-	double angle=90;//degree
 	double totalCount=5000;//fastest:4000
 	double motPos;
 
-	double deltaPos=-angle*3.7*2000/9216000;//m
+	static double startPos;
+	if(param.count==0)
+	{
+		startPos=robot.motionPool().at(18).motPos();//m
+	}
 
-	motPos=homePos+(cos(((double)param.count/totalCount-1)*PI)+1)*deltaPos/2;
+	double deltaPos=param.angle*3.7*2000/9216000;//m
+
+	motPos=startPos+(cos(((double)param.count/totalCount-1)*PI)+1)*deltaPos/2;
 
 	robot.motionPool().at(18).setMotPos(motPos);
 
 	return totalCount - param.count - 1;
 }
+
 
 
 
@@ -164,6 +191,366 @@ std::atomic_int moveDir[6];
 std::atomic_bool isPull;
 std::atomic_bool isConfirm;
 //std::atomic_int moveDir;//
+int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+	auto &robot = static_cast<Robots::RobotBase &>(model);
+	auto &param = static_cast<const SpecialParam &>(param_in);
+
+	static bool isStop;
+	double circleR=10;//mm
+	double velRatio=5;
+
+	//for data record
+	double pEE[18];
+
+	//MoveState: PointLocation
+	static double beginBodyPE[6];
+	static double beginBodyPm[4][4];
+	double invBeginBodyPm[4][4];
+	double invLocation[3][3];
+	double planeConst[3]{1,1,1};
+	double planeVertical[3]{0,0,0};
+	double planeVerticalInB[3]{0,0,0};
+
+	double touchPE[6];
+
+	//PushState
+	double now2StartPE[6];
+
+	//Force Control
+	double Fbody[6]{0,0,0,0,0,0};
+	double C[6]{50,50,50,50,50,50};
+	double M[6]{1,1,1,1,1,1};
+	double deltaT{0.001};
+	double ForceRange[2]{10,90};
+	double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
+
+	//Position Generetion From Force
+	double bodyVel[6]{0,0,0,0,0,0};
+	double bodyAcc[6];
+	double bodyPE[6];//delta PE every ms
+	double bodyPm[4][4];//bodyPm to Ground every ms
+	double deltaPE[6];
+	double deltaPm[4][4];
+	double realPm[4][4];
+	double realPE[6];
+
+	static ForceTask::OpenDoorParam ODP;
+	ODP.count=param.count;
+	ODP.downwardCount=(int)(PI*20*1000*velRatio+1);
+
+	if(param.count==0)
+	{
+		robot.GetPeb(beginBodyPE);
+		robot.GetPmb(*beginBodyPm);
+	}
+
+	if (param.count<100)
+	{
+		if (param.count==0)
+		{
+			//initialize
+			for(int i=0;i<6;i++)
+			{
+				ODP.forceSum[i]=0;
+				ODP.bodyVel_last[i]=0;
+			}
+			aris::dynamic::s_pe2pe("313",beginBodyPE,"213",ODP.bodyPE_last);
+			ODP.pauseFlag=false;
+			ODP.moveState_last=MoveState::None;
+			isStop=false;
+
+			//start param of now2start in LocateAjust
+			robot.GetPeb(ODP.startPE);
+		}
+
+		ODP.moveState=MoveState::None;
+
+		ODP.forceSum[0]+=param.force_data->at(0).Fx;
+		ODP.forceSum[1]+=param.force_data->at(0).Fy;
+		ODP.forceSum[2]+=param.force_data->at(0).Fz;
+		ODP.forceSum[3]+=param.force_data->at(0).Mx;
+		ODP.forceSum[4]+=param.force_data->at(0).My;
+		ODP.forceSum[5]+=param.force_data->at(0).Mz;
+
+	}
+	else if(param.count==100)
+	{
+		for(int i=0;i<6;i++)
+		{
+			ODP.forceAvg[i]=ODP.forceSum[i]/100;
+		}
+	}
+	else
+	{
+		ODP.force[0]=(param.force_data->at(0).Fx-ODP.forceAvg[0])/forceRatio;
+		ODP.force[1]=(param.force_data->at(0).Fy-ODP.forceAvg[1])/forceRatio;
+		ODP.force[2]=(param.force_data->at(0).Fz-ODP.forceAvg[2])/forceRatio;
+		ODP.force[3]=(param.force_data->at(0).Mx-ODP.forceAvg[3])/forceRatio;
+		ODP.force[4]=(param.force_data->at(0).My-ODP.forceAvg[4])/forceRatio;
+		ODP.force[5]=(param.force_data->at(0).Mz-ODP.forceAvg[5])/forceRatio;
+	}
+
+	switch(ODP.moveState)
+	{
+	case MoveState::None:
+		if(param.count>200)
+		{
+			Fbody[2]=-1;
+		}
+
+		if (fabs(ODP.force[0])>ForceRange[0] && param.count>200 && ODP.pauseFlag==false)
+		{
+			ODP.countIter=param.count;
+			robot.GetPeb(ODP.pointLocation1);
+			memcpy(*ODP.location,ODP.pointLocation1,sizeof(double)*3);
+			ODP.moveState=MoveState::PointLocate1;
+		}
+
+		break;
+
+	case MoveState::PointLocate1:
+		if (param.count-ODP.countIter<5000)
+		{
+			Fbody[2]=1;
+			if(isPull==true)
+				Fbody[0]=1;
+			else
+				Fbody[0]=-1;
+		}
+		else
+		{
+			Fbody[2]=-1;
+		}
+
+		if (fabs(ODP.force[0])>ForceRange[0] && (param.count-ODP.countIter)>5000)
+		{
+			ODP.countIter=param.count;
+			robot.GetPeb(ODP.pointLocation2);
+			memcpy(*ODP.location+3,ODP.pointLocation2,sizeof(double)*3);
+			ODP.moveState=MoveState::PointLocate2;
+		}
+
+		break;
+
+	case MoveState::PointLocate2:
+		if (param.count-ODP.countIter<5000)
+		{
+			Fbody[2]=1;
+			Fbody[1]=1;
+		}
+		else
+		{
+			Fbody[2]=-1;
+		}
+
+		if (fabs(ODP.force[0])>ForceRange[0] && (param.count-ODP.countIter)>5000)
+		{
+			ODP.countIter=param.count+1;
+			robot.GetPeb(ODP.pointLocation3);
+			memcpy(*ODP.location+6,ODP.pointLocation3,sizeof(double)*3);
+			ODP.moveState=MoveState::LocateAjust;
+
+			//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
+			ForceTask::inv3(*ODP.location,*invLocation);
+			aris::dynamic::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
+			aris::dynamic::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
+			aris::dynamic::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
+			ODP.planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
+			ODP.planeYPR[1]=-asin(planeVerticalInB[1]/ForceTask::norm(planeVerticalInB));
+			ODP.planeYPR[2]=0;
+
+			//Set now param of now2start in LocateAjust
+			robot.GetPeb(ODP.nowPE);
+			robot.GetPee(ODP.nowPee);
+
+			//Set rotate param
+			if(fabs(ODP.planeYPR[0])>PI/9)
+			{
+				ODP.walkParam.n=2;
+				ODP.walkParam.beta=ODP.planeYPR[0]*0.88/3*2;
+			}
+			else
+			{
+				ODP.walkParam.n=1;
+				ODP.walkParam.beta=ODP.planeYPR[0]*0.88*2;
+			}
+
+			ODP.walkParam.d=0;
+			ODP.walkParam.alpha=0;
+			ODP.walkParam.totalCount=2000;
+
+			rt_printf("yaw:%f,pitch:%f,roll:%f\n",ODP.planeYPR[0],ODP.planeYPR[1],ODP.planeYPR[2]);
+		}
+
+		break;
+
+	case MoveState::LocateAjust:
+		//1.now2start
+		if(param.count-ODP.countIter<ODP.now2StartCount)
+		{
+			for (int i=0;i<6;i++)
+			{
+				now2StartPE[i]=ODP.nowPE[i]+(ODP.startPE[i]-ODP.nowPE[i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
+			}
+
+			robot.SetPeb(now2StartPE);
+			robot.SetPee(ODP.nowPee);
+		}
+		//2.rotate
+		else
+		{
+			ODP.walkParam.count=param.count-ODP.countIter-ODP.now2StartCount;
+			ODP.ret=Robots::walkGait(robot,ODP.walkParam);
+
+			if(ODP.ret==0)
+			{
+				ODP.countIter=param.count;
+				ODP.moveState=MoveState::Forward;
+			}
+		}
+
+		robot.GetPmb(*bodyPm);
+		robot.GetPeb(bodyPE,"213");
+		for(int i=0;i<6;i++)
+		{
+			bodyVel[i]=bodyPE[i]-ODP.bodyPE_last[i];
+		}
+
+		break;
+
+	case MoveState::Forward:
+		Fbody[2]=-1;
+
+		if(param.count==ODP.countIter+1)
+		{
+			robot.GetPeb(ODP.startPE);//Used in PrePush for now2Start
+		}
+
+		if(fabs(ODP.force[0])>ForceRange[0])
+		{
+			ODP.countIter=param.count;
+			ODP.moveState=MoveState::Backward;
+			robot.GetPeb(touchPE);//For calculation of DoorLocation
+
+			for (int i=0;i<3;i++)
+			{
+				ODP.vector0[i]=touchPE[i]-ODP.startPE[i];
+			}
+		}
+
+		break;
+
+	case MoveState::Backward:
+		Fbody[2]=1;
+
+		if (param.count-ODP.countIter>750)
+		{
+			ODP.recoverParam.count=param.count-ODP.countIter-751;
+			ODP.recoverParam.angle=90;
+			Fbody[2]=0;
+
+			if(specialRecover(robot,ODP.recoverParam)==0)
+			{
+				ODP.countIter=param.count;
+				robot.GetPee(ODP.endPeeInB,robot.body());
+				robot.GetPeb(ODP.beginPE);//For calculation of DoorLocation
+
+				ODP.moveState=MoveState::Pushhandle;
+			}
+		}
+
+		break;
+
+	case MoveState::Pushhandle://forward fast to get close
+
+		Fbody[2]=-1;
+
+		if (param.count-ODP.countIter>900)
+		{
+			ODP.countIter=param.count;
+			ODP.moveState=MoveState::PrePush;
+		}
+		break;
+
+	case MoveState::PrePush://forward slowly to manufacture
+
+		Fbody[2]=-1;
+		C[2]=50*20*velRatio;
+		M[2]=2*velRatio;
+
+		if(ODP.count-ODP.countIter>(4000*velRatio))
+		{
+			ODP.countIter=param.count;
+			ODP.moveState=MoveState::Push;
+		}
+
+		break;
+
+	case MoveState::Push:
+
+		if(ODP.count-ODP.countIter<ODP.downwardCount)//moving along a circle
+		{
+			Fbody[0]=sin((double)(param.count-ODP.countIter)/(1000*velRatio*circleR));
+			Fbody[1]=cos((double)(param.count-ODP.countIter)/(1000*velRatio*circleR));
+			C[0]=50*20*velRatio;
+			C[1]=50*20*velRatio;
+			M[0]=2*velRatio;
+			M[1]=2*velRatio;
+		}
+
+		else if(ODP.count-ODP.countIter<(ODP.downwardCount+750))
+		{
+			Fbody[2]=1;
+			C[2]=50;
+		}
+
+		else
+		{
+			isStop=true;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	if(ODP.moveState!=MoveState::LocateAjust)
+	{
+		for (int i=0;i<6;i++)
+		{
+			bodyAcc[i]=(Fbody[i]-C[i]*ODP.bodyVel_last[i])/M[i];
+			bodyVel[i]=ODP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+			deltaPE[i]=bodyVel[i]*deltaT;
+		}
+
+		robot.GetPmb(*bodyPm);
+		robot.GetPeb(bodyPE);
+		double pBody[6];
+		aris::dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
+		aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
+		aris::dynamic::s_pm2pe(*realPm,realPE,"313");
+
+		robot.GetPee(pEE);
+		robot.SetPeb(realPE);
+		robot.SetPee(pEE);
+	}
+	if (param.count%100==0)
+	{
+		rt_printf("moveState:%d,forceRaw:%f,%f,%f,force:%f,%f,%f\n",ODP.moveState,param.force_data->at(0).Fx,param.force_data->at(0).Fy,param.force_data->at(0).Fz,ODP.force[0],ODP.force[1],ODP.force[2]);
+	}
+
+	robot.GetPee(pEE);
+	memcpy(ODP.pEE_last,pEE,sizeof(double)*18);
+	memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
+	memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
+
+	if ( isStop==true && fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10 && fabs(bodyVel[3])<1e-10 && fabs(bodyVel[4])<1e-10 && fabs(bodyVel[5])<1e-10)
+		return 0;
+	else
+		return 1;
+}
+
 
 void ForceTask::parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
 {

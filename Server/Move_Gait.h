@@ -24,8 +24,13 @@ void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::str
 int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 struct SpecialParam final :public aris::server::GaitParamBase {};
+struct SpecialRecoverParam final :public aris::server::GaitParamBase
+{
+	double angle;
+};
 void specialParse(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int specialHome(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+void specialRecoverParse(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int specialRecover(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 namespace ForceTask
@@ -34,8 +39,11 @@ namespace ForceTask
 	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+
 	int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+	int forceManuf(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
@@ -141,6 +149,9 @@ namespace ForceTask
 		MoveState moveState_last;
 		int pauseCount{0};
 		bool pauseFlag;
+
+		//for forceManuf
+		SpecialRecoverParam recoverParam;
 	};
 };
 
