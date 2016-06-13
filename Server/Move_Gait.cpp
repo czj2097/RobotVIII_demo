@@ -197,8 +197,9 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 	auto &param = static_cast<const SpecialParam &>(param_in);
 
 	static bool isStop;
+	static int holeIter;
 	double circleR=10;//mm
-	double velRatio=5;
+	double velRatio=1;
 
 	//for data record
 	double pEE[18];
@@ -258,7 +259,9 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 			aris::dynamic::s_pe2pe("313",beginBodyPE,"213",ODP.bodyPE_last);
 			ODP.pauseFlag=false;
 			ODP.moveState_last=MoveState::None;
+
 			isStop=false;
+			holeIter=0;
 
 			//start param of now2start in LocateAjust
 			robot.GetPeb(ODP.startPE);
@@ -479,7 +482,7 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 		C[2]=50*20*velRatio;
 		M[2]=2*velRatio;
 
-		if(ODP.count-ODP.countIter>(4000*velRatio))
+		if(ODP.count-ODP.countIter>(10000*velRatio))
 		{
 			ODP.countIter=param.count;
 			ODP.moveState=MoveState::Push;
@@ -489,25 +492,37 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 
 	case MoveState::Push:
 
-		if(ODP.count-ODP.countIter<ODP.downwardCount)//moving along a circle
-		{
-			Fbody[0]=sin((double)(param.count-ODP.countIter)/(1000*velRatio*circleR));
-			Fbody[1]=cos((double)(param.count-ODP.countIter)/(1000*velRatio*circleR));
-			C[0]=50*20*velRatio;
-			C[1]=50*20*velRatio;
-			M[0]=2*velRatio;
-			M[1]=2*velRatio;
-		}
-
-		else if(ODP.count-ODP.countIter<(ODP.downwardCount+750))
+		if(ODP.count-ODP.countIter<500)
 		{
 			Fbody[2]=1;
-			C[2]=50;
 		}
-
+		else if(ODP.count-ODP.countIter<2000)
+		{
+			if(holeIter==0)
+			{
+				Fbody[0]=1;//right
+			}
+			else if(holeIter==1)
+			{
+				Fbody[1]=-1;//down
+			}
+			else if(holeIter==2)
+			{
+				Fbody[0]=-1;//left
+			}
+			else if(holeIter==3)
+			{
+				isStop=true;
+			}
+		}
 		else
 		{
-			isStop=true;
+			if(holeIter==0 || holeIter==1 || holeIter==2)
+			{
+				ODP.moveState=MoveState::PrePush;
+				holeIter++;
+				ODP.countIter=param.count;
+			}
 		}
 		break;
 
