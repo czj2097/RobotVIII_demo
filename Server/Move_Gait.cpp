@@ -469,7 +469,7 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 
 		Fbody[2]=-1;
 
-		if (param.count-ODP.countIter>900)
+		if (param.count-ODP.countIter>6300)//50 count per mm
 		{
 			ODP.countIter=param.count;
 			ODP.moveState=MoveState::PrePush;
