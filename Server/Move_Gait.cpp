@@ -482,7 +482,7 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 		C[2]=50*20*velRatio;
 		M[2]=2*velRatio;
 
-		if(ODP.count-ODP.countIter>(10000*velRatio))
+		if(ODP.count-ODP.countIter>(15000*velRatio))
 		{
 			ODP.countIter=param.count;
 			ODP.moveState=MoveState::Push;
@@ -492,11 +492,11 @@ int ForceTask::forceManuf(aris::dynamic::Model &model, const aris::dynamic::Plan
 
 	case MoveState::Push:
 
-		if(ODP.count-ODP.countIter<500)
+		if(ODP.count-ODP.countIter<750)
 		{
 			Fbody[2]=1;
 		}
-		else if(ODP.count-ODP.countIter<2000)
+		else if(ODP.count-ODP.countIter<2250)
 		{
 			if(holeIter==0)
 			{
