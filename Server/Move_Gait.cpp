@@ -98,15 +98,20 @@ void fastTg()
 	Robots::RobotTypeI rbt;
 	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
-	double f[18];
-	double df[18];
-	double ddf[18];
-	double s[2001];
-	double ds[2001];
-	double dds[2001];
-	//double vEE[18];
+	double f_s[18];
+	double df_s[18];
+	double ddf_s[18];
+	double s_t[2001];
+	double ds_t[2001];
+	double dds_t[2001];
+
 	double Jvi[3][3];
-	double dJvi[3][3]{0,0,0,0,0,0,0,0,0};
+	double dJvi_t[3][3]{0,0,0,0,0,0,0,0,0};
+	double dJvi_t_in[3][3]{0,0,0,0,0,0,0,0,0};
+	double outputJvi[2001][9];
+	double outputdJvi_t[2001][9];
+	double outputdJvi_t_in[2001][9];
+
 	double dJvi_x[3][3];
 	double dJvi_y[3][3];
 	double dJvi_z[3][3];
@@ -114,70 +119,83 @@ void fastTg()
 	double stepD=0.15;
 	double initPeb[6]{0,0,0,0,0,0};
 	double initVeb[6]{0,0,0,0,0,0};
+	double initAeb[6]{0,0,0,0,0,0};
 	double initPee[18]{ -0.3, -0.85, -0.65,
 					   -0.45, -0.85, 0,
 					    -0.3, -0.85, 0.65,
 					     0.3, -0.85, -0.65,
 					    0.45, -0.85, 0,
-					     0.3, -0.85, 0.65};
+					     0.3, -0.85, 0.65 };
+	double vEE[18];
+	double aEE[18];
+	double vEE_L[3];
 	double vLmt[2]{-0.9,0.9};
 	double aLmt[2]{-3.2,3.2};
-	double paramJ[3]{0,0,0};
-	double paramK[3]{0,0,0};
-	double outputJ[2001][18];
-	double outputK[2001][18];
 
-	for (int i=0;i<2001;i++)
+
+	for (int i=0;i<2001;i++)//i is the time(ms)
 	{
-		s[i]=(2.0*i/2000-1)*PI;
-		if (i==0)
-			ds[i]=0;
-		else
-			ds[i]=(s[i]-s[i-1])*1000;
+		s_t[i]=PI*sin(PI*i/4000)-PI;//[-PI,0]rad
+		ds_t[i]=PI*PI/4*cos(PI*i/4000);//rad/s
+		dds_t[i]=-PI*PI*PI/16*sin(PI*i/4000);//rad/s^2
 
 		for(int j=0;j<6;j++)
 		{
-			f[3*j]=stepD/2*cos(s[i])+initPee[3*j]-stepD/2;
-			f[3*j+1]=stepH*sin(s[i])+initPee[3*j+1];
-			f[3*j+2]=0+initPee[3*j+2];
+			f_s[3*j]=stepD/2*cos(s_t[i])+stepD/2+initPee[3*j];
+			f_s[3*j+1]=-stepH*sin(s_t[i])+initPee[3*j+1];
+			f_s[3*j+2]=0+initPee[3*j+2];
 
-			df[3*j]=-stepD/2*sin(s[i]);
-			df[3*j+1]=stepH*cos(s[i]);
-			df[3*j+2]=0;
+			df_s[3*j]=-stepD/2*sin(s_t[i]);
+			df_s[3*j+1]=-stepH*cos(s_t[i]);
+			df_s[3*j+2]=0;
 
-			//vEE[3*j]=df[3*j]*ds[i];
-			//vEE[3*j+1]=df[3*j+1]*ds[i];
-			//vEE[3*j+2]=df[3*j+2]*ds[i];
+			vEE[3*j]=df_s[3*j]*ds_t[i];
+			vEE[3*j+1]=df_s[3*j+1]*ds_t[i];
+			vEE[3*j+2]=df_s[3*j+2]*ds_t[i];
 
-			ddf[3*j]=-stepD/2*cos(s[i]);
-			ddf[3*j+1]=-stepH*sin(s[i]);
-			ddf[3*j+2]=0;
+			ddf_s[3*j]=-stepD/2*cos(s_t[i]);
+			ddf_s[3*j+1]=stepH*sin(s_t[i]);
+			ddf_s[3*j+2]=0;
+
+			aEE[3*j]=ddf_s[3*j]*ds_t[i]+df_s[3*j]*dds_t[i];
+			aEE[3*j+1]=ddf_s[3*j+1]*ds_t[i]+df_s[3*j+1]*dds_t[i];
+			aEE[3*j+2]=ddf_s[3*j+2]*ds_t[i]+df_s[3*j+2]*dds_t[i];
 		}
 
 		rbt.SetPeb(initPeb);
-		rbt.SetPee(f);
-		//rbt.SetVb(initVeb);
-		//rbt.SetVee(vEE);
+		rbt.SetPee(f_s);
+		rbt.SetVb(initVeb);
+		rbt.SetVee(vEE);
+		rbt.SetAb(initAeb);
+		rbt.SetAee(aEE);
 
 		for(int j=0;j<6;j++)
 		{
-			rbt.pLegs[j]->GetJvi(*Jvi);
-			rbt.pLegs[j]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"G");
+			rbt.pLegs[0]->GetJvi(*Jvi,rbt.pLegs[0]->base());
+			rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"L");
+			rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.pLegs[0]->base());
 
-			aris::dynamic::s_daxpy(9,ds[3*j],*dJvi_x,1,*dJvi,1);
-			aris::dynamic::s_daxpy(9,ds[3*j+1],*dJvi_y,1,*dJvi,1);
-			aris::dynamic::s_daxpy(9,ds[3*j+2],*dJvi_z,1,*dJvi,1);
+			rbt.pLegs[0]->GetVee(vEE_L,rbt.pLegs[0]->base());
 
-			aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,ddf+3*j,1,0,paramJ,1);
-			aris::dynamic::s_dgemm(3,1,3,1,*dJvi,3,df+3*j,1,0,paramJ,1);
-			aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,df+3*j,1,0,paramK,1);
-			memcpy(*outputJ+3*j+18*i,paramJ,3*sizeof(double));
-			memcpy(*outputK+3*j+18*i,paramK,3*sizeof(double));
+			std::fill_n(*dJvi_t_in,9,0);
+
+			aris::dynamic::s_daxpy(9,vEE_L[0],*dJvi_x,1,*dJvi_t_in,1);//for t
+			aris::dynamic::s_daxpy(9,vEE_L[1],*dJvi_y,1,*dJvi_t_in,1);//for t
+			aris::dynamic::s_daxpy(9,vEE_L[2],*dJvi_z,1,*dJvi_t_in,1);//for t
+
+			if(j==0)//to check is dJvi right by diff Jvi in matlab
+			{
+				memcpy(*outputJvi+9*i,*Jvi,9*sizeof(double));
+				memcpy(*outputdJvi_t+9*i,*dJvi_t,9*sizeof(double));
+				memcpy(*outputdJvi_t_in+9*i,*dJvi_t_in,9*sizeof(double));
+			}
 		}
 	}
 
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/paramJ.txt",*outputJ,2001,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/paramK.txt",*outputK,2001,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Jvi.txt",*outputJvi,2001,9);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t.txt",*outputdJvi_t,2001,9);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
+
 
 
 	gettimeofday(&tpend,NULL);
@@ -689,22 +707,6 @@ namespace ForceTask
 			sum+=vector_in1[i]*vector_in2[i];
 		}
 		return sum;
-	}
-
-	void s_admdm(int m, int n, int k, double alpha, double *matrix_in1, double *matrix_in2,double *matrix_out)
-	{
-		for(int i=0;i<m;i++)
-		{
-			for (int j=0;j<k;j++)
-			{
-				matrix_out[i+j]=0;
-				for (int h=0;h<n;h++)
-				{
-					matrix_out[i+j]+=matrix_in1[i+h]*matrix_in2[h+j];
-				}
-				matrix_out[i+j]*=alpha;
-			}
-		}
 	}
 
 	double norm(double * vector_in)
@@ -1404,7 +1406,8 @@ namespace ForceTask
 				openDoorPipe.recvInNrt(param);
 
 				//fileGait << ++count << " ";
-				fileGait << param.count << "  ";
+				fileGait << param.walkParam.count << "  ";
+				/*
 				fileGait << param.moveState << "  ";
 
 				for (int i = 0; i < 18; i++)
@@ -1422,8 +1425,11 @@ namespace ForceTask
 				for (int i = 0; i < 3; i++)
 				{
 					fileGait << param.forceInB[i] << "  ";
+				}*/
+				for (int i=0;i<18;i++)
+				{
+					fileGait << param.walkParam.motion_raw_data->at(i).feedback_cur << "  ";
 				}
-
 				fileGait << std::endl;
 			}
 
