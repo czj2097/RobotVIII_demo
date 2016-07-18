@@ -24,7 +24,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	fastTg();
+	maxVel();
 	ForceTask::StartRecordData();
 
 	std::string xml_address;

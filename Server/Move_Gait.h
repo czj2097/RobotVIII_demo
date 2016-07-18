@@ -154,5 +154,10 @@ struct MoveRotateParam final :public aris::server::GaitParamBase
 void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 void fastTg();
+void trajCal();
+void calPee();
+void calWK();
+void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
+void maxVel();
 
 #endif // MOVE_GAIT_H

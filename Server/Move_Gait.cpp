@@ -107,6 +107,7 @@ void fastTg()
 
 	double Jvi[3][3];
 	double dJvi_t[3][3]{0,0,0,0,0,0,0,0,0};
+	double dJvi_t_tem[3][3]{0,0,0,0,0,0,0,0,0};
 	double dJvi_t_in[3][3]{0,0,0,0,0,0,0,0,0};
 	double outputJvi[2001][9];
 	double outputdJvi_t[2001][9];
@@ -128,7 +129,7 @@ void fastTg()
 					     0.3, -0.85, 0.65 };
 	double vEE[18];
 	double aEE[18];
-	double vEE_L[3];
+	double vEE_B[3];
 	double vLmt[2]{-0.9,0.9};
 	double aLmt[2]{-3.2,3.2};
 
@@ -169,27 +170,27 @@ void fastTg()
 		rbt.SetAb(initAeb);
 		rbt.SetAee(aEE);
 
-		for(int j=0;j<6;j++)
-		{
-			rbt.pLegs[0]->GetJvi(*Jvi,rbt.pLegs[0]->base());
-			rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"L");
-			rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.pLegs[0]->base());
+		//for(int j=0;j<6;j++)
+		//{
+			rbt.pLegs[0]->GetJvi(*Jvi,rbt.body());
+			rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"B");
+			rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.body());
 
-			rbt.pLegs[0]->GetVee(vEE_L,rbt.pLegs[0]->base());
+			rbt.pLegs[0]->GetVee(vEE_B,rbt.body());
 
 			std::fill_n(*dJvi_t_in,9,0);
 
-			aris::dynamic::s_daxpy(9,vEE_L[0],*dJvi_x,1,*dJvi_t_in,1);//for t
-			aris::dynamic::s_daxpy(9,vEE_L[1],*dJvi_y,1,*dJvi_t_in,1);//for t
-			aris::dynamic::s_daxpy(9,vEE_L[2],*dJvi_z,1,*dJvi_t_in,1);//for t
+			aris::dynamic::s_daxpy(9,vEE_B[0],*dJvi_x,1,*dJvi_t_in,1);//for t
+			aris::dynamic::s_daxpy(9,vEE_B[1],*dJvi_y,1,*dJvi_t_in,1);//for t
+			aris::dynamic::s_daxpy(9,vEE_B[2],*dJvi_z,1,*dJvi_t_in,1);//for t
 
-			if(j==0)//to check is dJvi right by diff Jvi in matlab
-			{
+			//if(j==0)//to check is dJvi right by diff Jvi in matlab
+			//{
 				memcpy(*outputJvi+9*i,*Jvi,9*sizeof(double));
 				memcpy(*outputdJvi_t+9*i,*dJvi_t,9*sizeof(double));
 				memcpy(*outputdJvi_t_in+9*i,*dJvi_t_in,9*sizeof(double));
-			}
-		}
+			//}
+		//}
 	}
 
 	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Jvi.txt",*outputJvi,2001,9);
@@ -201,6 +202,288 @@ void fastTg()
 	gettimeofday(&tpend,NULL);
 	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
 	printf("UsedTime:%f\n",tused);
+}
+
+void trajCal()
+{
+	timeval tpstart,tpend;
+	float tused;
+	gettimeofday(&tpstart,NULL);
+
+
+	Robots::RobotTypeI rbt;
+	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+	int totalCount=3000;
+	double stepH=0.3;
+	double stepD=1.1;
+	double initPeb[6]{0,0,0,0,0,0};
+	double initVeb[6]{0,0,0,0,0,0};
+	double initAeb[6]{0,0,0,0,0,0};
+	double initPee[18]{ -0.3, -0.85, -0.65,
+					   -0.45, -0.85, 0,
+						-0.3, -0.85, 0.65,
+						 0.3, -0.85, -0.65,
+						0.45, -0.85, 0,
+						 0.3, -0.85, 0.65 };
+	double pEB[6];
+	double pEE[18];
+	double pEE_B[18];
+	double vEE[18];
+	double aEE[18];
+	double vLmt[2]{-0.9,0.9};
+	double aLmt[2]{-3.2,3.2};
+
+	double outputPee[4*totalCount][18];
+	double outputPee_B[4*totalCount][18];
+
+	for(int count=0;count<4*totalCount;count++)
+	{
+		if(count<totalCount)//acc
+		{
+			memcpy(pEB,initPeb,sizeof(initPeb));
+			pEB[2]=initPeb[2]+stepD/4*(cos(PI*(double)count/(2*totalCount-1))-1);
+
+			for (int i=0;i<3;i++)
+			{
+				//swing leg
+				pEE[6*i]=initPee[6*i];
+				pEE[6*i+1]=initPee[6*i+1]+stepH*sin(PI*(double)count/(totalCount-1));
+				pEE[6*i+2]=initPee[6*i+2]+stepD/4*(cos(PI*(double)count/(totalCount-1))-1);
+				//stance leg
+				pEE[6*i+3]=initPee[6*i+3];
+				pEE[6*i+4]=initPee[6*i+4];
+				pEE[6*i+5]=initPee[6*i+5];
+			}
+		}
+
+		else if(count<(2*totalCount))//const
+		{
+			pEB[2]=initPeb[2]-stepD/4-stepD/2*(double)(count-totalCount)/(totalCount-1);
+			for (int i=0;i<3;i++)
+			{
+				//swing leg
+				pEE[6*i+3]=initPee[6*i+3];
+				pEE[6*i+4]=initPee[6*i+4]+stepH*sin(PI*(double)(count-totalCount)/(totalCount-1));
+				pEE[6*i+5]=initPee[6*i+5]+stepD/2*(cos(PI*(double)(count-totalCount)/(totalCount-1))-1);
+				//stance leg
+				pEE[6*i]=initPee[6*i];
+				pEE[6*i+1]=initPee[6*i+1];
+				pEE[6*i+2]=initPee[6*i+2]-stepD/2;
+			}
+		}
+
+		else if(count<(3*totalCount))//const
+		{
+			pEB[2]=initPeb[2]-3*stepD/4-stepD/2*(double)(count-2*totalCount)/(totalCount-1);
+			for (int i=0;i<3;i++)
+			{
+				//swing leg
+				pEE[6*i]=initPee[6*i];
+				pEE[6*i+1]=initPee[6*i+1]+stepH*sin(PI*(double)(count-2*totalCount)/(totalCount-1));
+				pEE[6*i+2]=initPee[6*i+2]-stepD/2+stepD/2*(cos(PI*(double)(count-2*totalCount)/(totalCount-1))-1);
+				//stance leg
+				pEE[6*i+3]=initPee[6*i+3];
+				pEE[6*i+4]=initPee[6*i+4];
+				pEE[6*i+5]=initPee[6*i+5]-stepD;
+			}
+		}
+
+		else//dec
+		{
+			pEB[2]=initPeb[2]-5*stepD/4+stepD/4*cos(PI*(double)(count-3*totalCount)/(2*totalCount-1)+PI/2);
+			for (int i=0;i<3;i++)
+			{
+				//swing leg
+				pEE[6*i+3]=initPee[6*i+3];
+				pEE[6*i+4]=initPee[6*i+4]+stepH*sin(PI*(double)(count-3*totalCount)/(totalCount-1));
+				pEE[6*i+5]=initPee[6*i+5]-stepD+stepD/4*(cos(PI*(double)(count-3*totalCount)/(totalCount-1))-1);
+				//stance leg
+				pEE[6*i]=initPee[6*i];
+				pEE[6*i+1]=initPee[6*i+1];
+				pEE[6*i+2]=initPee[6*i+2]-3*stepD/2;
+			}
+		}
+
+		rbt.SetPeb(pEB);
+		rbt.SetPee(pEE);
+		rbt.GetPee(pEE_B,rbt.body());
+
+		memcpy(*outputPee+18*count,pEE,sizeof(pEE));
+		memcpy(*outputPee_B+18*count,pEE_B,sizeof(pEE_B));
+	}
+
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pee.txt",*outputPee,4*totalCount,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pee_B.txt",*outputPee_B,4*totalCount,18);
+
+
+	gettimeofday(&tpend,NULL);
+	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+	printf("UsedTime:%f\n",tused);
+}
+
+void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc)
+{
+	auto &robot = static_cast<Robots::RobotBase &>(model);
+
+	double vLmt[2]{-0.9,0.9};
+	double aLmt[2]{-3.2,3.2};
+
+	double direction[3]{0,cos(alpha-PI/2),sin(alpha-PI/2)};
+	double Kv{0};
+	double Ka{0};
+
+	double Jvi[3][3];
+	double dJvi[3][3];
+	double tem[3];
+
+	//maxVel
+	robot.pLegs[legID]->GetJvi(*Jvi,robot.body());
+	aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,direction,1,0,tem,1);
+	for (int i=0;i<3;i++)
+	{
+		if(i==0)
+		{
+			Kv=vLmt[1]/fabs(tem[i]);
+		}
+		else
+		{
+			if(Kv>=vLmt[1]/fabs(tem[i]))
+			{
+				Kv=vLmt[1]/fabs(tem[i]);
+			}
+		}
+	}
+	for (int i=0;i<3;i++)
+	{
+		maxVel[i]=Kv*direction[i];
+	}
+
+	//printf("alpha:%f ; tem:%f,%f,%f ; Kv:%f\n",alpha,tem[0],tem[1],tem[2],Kv);
+
+	//maxAcc
+	robot.pLegs[legID]->GetDifJvi(*dJvi,robot.body());
+}
+
+void maxVel()
+{
+	timeval tpstart,tpend;
+	float tused;
+	gettimeofday(&tpstart,NULL);
+
+	Robots::RobotTypeI rbt;
+	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+	double initPeb[6]{0,0,0,0,0,0};
+	double initPee[18]{ -0.3, -0.85, -0.65,
+					   -0.45, -0.85, 0,
+						-0.3, -0.85, 0.65,
+						 0.3, -0.85, -0.65,
+						0.45, -0.85, 0,
+						 0.3, -0.85, 0.65 };
+	double pEE[18];
+	int stepHNum=11;
+	int stepDNum=21;
+	int angleNum=36;
+	double alpha;
+	double maxVel[stepDNum*stepHNum*angleNum][18];
+	double maxAcc[stepDNum*stepHNum*angleNum][18];
+
+	for (int i=0;i<stepDNum;i++)
+	{
+		for (int j=0;j<stepHNum;j++)
+		{
+			for (int k=0;k<6;k++)
+			{
+				pEE[3*k]=initPee[3*k];
+				pEE[3*k+1]=initPee[3*k+1]-0.1+0.4*j/(stepHNum-1);
+				pEE[3*k+2]=initPee[3*k+2]-0.4+0.8*i/(stepDNum-1);
+			}
+			rbt.SetPeb(initPeb);
+			rbt.SetPee(pEE);
+
+			for(int a=0;a<angleNum;a++)
+			{
+				alpha=(double)a/angleNum*PI;
+				for (int k=0;k<6;k++)
+				{
+					maxCal(rbt,alpha,k,*maxVel+((i*stepHNum+j)*angleNum+a)*18+3*k,*maxAcc+((i*stepHNum+j)*angleNum+a)*18+3*k);
+				}
+			}
+		}
+	}
+
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/maxVel.txt",*maxVel,stepDNum*stepHNum*angleNum,18);
+
+	gettimeofday(&tpend,NULL);
+	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+	printf("UsedTime:%f\n",tused);
+}
+
+void calPee()
+{
+	Robots::RobotTypeI rbt;
+	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+	double pIn_acc[900][19];
+	double pIn_const[1800][19];
+	double pIn_dec[900][19];
+	double pEB[6]{0,0,0,0,0,0};
+
+	double pEE_acc[900][18];
+	double pEE_const[1800][18];
+	double pEE_dec[900][18];
+
+	aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_acc.txt",*pIn_acc);
+	aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_const.txt",*pIn_const);
+	aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_dec.txt",*pIn_dec);
+
+	for (int i=0;i<900;i++)
+	{
+		rbt.SetPeb(pEB);
+		rbt.SetPin(*pIn_acc+18*i);
+		rbt.GetPee(*pEE_acc+18*i);
+	}
+	for (int i=0;i<1800;i++)
+	{
+		rbt.SetPeb(pEB);
+		rbt.SetPin(*pIn_const+18*i);
+		rbt.GetPee(*pEE_const+18*i);
+	}
+	for (int i=0;i<900;i++)
+	{
+		rbt.SetPeb(pEB);
+		rbt.SetPin(*pIn_dec+18*i);
+		rbt.GetPee(*pEE_dec+18*i);
+	}
+
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_acc.txt",*pEE_acc,900,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_const.txt",*pEE_const,1800,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_dec.txt",*pEE_dec,900,18);
+}
+
+void calWK()
+{
+	Robots::RobotTypeI rbt;
+	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+	Robots::WalkParam param;
+	param.alpha=0;
+	param.beta=0;
+	param.d=0.8;
+	param.h=0.05;
+	param.totalCount=1000;
+	param.n=2;
+
+	double pEE[4*param.totalCount][18];
+
+	for(param.count=0;param.count<4*param.totalCount;param.count++)
+	{
+		Robots::walkGait(rbt,param);
+		rbt.GetPee(*pEE+18*param.count,rbt.body());
+	}
+
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_WK.txt",*pEE,4*param.totalCount,18);
 }
 
 
