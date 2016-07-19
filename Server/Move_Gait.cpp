@@ -215,7 +215,8 @@ void trajCal()
 	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
 	int totalCount=3000;
-	double stepH=0.3;
+	double s;
+	double stepH=0.1;
 	double stepD=1.1;
 	double initPeb[6]{0,0,0,0,0,0};
 	double initVeb[6]{0,0,0,0,0,0};
@@ -229,26 +230,30 @@ void trajCal()
 	double pEB[6];
 	double pEE[18];
 	double pEE_B[18];
+	double pIn[18];
 	double vEE[18];
 	double aEE[18];
 	double vLmt[2]{-0.9,0.9};
 	double aLmt[2]{-3.2,3.2};
 
+	double outputPeb[4*totalCount][6];
 	double outputPee[4*totalCount][18];
 	double outputPee_B[4*totalCount][18];
+	double outputPin[4*totalCount][18];
 
 	for(int count=0;count<4*totalCount;count++)
 	{
 		if(count<totalCount)//acc
 		{
 			memcpy(pEB,initPeb,sizeof(initPeb));
-			pEB[2]=initPeb[2]+stepD/4*(cos(PI*(double)count/(2*totalCount-1))-1);
+			pEB[2]=initPeb[2]+stepD/4*(cos(PI*(double)(count+1)/(2*totalCount))-1);
 
 			for (int i=0;i<3;i++)
 			{
+				s = -(PI / 2)*cos(PI * (count + 1) / totalCount) + PI / 2;//0-PI
 				//swing leg
 				pEE[6*i]=initPee[6*i];
-				pEE[6*i+1]=initPee[6*i+1]+stepH*sin(PI*(double)count/(totalCount-1));
+				pEE[6*i+1]=initPee[6*i+1]+stepH/2*(cos(2*PI*(double)count/(totalCount-1)-PI)+1);
 				pEE[6*i+2]=initPee[6*i+2]+stepD/4*(cos(PI*(double)count/(totalCount-1))-1);
 				//stance leg
 				pEE[6*i+3]=initPee[6*i+3];
@@ -259,13 +264,13 @@ void trajCal()
 
 		else if(count<(2*totalCount))//const
 		{
-			pEB[2]=initPeb[2]-stepD/4-stepD/2*(double)(count-totalCount)/(totalCount-1);
+			pEB[2]=initPeb[2]-stepD/4-stepD/2*(double)(count-totalCount+1)/totalCount;
 			for (int i=0;i<3;i++)
 			{
 				//swing leg
 				pEE[6*i+3]=initPee[6*i+3];
-				pEE[6*i+4]=initPee[6*i+4]+stepH*sin(PI*(double)(count-totalCount)/(totalCount-1));
-				pEE[6*i+5]=initPee[6*i+5]+stepD/2*(cos(PI*(double)(count-totalCount)/(totalCount-1))-1);
+				pEE[6*i+4]=initPee[6*i+4]+stepH/2*(cos(2*PI*(double)(count-totalCount+1)/totalCount-PI)+1);
+				pEE[6*i+5]=initPee[6*i+5]+stepD/2*(cos(PI*(double)(count-totalCount+1)/totalCount)-1);
 				//stance leg
 				pEE[6*i]=initPee[6*i];
 				pEE[6*i+1]=initPee[6*i+1];
@@ -275,13 +280,13 @@ void trajCal()
 
 		else if(count<(3*totalCount))//const
 		{
-			pEB[2]=initPeb[2]-3*stepD/4-stepD/2*(double)(count-2*totalCount)/(totalCount-1);
+			pEB[2]=initPeb[2]-3*stepD/4-stepD/2*(double)(count-2*totalCount+1)/totalCount;
 			for (int i=0;i<3;i++)
 			{
 				//swing leg
 				pEE[6*i]=initPee[6*i];
-				pEE[6*i+1]=initPee[6*i+1]+stepH*sin(PI*(double)(count-2*totalCount)/(totalCount-1));
-				pEE[6*i+2]=initPee[6*i+2]-stepD/2+stepD/2*(cos(PI*(double)(count-2*totalCount)/(totalCount-1))-1);
+				pEE[6*i+1]=initPee[6*i+1]+stepH/2*(cos(2*PI*(double)(count-2*totalCount+1)/totalCount-PI)+1);
+				pEE[6*i+2]=initPee[6*i+2]-stepD/2+stepD/2*(cos(PI*(double)(count-2*totalCount+1)/totalCount)-1);
 				//stance leg
 				pEE[6*i+3]=initPee[6*i+3];
 				pEE[6*i+4]=initPee[6*i+4];
@@ -291,13 +296,13 @@ void trajCal()
 
 		else//dec
 		{
-			pEB[2]=initPeb[2]-5*stepD/4+stepD/4*cos(PI*(double)(count-3*totalCount)/(2*totalCount-1)+PI/2);
+			pEB[2]=initPeb[2]-5*stepD/4+stepD/4*cos(PI*(double)(count-3*totalCount+1)/(2*totalCount)+PI/2);
 			for (int i=0;i<3;i++)
 			{
 				//swing leg
 				pEE[6*i+3]=initPee[6*i+3];
-				pEE[6*i+4]=initPee[6*i+4]+stepH*sin(PI*(double)(count-3*totalCount)/(totalCount-1));
-				pEE[6*i+5]=initPee[6*i+5]-stepD+stepD/4*(cos(PI*(double)(count-3*totalCount)/(totalCount-1))-1);
+				pEE[6*i+4]=initPee[6*i+4]+stepH/2*(cos(2*PI*(double)(count-3*totalCount+1)/totalCount-PI)+1);
+				pEE[6*i+5]=initPee[6*i+5]-stepD+stepD/4*(cos(PI*(double)(count-3*totalCount+1)/totalCount)-1);
 				//stance leg
 				pEE[6*i]=initPee[6*i];
 				pEE[6*i+1]=initPee[6*i+1];
@@ -308,13 +313,18 @@ void trajCal()
 		rbt.SetPeb(pEB);
 		rbt.SetPee(pEE);
 		rbt.GetPee(pEE_B,rbt.body());
+		rbt.GetPin(pIn);
 
+		memcpy(*outputPeb+6*count,pEB,sizeof(pEB));
 		memcpy(*outputPee+18*count,pEE,sizeof(pEE));
 		memcpy(*outputPee_B+18*count,pEE_B,sizeof(pEE_B));
+		memcpy(*outputPin+18*count,pIn,sizeof(pIn));
 	}
 
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Peb.txt",*outputPeb,4*totalCount,6);
 	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pee.txt",*outputPee,4*totalCount,18);
 	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pee_B.txt",*outputPee_B,4*totalCount,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pin.txt",*outputPin,4*totalCount,18);
 
 
 	gettimeofday(&tpend,NULL);
