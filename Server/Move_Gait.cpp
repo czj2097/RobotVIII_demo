@@ -461,7 +461,18 @@ void screwInterpolationTraj()
 
 		keyPee_B[1][3*i]=initPee[3*i];
 		keyPee_B[1][3*i+1]=initPee[3*i+1]+stepH;
-		keyPee_B[1][3*i+2]=initPee[3*i+2];
+		if(i==0 || i==3)
+		{
+			keyPee_B[1][3*i+2]=initPee[3*i+2]+stepD/8;
+		}
+		else if (i==2 || i==5)
+		{
+			keyPee_B[1][3*i+2]=initPee[3*i+2]-stepD/8;
+		}
+		else
+		{
+			keyPee_B[1][3*i+2]=initPee[3*i+2];
+		}
 
 		keyPee_B[2][3*i]=initPee[3*i];
 		keyPee_B[2][3*i+1]=initPee[3*i+1];
@@ -550,8 +561,31 @@ void screwInterpolationTraj()
 
 	int totalCount=round(totalTime*1000);
 	double vIn[3000][18];
+	double pIn[3000][18];
 	double vIn_adjust[totalCount][18];
 	double pIn_adjust[totalCount][18];
+	double pEE_adjust[totalCount][18];
+
+	for (int i=0;i<18;i++)
+	{
+		s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 ( vector with direction)
+		s3[i]=-0.5*aLmt*t3[i]*t3[i];
+		s2[i]=keyPin[1][i]-keyPin[0][i]-s1[i]-s3[i];
+		s4[i]=0.5*aLmt*t4[i]*t4[i];
+		s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
+		s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
+
+		a1[i]=2*(s1[i]-keyVin[0][i]*t1[i]*totalTmax/totalT[i])/(t1[i]*totalTmax/totalT[i])/(t1[i]*totalTmax/totalT[i]);
+		a3[i]=-2*s3[i]/(t3[i]*totalTmax/totalT[i])/(t3[i]*totalTmax/totalT[i]);
+		a4[i]=2*s4[i]/(t4[i]*totalTmax/totalT[i])/(t4[i]*totalTmax/totalT[i]);
+		a6[i]=-2*(s6[i]-keyVin[2][i]*t6[i]*totalTmax/totalT[i])/(t6[i]*totalTmax/totalT[i])/(t6[i]*totalTmax/totalT[i]);
+
+		//v2[i]=keyVin[0][i]+a1[i]*t1[i]*totalTmax/totalT[i];
+		//v5[i]=keyVin[2][i]-a6[i]*t6[i]*totalTmax/totalT[i];
+
+		//printf("s1:%.4f,s2:%.4f,s3:%.4f,s4:%.4f,s5:%.4f,s6:%.4f\n",s1[i],s2[i],s3[i],s4[i],s5[i],s6[i]);
+		//printf("a1:%.4f,a3:%.4f,a4:%.4f,a6:%.4f\n",a1[i],a3[i],a4[i],a6[i]);
+	}
 
 	for (int i=0;i<3000;i++)
 	{
@@ -559,43 +593,37 @@ void screwInterpolationTraj()
 		{
 			if(((double)i/1000)<t1[j])
 			{
-				vIn[i][j]=keyVin[0][j]-aLmt*(double)i/1000;
+				vIn[i][j]=keyVin[0][j]-aLmt*i/1000;
+				pIn[i][j]=keyPin[0][j]+keyVin[0][j]*i/1000-0.5*aLmt*i/1000*i/1000;
 			}
-			else if(((double)i/1000)<(t1[j]+t3[j]+t4[j]))
+			else if(((double)i/1000)<(t1[j]+t2[j]))
 			{
-				vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*((double)i/1000-t1[j]);
+				vIn[i][j]=-vLmt;
+				pIn[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000-t1[j]);
 			}
-			else if(((double)i/1000)<(t1[j]+t3[j]+t4[j]+t6[j]))
+			else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]))
+			{
+				vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*((double)i/1000-t1[j]-t2[j]);
+				pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000-t1[j]-t2[j])+0.5*aLmt*((double)i/1000-t1[j]-t2[j])*((double)i/1000-t1[j]-t2[j]);
+			}
+			else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]))
+			{
+				vIn[i][j]=vLmt;
+				pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000-(t1[j]+t2[j]+t3[j]+t4[j]));
+			}
+			else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j]))
 			{
 				vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j])-aLmt*((double)i/1000-t1[j]-t3[j]-t4[j]);
+				pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
 			}
 			else
 			{
 				vIn[i][j]=keyVin[2][j];
+				pIn[i][j]=keyPin[2][j];
 			}
 		}
 	}
 
-	for (int i=0;i<18;i++)
-	{
-		s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 ( vector with direction)
-		s2[i]=0;
-		s3[i]=-0.5*aLmt*t3[i]*t3[i];
-		s4[i]=0.5*aLmt*t4[i]*t4[i];
-		s5[i]=0;
-		s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
-
-		a1[i]=2*(s1[i]-keyVin[0][i]*t1[i]*totalTmax/totalT[i])/(t1[i]*totalTmax/totalT[i])/(t1[i]*totalTmax/totalT[i]);
-		a3[i]=-2*s3[i]/(t3[i]*totalTmax/totalT[i])/(t3[i]*totalTmax/totalT[i]);
-		a4[i]=2*s4[i]/(t4[i]*totalTmax/totalT[i])/(t4[i]*totalTmax/totalT[i]);
-		a6[i]=-2*(s6[i]-keyVin[2][i]*t6[i]*totalTmax/totalT[i])/(t6[i]*totalTmax/totalT[i])/(t6[i]*totalTmax/totalT[i]);
-
-		v2[i]=keyVin[0][i]+a1[i]*t1[i]*totalTmax/totalT[i];
-		v5[i]=keyVin[2][i]-a6[i]*t6[i]*totalTmax/totalT[i];
-
-		//printf("s1:%.4f,s3:%.4f,s4:%.4f,s6:%.4f\n",s1[i],s3[i],s4[i],s6[i]);
-		//printf("a1:%.4f,a3:%.4f,a4:%.4f,a6:%.4f\n",a1[i],a3[i],a4[i],a6[i]);
-	}
 
 	for (int i=0;i<totalCount;i++)
 	{
@@ -627,12 +655,16 @@ void screwInterpolationTraj()
 				pIn_adjust[i][j]=keyPin[2][j];
 			}
 		}
+
+		rbt.SetPin(*pIn_adjust+18*i);
+		rbt.GetPee(*pEE_adjust+18*i,rbt.body());
 	}
 
 
 	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/vIn.txt",*vIn,3000,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/vIn_adjust.txt",*vIn_adjust,totalCount,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_adjust.txt",*pIn_adjust,totalCount,18);
+	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn.txt",*pIn,3000,18);
+	//aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/vIn_adjust.txt",*vIn_adjust,totalCount,18);
+	//aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_adjust.txt",*pIn_adjust,totalCount,18);
 
 
 	gettimeofday(&tpend,NULL);
