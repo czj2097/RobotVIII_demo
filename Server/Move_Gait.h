@@ -150,9 +150,20 @@ struct MoveRotateParam final :public aris::server::GaitParamBase
 	double targetBodyPE213[6]{0};
 	std::int32_t totalCount;
 };
+struct FastWalkByScrewParam final:public aris::server::GaitParamBase
+{
+	double swingPee[1000][18];
+	double bodyForwardAcc{0.5};
+	double bodyForwardDec{0.5};
+	double bodyForwardVel{0.5};
+	std::int32_t n{2};
+};
 
 void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+void parseFastWalkByScrew(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+int fastWalkByScrew(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+void fastTgByScrew();
 void fastTg();
 void ellipseTrajAnalyse();
 void screwInterpolationTraj();

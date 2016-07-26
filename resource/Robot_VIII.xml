@@ -553,6 +553,14 @@
                     <beta abbreviation="b" type="double" default="0"/>
                 </fwk_param>
             </fwk>
+            <fws>
+            	<fws_param type="group">
+            		<bodyForwardAcc abbreviation="a" type="double" default="0.5"/>
+            		<bodyForwardDec abbreviation="d" type="double" default="0.5"/>
+            		<bodyForwardVel abbreviation="v" type="double" default="0.5"/>
+            		<n abbreviation="n" type="int" default="1"/>
+            	</fws_param>
+            </fws>
 			<cmb default="cmb_param">
 				<cmb_param type="group">
 					<u abbreviation="u" type="double" default="0"/>
