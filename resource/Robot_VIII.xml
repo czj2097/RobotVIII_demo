@@ -513,10 +513,10 @@
             <rc default="rc_param">
                 <rc_param type="group">
                     <leg_param type="unique" default="all">
-                        <all abbreviation="a"/>
-                        <first abbreviation="f"/>
-                        <second abbreviation="s"/>
-                        <leg abbreviation="l" type="intArray" default="0"/>
+                    <all abbreviation="a"/>
+                    <first abbreviation="f"/>
+                    <second abbreviation="s"/>
+                    <leg abbreviation="l" type="intArray" default="0"/>
                     </leg_param>
                     <t1 abbreviation="t" type="intArray" default="3000"/>
                     <t2 type="intArray" default="3000"/>
@@ -596,6 +596,13 @@
 				</src_param>
 			</src>
 			<fm/>
+			<cc default="cc_param">
+		        <cc_param type="group">
+		            <totalCount abbreviation="t" type="int" default="3000"/>
+		            <chasmWidth abbreviation="d" type="double" default="1"/>
+		            <stepHeight abbreviation="h" type="double" default="0.05"/>
+                </cc_param>
+            </cc>
             <ro/>
         </Commands>
     </Server>

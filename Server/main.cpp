@@ -20,6 +20,7 @@ using namespace std;
 #endif
 
 #include "Move_Gait.h"
+#include "cross_chasm.h"
 
 
 int main(int argc, char *argv[])
@@ -66,6 +67,7 @@ int main(int argc, char *argv[])
     rs.addCmd("shm",specialParse,specialHome);
     rs.addCmd("src",specialRecoverParse,specialRecover);
 	rs.addCmd("fm",specialParse,ForceTask::forceManuf);
+	rs.addCmd("cc",crossChasmParse,crossChasmGait);
 	rs.open();
 
 	rs.setOnExit([&]()
