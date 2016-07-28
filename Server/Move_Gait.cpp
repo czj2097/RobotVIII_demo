@@ -88,854 +88,738 @@ int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBa
 	return param.totalCount - param.count - 1;
 }
 
-void fastTg()
+namespace FastWalk
 {
-	timeval tpstart,tpend;
-	float tused;
-	gettimeofday(&tpstart,NULL);
 
-
-	Robots::RobotTypeI rbt;
-	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-
-	double f_s[18];
-	double df_s[18];
-	double ddf_s[18];
-	double s_t[2001];
-	double ds_t[2001];
-	double dds_t[2001];
-
-	double Jvi[3][3];
-	double dJvi_t[3][3]{0,0,0,0,0,0,0,0,0};
-	double dJvi_t_tem[3][3]{0,0,0,0,0,0,0,0,0};
-	double dJvi_t_in[3][3]{0,0,0,0,0,0,0,0,0};
-	double outputJvi[2001][9];
-	double outputdJvi_t[2001][9];
-	double outputdJvi_t_in[2001][9];
-
-	double dJvi_x[3][3];
-	double dJvi_y[3][3];
-	double dJvi_z[3][3];
-	double stepH=0.05;
-	double stepD=0.15;
-	double initPeb[6]{0,0,0,0,0,0};
-	double initVeb[6]{0,0,0,0,0,0};
-	double initAeb[6]{0,0,0,0,0,0};
-	double initPee[18]{ -0.3, -0.85, -0.65,
-					   -0.45, -0.85, 0,
-					    -0.3, -0.85, 0.65,
-					     0.3, -0.85, -0.65,
-					    0.45, -0.85, 0,
-					     0.3, -0.85, 0.65 };
-	double vEE[18];
-	double aEE[18];
-	double vEE_B[3];
-	double vLmt[2]{-0.9,0.9};
-	double aLmt[2]{-3.2,3.2};
-
-
-	for (int i=0;i<2001;i++)//i is the time(ms)
+	void fastTg()
 	{
-		s_t[i]=PI*sin(PI*i/4000)-PI;//[-PI,0]rad
-		ds_t[i]=PI*PI/4*cos(PI*i/4000);//rad/s
-		dds_t[i]=-PI*PI*PI/16*sin(PI*i/4000);//rad/s^2
+		timeval tpstart,tpend;
+		float tused;
+		gettimeofday(&tpstart,NULL);
 
-		for(int j=0;j<6;j++)
+
+		Robots::RobotTypeI rbt;
+		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+		double f_s[18];
+		double df_s[18];
+		double ddf_s[18];
+		double s_t[2001];
+		double ds_t[2001];
+		double dds_t[2001];
+
+		double Jvi[3][3];
+		double dJvi_t[3][3]{0,0,0,0,0,0,0,0,0};
+		double dJvi_t_tem[3][3]{0,0,0,0,0,0,0,0,0};
+		double dJvi_t_in[3][3]{0,0,0,0,0,0,0,0,0};
+		double outputJvi[2001][9];
+		double outputdJvi_t[2001][9];
+		double outputdJvi_t_in[2001][9];
+
+		double dJvi_x[3][3];
+		double dJvi_y[3][3];
+		double dJvi_z[3][3];
+		double stepH=0.05;
+		double stepD=0.15;
+		double initPeb[6]{0,0,0,0,0,0};
+		double initVeb[6]{0,0,0,0,0,0};
+		double initAeb[6]{0,0,0,0,0,0};
+		double initPee[18]{ -0.3, -0.85, -0.65,
+						   -0.45, -0.85, 0,
+							-0.3, -0.85, 0.65,
+							 0.3, -0.85, -0.65,
+							0.45, -0.85, 0,
+							 0.3, -0.85, 0.65 };
+		double vEE[18];
+		double aEE[18];
+		double vEE_B[3];
+		double vLmt[2]{-0.9,0.9};
+		double aLmt[2]{-3.2,3.2};
+
+
+		for (int i=0;i<2001;i++)//i is the time(ms)
 		{
-			f_s[3*j]=stepD/2*cos(s_t[i])+stepD/2+initPee[3*j];
-			f_s[3*j+1]=-stepH*sin(s_t[i])+initPee[3*j+1];
-			f_s[3*j+2]=0+initPee[3*j+2];
+			s_t[i]=PI*sin(PI*i/4000)-PI;//[-PI,0]rad
+			ds_t[i]=PI*PI/4*cos(PI*i/4000);//rad/s
+			dds_t[i]=-PI*PI*PI/16*sin(PI*i/4000);//rad/s^2
 
-			df_s[3*j]=-stepD/2*sin(s_t[i]);
-			df_s[3*j+1]=-stepH*cos(s_t[i]);
-			df_s[3*j+2]=0;
+			for(int j=0;j<6;j++)
+			{
+				f_s[3*j]=stepD/2*cos(s_t[i])+stepD/2+initPee[3*j];
+				f_s[3*j+1]=-stepH*sin(s_t[i])+initPee[3*j+1];
+				f_s[3*j+2]=0+initPee[3*j+2];
 
-			vEE[3*j]=df_s[3*j]*ds_t[i];
-			vEE[3*j+1]=df_s[3*j+1]*ds_t[i];
-			vEE[3*j+2]=df_s[3*j+2]*ds_t[i];
+				df_s[3*j]=-stepD/2*sin(s_t[i]);
+				df_s[3*j+1]=-stepH*cos(s_t[i]);
+				df_s[3*j+2]=0;
 
-			ddf_s[3*j]=-stepD/2*cos(s_t[i]);
-			ddf_s[3*j+1]=stepH*sin(s_t[i]);
-			ddf_s[3*j+2]=0;
+				vEE[3*j]=df_s[3*j]*ds_t[i];
+				vEE[3*j+1]=df_s[3*j+1]*ds_t[i];
+				vEE[3*j+2]=df_s[3*j+2]*ds_t[i];
 
-			aEE[3*j]=ddf_s[3*j]*ds_t[i]+df_s[3*j]*dds_t[i];
-			aEE[3*j+1]=ddf_s[3*j+1]*ds_t[i]+df_s[3*j+1]*dds_t[i];
-			aEE[3*j+2]=ddf_s[3*j+2]*ds_t[i]+df_s[3*j+2]*dds_t[i];
-		}
+				ddf_s[3*j]=-stepD/2*cos(s_t[i]);
+				ddf_s[3*j+1]=stepH*sin(s_t[i]);
+				ddf_s[3*j+2]=0;
 
-		rbt.SetPeb(initPeb);
-		rbt.SetPee(f_s);
-		rbt.SetVb(initVeb);
-		rbt.SetVee(vEE);
-		rbt.SetAb(initAeb);
-		rbt.SetAee(aEE);
+				aEE[3*j]=ddf_s[3*j]*ds_t[i]+df_s[3*j]*dds_t[i];
+				aEE[3*j+1]=ddf_s[3*j+1]*ds_t[i]+df_s[3*j+1]*dds_t[i];
+				aEE[3*j+2]=ddf_s[3*j+2]*ds_t[i]+df_s[3*j+2]*dds_t[i];
+			}
 
-		//for(int j=0;j<6;j++)
-		//{
-			rbt.pLegs[0]->GetJvi(*Jvi,rbt.body());
-			rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"B");
-			rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.body());
+			rbt.SetPeb(initPeb);
+			rbt.SetPee(f_s);
+			rbt.SetVb(initVeb);
+			rbt.SetVee(vEE);
+			rbt.SetAb(initAeb);
+			rbt.SetAee(aEE);
 
-			rbt.pLegs[0]->GetVee(vEE_B,rbt.body());
-
-			std::fill_n(*dJvi_t_in,9,0);
-
-			aris::dynamic::s_daxpy(9,vEE_B[0],*dJvi_x,1,*dJvi_t_in,1);//for t
-			aris::dynamic::s_daxpy(9,vEE_B[1],*dJvi_y,1,*dJvi_t_in,1);//for t
-			aris::dynamic::s_daxpy(9,vEE_B[2],*dJvi_z,1,*dJvi_t_in,1);//for t
-
-			//if(j==0)//to check is dJvi right by diff Jvi in matlab
+			//for(int j=0;j<6;j++)
 			//{
-				memcpy(*outputJvi+9*i,*Jvi,9*sizeof(double));
-				memcpy(*outputdJvi_t+9*i,*dJvi_t,9*sizeof(double));
-				memcpy(*outputdJvi_t_in+9*i,*dJvi_t_in,9*sizeof(double));
+				rbt.pLegs[0]->GetJvi(*Jvi,rbt.body());
+				rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"B");
+				rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.body());
+
+				rbt.pLegs[0]->GetVee(vEE_B,rbt.body());
+
+				std::fill_n(*dJvi_t_in,9,0);
+
+				aris::dynamic::s_daxpy(9,vEE_B[0],*dJvi_x,1,*dJvi_t_in,1);//for t
+				aris::dynamic::s_daxpy(9,vEE_B[1],*dJvi_y,1,*dJvi_t_in,1);//for t
+				aris::dynamic::s_daxpy(9,vEE_B[2],*dJvi_z,1,*dJvi_t_in,1);//for t
+
+				//if(j==0)//to check is dJvi right by diff Jvi in matlab
+				//{
+					memcpy(*outputJvi+9*i,*Jvi,9*sizeof(double));
+					memcpy(*outputdJvi_t+9*i,*dJvi_t,9*sizeof(double));
+					memcpy(*outputdJvi_t_in+9*i,*dJvi_t_in,9*sizeof(double));
+				//}
 			//}
-		//}
-	}
-
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Jvi.txt",*outputJvi,2001,9);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t.txt",*outputdJvi_t,2001,9);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
-
-
-
-	gettimeofday(&tpend,NULL);
-	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
-	printf("UsedTime:%f\n",tused);
-}
-
-void fastTgByPYAnalyse()
-{
-	Robots::RobotTypeI rbt;
-	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-
-	double pIn_acc[900][19];
-	double pIn_const[1800][19];
-	double pIn_dec[900][19];
-	double pEB[6]{0,0,0,0,0,0};
-
-	double pEE_acc[900][18];
-	double pEE_const[1800][18];
-	double pEE_dec[900][18];
-
-	aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_acc.txt",*pIn_acc);
-	aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_const.txt",*pIn_const);
-	aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_dec.txt",*pIn_dec);
-
-	for (int i=0;i<900;i++)
-	{
-		rbt.SetPeb(pEB);
-		rbt.SetPin(*pIn_acc+18*i);
-		rbt.GetPee(*pEE_acc+18*i);
-	}
-	for (int i=0;i<1800;i++)
-	{
-		rbt.SetPeb(pEB);
-		rbt.SetPin(*pIn_const+18*i);
-		rbt.GetPee(*pEE_const+18*i);
-	}
-	for (int i=0;i<900;i++)
-	{
-		rbt.SetPeb(pEB);
-		rbt.SetPin(*pIn_dec+18*i);
-		rbt.GetPee(*pEE_dec+18*i);
-	}
-
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_acc.txt",*pEE_acc,900,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_const.txt",*pEE_const,1800,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_dec.txt",*pEE_dec,900,18);
-}
-
-void wkByPYAnalyse()
-{
-	Robots::RobotTypeI rbt;
-	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-
-	Robots::WalkParam param;
-	param.alpha=0;
-	param.beta=0;
-	param.d=1.0;
-	param.h=0.1;
-	param.totalCount=914;
-	param.n=2;
-
-	double pEE[4*param.totalCount][18];
-	double pIn[4*param.totalCount][18];
-
-	for(param.count=0;param.count<4*param.totalCount;param.count++)
-	{
-		Robots::walkGait(rbt,param);
-		rbt.GetPee(*pEE+18*param.count,rbt.body());
-		rbt.GetPin(*pIn+18*param.count);
-	}
-
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_WK.txt",*pEE,4*param.totalCount,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_WK.txt",*pIn,4*param.totalCount,18);
-}
-
-
-void ellipseTrajAnalyse()
-{
-	timeval tpstart,tpend;
-	float tused;
-	gettimeofday(&tpstart,NULL);
-
-
-	Robots::RobotTypeI rbt;
-	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-
-	int totalCount=3000;
-	double s;
-	double stepH=0.1;
-	double stepD=1.0;
-	double initPeb[6]{0,0,0,0,0,0};
-	double initVeb[6]{0,0,0,0,0,0};
-	double initAeb[6]{0,0,0,0,0,0};
-	double initPee[18]{ -0.3, -0.85, -0.65,
-					   -0.45, -0.85, 0,
-						-0.3, -0.85, 0.65,
-						 0.3, -0.85, -0.65,
-						0.45, -0.85, 0,
-						 0.3, -0.85, 0.65 };
-	double pEB[6];
-	double pEE[18];
-	double pEE_B[18];
-	double pIn[18];
-	double vEE[18];
-	double aEE[18];
-	double vLmt[2]{-0.9,0.9};
-	double aLmt[2]{-3.2,3.2};
-
-	double outputPeb[4*totalCount][6];
-	double outputPee[4*totalCount][18];
-	double outputPee_B[4*totalCount][18];
-	double outputPin[4*totalCount][18];
-
-	for(int count=0;count<4*totalCount;count++)
-	{
-		if(count<totalCount)//acc
-		{
-			memcpy(pEB,initPeb,sizeof(initPeb));
-			pEB[2]=initPeb[2]-stepD/4*(count+1)*(count+1)/(totalCount*totalCount);
-
-			s = -(PI / 2)*cos(PI * (count + 1) / totalCount) + PI / 2;//0-PI
-
-			for (int i=0;i<3;i++)
-			{
-				//swing leg
-				pEE[6*i]=initPee[6*i];
-				pEE[6*i+1]=initPee[6*i+1]+stepH*sin(s);
-				pEE[6*i+2]=initPee[6*i+2]-stepD/4+stepD/4*cos(s);
-				//stance leg
-				pEE[6*i+3]=initPee[6*i+3];
-				pEE[6*i+4]=initPee[6*i+4];
-				pEE[6*i+5]=initPee[6*i+5];
-			}
 		}
 
-		else if(count<(2*totalCount))//const
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Jvi.txt",*outputJvi,2001,9);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t.txt",*outputdJvi_t,2001,9);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
+
+
+
+		gettimeofday(&tpend,NULL);
+		tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+		printf("UsedTime:%f\n",tused);
+	}
+
+	void fastTgByPYAnalyse()
+	{
+		Robots::RobotTypeI rbt;
+		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+		double pIn_acc[900][19];
+		double pIn_const[1800][19];
+		double pIn_dec[900][19];
+		double pEB[6]{0,0,0,0,0,0};
+
+		double pEE_acc[900][18];
+		double pEE_const[1800][18];
+		double pEE_dec[900][18];
+
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_acc.txt",*pIn_acc);
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_const.txt",*pIn_const);
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_dec.txt",*pIn_dec);
+
+		for (int i=0;i<900;i++)
 		{
-			pEB[2]=initPeb[2]-stepD/4-stepD/2*(double)(count-totalCount+1)/totalCount;
-
-			s = -(PI / 2)*cos(PI * (count -totalCount + 1) / totalCount) + PI / 2;//0-PI
-
-			for (int i=0;i<3;i++)
-			{
-				//swing leg
-				pEE[6*i+3]=initPee[6*i+3];
-				pEE[6*i+4]=initPee[6*i+4]+stepH*sin(s);
-				pEE[6*i+5]=initPee[6*i+5]-stepD/2+stepD/2*cos(s);
-				//stance leg
-				pEE[6*i]=initPee[6*i];
-				pEE[6*i+1]=initPee[6*i+1];
-				pEE[6*i+2]=initPee[6*i+2]-stepD/2;
-			}
+			rbt.SetPeb(pEB);
+			rbt.SetPin(*pIn_acc+18*i);
+			rbt.GetPee(*pEE_acc+18*i);
+		}
+		for (int i=0;i<1800;i++)
+		{
+			rbt.SetPeb(pEB);
+			rbt.SetPin(*pIn_const+18*i);
+			rbt.GetPee(*pEE_const+18*i);
+		}
+		for (int i=0;i<900;i++)
+		{
+			rbt.SetPeb(pEB);
+			rbt.SetPin(*pIn_dec+18*i);
+			rbt.GetPee(*pEE_dec+18*i);
 		}
 
-		else if(count<(3*totalCount))//const
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_acc.txt",*pEE_acc,900,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_const.txt",*pEE_const,1800,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pEE_dec.txt",*pEE_dec,900,18);
+	}
+
+	void wkByPYAnalyse()
+	{
+		Robots::RobotTypeI rbt;
+		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+		Robots::WalkParam param;
+		param.alpha=0;
+		param.beta=0;
+		param.d=1.0;
+		param.h=0.1;
+		param.totalCount=914;
+		param.n=2;
+
+		double pEE[4*param.totalCount][18];
+		double pIn[4*param.totalCount][18];
+
+		for(param.count=0;param.count<4*param.totalCount;param.count++)
 		{
-			pEB[2]=initPeb[2]-3*stepD/4-stepD/2*(double)(count-2*totalCount+1)/totalCount;
-
-			s = -(PI / 2)*cos(PI * (count -2*totalCount + 1) / totalCount) + PI / 2;//0-PI
-
-			for (int i=0;i<3;i++)
-			{
-				//swing leg
-				pEE[6*i]=initPee[6*i];
-				pEE[6*i+1]=initPee[6*i+1]+stepH*sin(s);
-				pEE[6*i+2]=initPee[6*i+2]-stepD+stepD/2*cos(s);
-				//stance leg
-				pEE[6*i+3]=initPee[6*i+3];
-				pEE[6*i+4]=initPee[6*i+4];
-				pEE[6*i+5]=initPee[6*i+5]-stepD;
-			}
+			Robots::walkGait(rbt,param);
+			rbt.GetPee(*pEE+18*param.count,rbt.body());
+			rbt.GetPin(*pIn+18*param.count);
 		}
 
-		else//dec
-		{
-			pEB[2]=initPeb[2]-5*stepD/4-(stepD/2*(count-3*totalCount+1)/totalCount-stepD/4*(count-3*totalCount+1)*(count-3*totalCount+1)/(totalCount*totalCount));
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_WK.txt",*pEE,4*param.totalCount,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_WK.txt",*pIn,4*param.totalCount,18);
+	}
 
-			s = -(PI / 2)*cos(PI * (count -3*totalCount + 1) / totalCount) + PI / 2;//0-PI
 
-			for (int i=0;i<3;i++)
-			{
-				//swing leg
-				pEE[6*i+3]=initPee[6*i+3];
-				pEE[6*i+4]=initPee[6*i+4]+stepH*sin(s);
-				pEE[6*i+5]=initPee[6*i+5]-5*stepD/4+stepD/4*cos(s);
-				//stance leg
-				pEE[6*i]=initPee[6*i];
-				pEE[6*i+1]=initPee[6*i+1];
-				pEE[6*i+2]=initPee[6*i+2]-3*stepD/2;
-			}
-		}
+	/*find gait with maxVel in joint space by iteration*/
+	void screwInterpolationTraj()
+	{
+		Robots::RobotTypeI rbt;
+		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+		timeval tpstart,tpend;
+		float tused;
+		gettimeofday(&tpstart,NULL);
+
+		double totalTime{3};
+
+		double ratio{0.7};//control point, from middle to edge [0,1]
+
+		double stepH=0.04;
+		double stepD=1.1;
+		double initPeb[6]{0,0,0,0,0,0};
+		double initVeb[6]{0,0,0,0,0,0};
+		double initPee[18]{ -0.3, -0.85, -0.65,
+						   -0.45, -0.85, 0,
+							-0.3, -0.85, 0.65,
+							 0.3, -0.85, -0.65,
+							0.45, -0.85, 0,
+							 0.3, -0.85, 0.65 };
+		double initVee[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+		double pEB[6];
+		double pEE[18];
+		double pEE_B[18];
+
+		double aEE[18];
+		double vLmt{0.9};
+		double aLmt{3.2};
+
+		int keyPointNum{3};
+		double keyPee_B[keyPointNum][18];
+		double keyPin[keyPointNum][18];
+		double keyVin[keyPointNum][18];
 
 		rbt.SetPeb(pEB);
-		rbt.SetPee(pEE);
-		rbt.GetPee(pEE_B,rbt.body());
-		rbt.GetPin(pIn);
+		rbt.SetVb(initVeb);
 
-		memcpy(*outputPeb+6*count,pEB,sizeof(pEB));
-		memcpy(*outputPee+18*count,pEE,sizeof(pEE));
-		memcpy(*outputPee_B+18*count,pEE_B,sizeof(pEE_B));
-		memcpy(*outputPin+18*count,pIn,sizeof(pIn));
-	}
-
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Peb.txt",*outputPeb,4*totalCount,6);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pee.txt",*outputPee,4*totalCount,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pee_B.txt",*outputPee_B,4*totalCount,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Pin.txt",*outputPin,4*totalCount,18);
-
-
-	gettimeofday(&tpend,NULL);
-	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
-	printf("UsedTime:%f\n",tused);
-}
-
-void screwInterpolationTraj()
-{
-	timeval tpstart,tpend;
-	float tused;
-	gettimeofday(&tpstart,NULL);
-
-
-	Robots::RobotTypeI rbt;
-	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-
-	double totalTime{3};
-
-	double ratio{0.7};//control point, from middle to edge [0,1]
-
-	double stepH=0.04;
-	double stepD=1.1;
-	double initPeb[6]{0,0,0,0,0,0};
-	double initVeb[6]{0,0,0,0,0,0};
-	double initAeb[6]{0,0,0,0,0,0};
-	double initPee[18]{ -0.3, -0.85, -0.65,
-					   -0.45, -0.85, 0,
-						-0.3, -0.85, 0.65,
-						 0.3, -0.85, -0.65,
-						0.45, -0.85, 0,
-						 0.3, -0.85, 0.65 };
-	double initVee[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-	double pEB[6];
-	double pEE[18];
-	double pEE_B[18];
-
-	double aEE[18];
-	double vLmt{0.9};
-	double aLmt{3.2};
-
-	int keyPointNum{3};
-	double keyPee_B[keyPointNum][18];
-	double keyPin[keyPointNum][18];
-	double keyVin[keyPointNum][18];
-
-	rbt.SetPeb(pEB);
-	rbt.SetVb(initVeb);
-
-	for (int i=0;i<6;i++)
-	{
-		keyPee_B[0][3*i]=initPee[3*i];
-		keyPee_B[0][3*i+1]=initPee[3*i+1];
-		keyPee_B[0][3*i+2]=initPee[3*i+2]+stepD/4;
-
-		keyPee_B[1][3*i]=initPee[3*i];
-		keyPee_B[1][3*i+1]=initPee[3*i+1]+stepH;
-		if(i==0 || i==3)
+		for (int i=0;i<6;i++)
 		{
-			keyPee_B[1][3*i+2]=initPee[3*i+2]+stepD/4*ratio;
-		}
-		else if (i==2 || i==5)
-		{
-			keyPee_B[1][3*i+2]=initPee[3*i+2]-stepD/4*ratio;
-		}
-		else
-		{
-			keyPee_B[1][3*i+2]=initPee[3*i+2];
+			keyPee_B[0][3*i]=initPee[3*i];
+			keyPee_B[0][3*i+1]=initPee[3*i+1];
+			keyPee_B[0][3*i+2]=initPee[3*i+2]+stepD/4;
+
+			keyPee_B[1][3*i]=initPee[3*i];
+			keyPee_B[1][3*i+1]=initPee[3*i+1]+stepH;
+			if(i==0 || i==3)
+			{
+				keyPee_B[1][3*i+2]=initPee[3*i+2]+stepD/4*ratio;
+			}
+			else if (i==2 || i==5)
+			{
+				keyPee_B[1][3*i+2]=initPee[3*i+2]-stepD/4*ratio;
+			}
+			else
+			{
+				keyPee_B[1][3*i+2]=initPee[3*i+2];
+			}
+
+			keyPee_B[2][3*i]=initPee[3*i];
+			keyPee_B[2][3*i+1]=initPee[3*i+1];
+			keyPee_B[2][3*i+2]=initPee[3*i+2]-stepD/4;
 		}
 
-		keyPee_B[2][3*i]=initPee[3*i];
-		keyPee_B[2][3*i+1]=initPee[3*i+1];
-		keyPee_B[2][3*i+2]=initPee[3*i+2]-stepD/4;
-	}
+		double e{1};
+		int k{0};
+		double totalTmax{0},totalT[18];
+		double t1[18],t2[18],t3[18],t4[18],t5[18],t6[18];
+		double s1[18],s2[18],s3[18],s4[18],s5[18],s6[18];
 
-	double e{1};
-	int k{0};
-	double totalTmax{0},totalT[18];
-	double t1[18],t2[18],t3[18],t4[18],t5[18],t6[18];
-	double s1[18],s2[18],s3[18],s4[18],s5[18],s6[18];
-
-	while(e>0.001)
-	{
-		for(int i=0;i<6;i++)
+		while(e>0.001)
 		{
-			initVee[3*i+2]=stepD/2/totalTime;
+			for(int i=0;i<6;i++)
+			{
+				initVee[3*i+2]=stepD/2/totalTime;
+			}
+
+			for (int i=0;i<keyPointNum;i++)
+			{
+				rbt.SetPee(*keyPee_B+18*i);
+				rbt.SetVee(initVee);
+
+				rbt.GetPin(*keyPin+18*i);
+				rbt.GetVin(*keyVin+18*i);
+			}
+
+			totalTmax=0;
+
+			for (int i=0;i<18;i++)
+			{
+				s1[i]=(vLmt*vLmt-keyVin[0][i]*keyVin[0][i])/2/aLmt;
+				s3[i]=vLmt*vLmt/2/aLmt;
+				s2[i]=keyPin[0]-keyPin[1]-s1[i]-s3[i];
+				if(s2[i]>=0)
+				{
+					//printf("s2_const exist, the s2 is %.4f\n",s2[i]);
+					t1[i]=(vLmt+keyVin[0][i])/aLmt;//dec
+					t2[i]=s2[i]/vLmt;//const
+					t3[i]=vLmt/aLmt;//acc
+				}
+				else
+				{
+					//printf("s2_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i]));
+					t1[i]=(sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])+keyVin[0][i])/aLmt;//dec
+					t2[i]=0;
+					t3[i]=sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])/aLmt;//acc
+				}
+
+				s4[i]=vLmt*vLmt/2/aLmt;
+				s6[i]=(vLmt*vLmt-keyVin[2][i]*keyVin[2][i])/2/aLmt;
+				s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
+
+				if(s5[i]>=0)
+				{
+					//printf("s5_const exist, the s5 is %.4f\n",s5[i]);
+					t4[i]=vLmt/aLmt;
+					t5[i]=s5[i]/vLmt;
+					t6[i]=(vLmt-keyVin[2][i])/aLmt;
+				}
+				else
+				{
+					//printf("s5_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i]));
+					t4[i]=sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])/aLmt;
+					t5[i]=0;
+					t6[i]=(sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])-keyVin[2][i])/aLmt;
+				}
+
+				totalT[i]=t1[i]+t2[i]+t3[i]+t4[i]+t5[i]+t6[i];
+				if(totalT[i]>totalTmax)
+				{
+					totalTmax=totalT[i];
+					k=i;
+				}
+			}
+
+			e=fabs(totalTmax-totalTime);
+
+			totalTime=totalTmax;
+
+			printf("%.4f,screwID:%d\n",totalTmax,k);
+			printf("\n");
 		}
 
-		for (int i=0;i<keyPointNum;i++)
-		{
-			rbt.SetPee(*keyPee_B+18*i);
-			rbt.SetVee(initVee);
+		gettimeofday(&tpend,NULL);
+		tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+		printf("UsedTime:%f\n",tused);
 
-			rbt.GetPin(*keyPin+18*i);
-			rbt.GetVin(*keyVin+18*i);
-		}
-
-		totalTmax=0;
+		totalTime=1;
+		int totalCount=round(totalTime*1000);
+		double vIn[3000][18];
+		double pIn[3000][18];
+		double vIn_adjust[totalCount][18];
+		double pIn_adjust[totalCount][18];
+		double pEE_adjust[totalCount][18];
 
 		for (int i=0;i<18;i++)
 		{
-			s1[i]=(vLmt*vLmt-keyVin[0][i]*keyVin[0][i])/2/aLmt;
-			s3[i]=vLmt*vLmt/2/aLmt;
-			s2[i]=keyPin[0]-keyPin[1]-s1[i]-s3[i];
-			if(s2[i]>=0)
-			{
-				//printf("s2_const exist, the s2 is %.4f\n",s2[i]);
-				t1[i]=(vLmt+keyVin[0][i])/aLmt;//dec
-				t2[i]=s2[i]/vLmt;//const
-				t3[i]=vLmt/aLmt;//acc
-			}
-			else
-			{
-				//printf("s2_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i]));
-				t1[i]=(sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])+keyVin[0][i])/aLmt;//dec
-				t2[i]=0;
-				t3[i]=sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])/aLmt;//acc
-			}
-
-			s4[i]=vLmt*vLmt/2/aLmt;
-			s6[i]=(vLmt*vLmt-keyVin[2][i]*keyVin[2][i])/2/aLmt;
+			s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 ( vector with direction)
+			s3[i]=-0.5*aLmt*t3[i]*t3[i];
+			s2[i]=keyPin[1][i]-keyPin[0][i]-s1[i]-s3[i];
+			s4[i]=0.5*aLmt*t4[i]*t4[i];
+			s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
 			s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
-
-			if(s5[i]>=0)
-			{
-				//printf("s5_const exist, the s5 is %.4f\n",s5[i]);
-				t4[i]=vLmt/aLmt;
-				t5[i]=s5[i]/vLmt;
-				t6[i]=(vLmt-keyVin[2][i])/aLmt;
-			}
-			else
-			{
-				//printf("s5_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i]));
-				t4[i]=sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])/aLmt;
-				t5[i]=0;
-				t6[i]=(sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])-keyVin[2][i])/aLmt;
-			}
-
-			totalT[i]=t1[i]+t2[i]+t3[i]+t4[i]+t5[i]+t6[i];
-			if(totalT[i]>totalTmax)
-			{
-				totalTmax=totalT[i];
-				k=i;
-			}
 		}
 
-		e=fabs(totalTmax-totalTime);
-
-		totalTime=totalTmax;
-
-		printf("%.4f,screwID:%d\n",totalTmax,k);
-		printf("\n");
-	}
-
-	totalTime=1;
-	int totalCount=round(totalTime*1000);
-	double vIn[3000][18];
-	double pIn[3000][18];
-	double vIn_adjust[totalCount][18];
-	double pIn_adjust[totalCount][18];
-	double pEE_adjust[totalCount][18];
-
-	for (int i=0;i<18;i++)
-	{
-		s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 ( vector with direction)
-		s3[i]=-0.5*aLmt*t3[i]*t3[i];
-		s2[i]=keyPin[1][i]-keyPin[0][i]-s1[i]-s3[i];
-		s4[i]=0.5*aLmt*t4[i]*t4[i];
-		s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
-		s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
-	}
-
-	for (int i=0;i<18;i++)
-	{
-		//printf("t:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",t1[i],t2[i],t3[i],t4[i],t5[i],t6[i],totalT[i]);
-		//printf("s:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",s1[i],s2[i],s3[i],s4[i],s5[i],s6[i]);
-	}
-
-	for (int i=0;i<3000;i++)
-	{
-		for (int j=0;j<18;j++)
+		for (int i=0;i<18;i++)
 		{
-			if(((double)i/1000)<t1[j])
-			{
-				vIn[i][j]=keyVin[0][j]-aLmt*i/1000;
-				pIn[i][j]=keyPin[0][j]+keyVin[0][j]*i/1000-0.5*aLmt*i/1000*i/1000;
-			}
-			else if(((double)i/1000)<(t1[j]+t2[j]))
-			{
-				vIn[i][j]=-vLmt;
-				pIn[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000-t1[j]);
-			}
-			else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]))
-			{
-				vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*((double)i/1000-t1[j]-t2[j]);
-				pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000-t1[j]-t2[j])+0.5*aLmt*((double)i/1000-t1[j]-t2[j])*((double)i/1000-t1[j]-t2[j]);
-			}
-			else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]))
-			{
-				vIn[i][j]=vLmt;
-				pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000-(t1[j]+t2[j]+t3[j]+t4[j]));
-			}
-			else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j]))
-			{
-				vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j])-aLmt*((double)i/1000-t1[j]-t3[j]-t4[j]);
-				pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
-			}
-			else
-			{
-				vIn[i][j]=keyVin[2][j];
-				pIn[i][j]=keyPin[2][j];
-			}
-		}
-	}
-
-	for (int i=0;i<totalCount;i++)
-	{
-		for (int j=0;j<18;j++)
-		{
-			if(((double)i/1000)<(t1[j]*totalTime/totalT[j]))
-			{
-				pIn_adjust[i][j]=keyPin[0][j]+keyVin[0][j]*((double)i/1000*totalT[j]/totalTime)-0.5*aLmt*((double)i/1000*totalT[j]/totalTime)*((double)i/1000*totalT[j]/totalTime);
-			}
-			else if(((double)i/1000)<((t1[j]+t2[j])*totalTime/totalT[j]))
-			{
-				pIn_adjust[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000*totalT[j]/totalTime-t1[j]);
-			}
-			else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j])*totalTime/totalT[j]))
-			{
-				pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j])+0.5*aLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]);
-			}
-			else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j]+t5[j])*totalTime/totalT[j]))
-			{
-				pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]);
-			}
-			else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j])*totalTime/totalT[j]))
-			{
-				pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
-			}
-			else
-			{
-				pIn_adjust[i][j]=keyPin[2][j];
-			}
+			//printf("t:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",t1[i],t2[i],t3[i],t4[i],t5[i],t6[i],totalT[i]);
+			//printf("s:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",s1[i],s2[i],s3[i],s4[i],s5[i],s6[i]);
 		}
 
-		rbt.SetPin(*pIn_adjust+18*i);
-		rbt.GetPee(*pEE_adjust+18*i,rbt.body());
-	}
-
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/vIn.txt",*vIn,3000,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn.txt",*pIn,3000,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_adjust.txt",*pIn_adjust,totalCount,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*pEE_adjust,totalCount,18);
-
-
-	gettimeofday(&tpend,NULL);
-	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
-	printf("UsedTime:%f\n",tused);
-}
-
-void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc)
-{
-	auto &robot = static_cast<Robots::RobotBase &>(model);
-
-	double vLmt[2]{-0.9,0.9};
-	double aLmt[2]{-3.2,3.2};
-
-	double direction[3]{0,cos(alpha-PI/2),sin(alpha-PI/2)};
-	double Kv{0};
-	double Ka{0};
-
-	double Jvi[3][3];
-	double dJvi[3][3];
-	double tem[3];
-
-	//maxVel
-	robot.pLegs[legID]->GetJvi(*Jvi,robot.body());
-	aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,direction,1,0,tem,1);
-	for (int i=0;i<3;i++)
-	{
-		if(i==0)
+		for (int i=0;i<3000;i++)
 		{
-			Kv=vLmt[1]/fabs(tem[i]);
-		}
-		else
-		{
-			if(Kv>=vLmt[1]/fabs(tem[i]))
+			for (int j=0;j<18;j++)
 			{
-				Kv=vLmt[1]/fabs(tem[i]);
-			}
-		}
-	}
-	for (int i=0;i<3;i++)
-	{
-		maxVel[i]=Kv*direction[i];
-	}
-
-	//printf("alpha:%f ; tem:%f,%f,%f ; Kv:%f\n",alpha,tem[0],tem[1],tem[2],Kv);
-
-	//maxAcc
-	robot.pLegs[legID]->GetDifJvi(*dJvi,robot.body());
-}
-
-void maxVel()
-{
-	timeval tpstart,tpend;
-	float tused;
-	gettimeofday(&tpstart,NULL);
-
-	Robots::RobotTypeI rbt;
-	rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-
-	double initPeb[6]{0,0,0,0,0,0};
-	double initPee[18]{ -0.3, -0.85, -0.65,
-					   -0.45, -0.85, 0,
-						-0.3, -0.85, 0.65,
-						 0.3, -0.85, -0.65,
-						0.45, -0.85, 0,
-						 0.3, -0.85, 0.65 };
-	double pEE[18];
-	int stepHNum=11;
-	int stepDNum=21;
-	int angleNum=36;
-	double alpha;
-	double maxVel[stepDNum*stepHNum*angleNum][18];
-	double maxAcc[stepDNum*stepHNum*angleNum][18];
-
-	for (int i=0;i<stepDNum;i++)
-	{
-		for (int j=0;j<stepHNum;j++)
-		{
-			for (int k=0;k<6;k++)
-			{
-				pEE[3*k]=initPee[3*k];
-				pEE[3*k+1]=initPee[3*k+1]-0.1+0.4*j/(stepHNum-1);
-				pEE[3*k+2]=initPee[3*k+2]-0.4+0.8*i/(stepDNum-1);
-			}
-			rbt.SetPeb(initPeb);
-			rbt.SetPee(pEE);
-
-			for(int a=0;a<angleNum;a++)
-			{
-				alpha=(double)a/angleNum*PI;
-				for (int k=0;k<6;k++)
+				if(((double)i/1000)<t1[j])
 				{
-					maxCal(rbt,alpha,k,*maxVel+((i*stepHNum+j)*angleNum+a)*18+3*k,*maxAcc+((i*stepHNum+j)*angleNum+a)*18+3*k);
+					vIn[i][j]=keyVin[0][j]-aLmt*i/1000;
+					pIn[i][j]=keyPin[0][j]+keyVin[0][j]*i/1000-0.5*aLmt*i/1000*i/1000;
+				}
+				else if(((double)i/1000)<(t1[j]+t2[j]))
+				{
+					vIn[i][j]=-vLmt;
+					pIn[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000-t1[j]);
+				}
+				else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]))
+				{
+					vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*((double)i/1000-t1[j]-t2[j]);
+					pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000-t1[j]-t2[j])+0.5*aLmt*((double)i/1000-t1[j]-t2[j])*((double)i/1000-t1[j]-t2[j]);
+				}
+				else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]))
+				{
+					vIn[i][j]=vLmt;
+					pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000-(t1[j]+t2[j]+t3[j]+t4[j]));
+				}
+				else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j]))
+				{
+					vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j])-aLmt*((double)i/1000-t1[j]-t3[j]-t4[j]);
+					pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
+				}
+				else
+				{
+					vIn[i][j]=keyVin[2][j];
+					pIn[i][j]=keyPin[2][j];
 				}
 			}
 		}
-	}
 
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/maxVel.txt",*maxVel,stepDNum*stepHNum*angleNum,18);
-
-	gettimeofday(&tpend,NULL);
-	tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
-	printf("UsedTime:%f\n",tused);
-}
-
-void parseFastWalkByScrew(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
-{
-	FastWalkByScrewParam param;
-
-	aris::dynamic::dlmread("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*param.swingPee);
-	for(auto &i:params)
-    {
-        if(i.first=="bodyForwardAcc")
-        {
-            param.bodyForwardAcc=stod(i.second);
-        }
-        else if(i.first=="bodyForwardDec")
-        {
-            param.bodyForwardDec=stod(i.second);
-        }
-        else if(i.first=="bodyForwardVel")
+		for (int i=0;i<totalCount;i++)
 		{
-			param.bodyForwardVel=stod(i.second);
+			for (int j=0;j<18;j++)
+			{
+				if(((double)i/1000)<(t1[j]*totalTime/totalT[j]))
+				{
+					pIn_adjust[i][j]=keyPin[0][j]+keyVin[0][j]*((double)i/1000*totalT[j]/totalTime)-0.5*aLmt*((double)i/1000*totalT[j]/totalTime)*((double)i/1000*totalT[j]/totalTime);
+				}
+				else if(((double)i/1000)<((t1[j]+t2[j])*totalTime/totalT[j]))
+				{
+					pIn_adjust[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000*totalT[j]/totalTime-t1[j]);
+				}
+				else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j])*totalTime/totalT[j]))
+				{
+					pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j])+0.5*aLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]);
+				}
+				else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j]+t5[j])*totalTime/totalT[j]))
+				{
+					pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]);
+				}
+				else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j])*totalTime/totalT[j]))
+				{
+					pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
+				}
+				else
+				{
+					pIn_adjust[i][j]=keyPin[2][j];
+				}
+			}
+
+			rbt.SetPin(*pIn_adjust+18*i);
+			rbt.GetPee(*pEE_adjust+18*i,rbt.body());
 		}
-        else if(i.first=="n")
+
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/vIn.txt",*vIn,3000,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn.txt",*pIn,3000,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_adjust.txt",*pIn_adjust,totalCount,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*pEE_adjust,totalCount,18);
+
+	}
+
+
+	JointSpaceWalk::JointSpaceWalk()
+	{
+	}
+	JointSpaceWalk::~JointSpaceWalk()
+	{
+	}
+
+	WalkState JointSpaceWalk::walkState=WalkState::None;
+
+	void JointSpaceWalk::parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	{
+		JointSpaceWalkParam param;
+
+		for(auto &i:params)
 		{
-			param.n=stoi(i.second);
+			if(i.first=="init")
+			{
+				walkState=WalkState::Init;
+				msg.copyStruct(param);
+				break;
+			}
+			else if(i.first=="acc")
+			{
+				bodyAcc=stod(i.second);
+				walkState=WalkState::Acc;
+				break;
+			}
+			else if(i.first=="dec")
+			{
+				bodyDec=stod(i.second);
+				walkState=WalkState::Dec;
+				break;
+			}
+			else if(i.first=="stop")
+			{
+				walkState=WalkState::Stop;
+				break;
+			}
+			else
+			{
+				std::cout<<"parse failed"<<std::endl;
+			}
 		}
-        else
-        {
-            std::cout<<"parse failed"<<std::endl;
-        }
-    }
 
-    msg.copyStruct(param);
-
-    std::cout<<"finished parse"<<std::endl;
-}
-
-int fastWalkByScrew(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
-{
-	auto &robot = static_cast<Robots::RobotBase &>(model);
-	auto &param = static_cast<const FastWalkByScrewParam &>(param_in);
-
-	double maxVel=0.5;//m/s
-	double bodyVel;
-	int totalCount=1000;
-	int accCount=round(param.bodyForwardVel/param.bodyForwardAcc*1000);
-	int decCount=round(param.bodyForwardVel/param.bodyForwardDec*1000);
-	double initPeb[6]{0,0,0,0,0,0};
-	double initPee[18]{ -0.3, -0.85, -0.65,
-					   -0.45, -0.85, 0,
-						-0.3, -0.85, 0.65,
-						 0.3, -0.85, -0.65,
-						0.45, -0.85, 0,
-						 0.3, -0.85, 0.65 };
-
-	if(param.count<accCount)
-	{
-		bodyVel=param.bodyForwardAcc*param.count/1000;
-	}
-	else if(param.count<param.n*2*totalCount-decCount)
-	{
-		bodyVel=param.bodyForwardVel;
-	}
-	else
-	{
-		bodyVel=param.bodyForwardVel-param.bodyForwardDec*(param.count-param.n*2*totalCount+decCount)/1000;
+		std::cout<<"finished parse"<<std::endl;
 	}
 
-	double ratio=bodyVel/maxVel;
-	double pEB[6]{0,0,0,0,0,0};
-	double pEE[18];
-	double pEB_last[6];
-
-	robot.GetPeb(pEB_last);
-	memcpy(pEB,pEB_last,sizeof(pEB_last));
-	pEB[2]=pEB_last[2]-bodyVel*param.count/1000;
-	if(param.count%(2*totalCount)<totalCount)
+	int JointSpaceWalk::jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
-		for(int i=0;i<3;i++)
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
+
+		int totalCount=1000;
+		if(param.count%(2*totalCount)<totalCount)
 		{
-			//swing leg in B
-			pEE[6*i]=param.swingPee[param.count%totalCount][6*i];
-			pEE[6*i+1]=param.swingPee[param.count%totalCount][6*i+1];
-			pEE[6*i+2]=(param.swingPee[param.count%totalCount][6*i+2]-initPee[6*i+2])*ratio+initPee[6*i+2];
-			//stance leg in B
-			pEE[6*i+3]=initPee[6*i+3];
-			pEE[6*i+4]=initPee[6*i+4];
-			pEE[6*i+5]=-bodyVel*(param.count%totalCount)/totalCount/2*ratio+initPee[6*i+5];
+			for (int i=0;i<3;i++)
+			{
+				gaitPhase[2*i]=true;//swing
+				gaitPhase[2*i+1]=false;//stance
+			}
+		}
+		else
+		{
+			for (int i=0;i<3;i++)
+			{
+				gaitPhase[2*i]=false;//stance
+				gaitPhase[2*i+1]=true;//swing
+			}
+		}
+
+		switch(walkState)
+		{
+		case WalkState::None:
+			return 1;
+			break;
+
+		case WalkState::Init:
+			robot.GetPeb(beginPeb);
+			robot.GetPee(beginPee);
+			std::fill_n(beginVb,6,0);
+			std::fill_n(beginVee,18,0);
+
+			return 1;
+			break;
+
+		case WalkState::Acc:
+
+			break;
+
+		case WalkState::Const:
+
+			break;
+
+		case WalkState::Dec:
+
+			break;
+
+		case WalkState::Stop:
+
+			break;
 		}
 	}
-	else
+
+
+	/*analyse the maxVel of Pee in workspace*/
+	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc)
 	{
-		for(int i=0;i<3;i++)
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+
+		double vLmt[2]{-0.9,0.9};
+		double aLmt[2]{-3.2,3.2};
+
+		double direction[3]{0,cos(alpha-PI/2),sin(alpha-PI/2)};
+		double Kv{0};
+		double Ka{0};
+
+		double Jvi[3][3];
+		double dJvi[3][3];
+		double tem[3];
+
+		//maxVel
+		robot.pLegs[legID]->GetJvi(*Jvi,robot.body());
+		aris::dynamic::s_dgemm(3,1,3,1,*Jvi,3,direction,1,0,tem,1);
+		for (int i=0;i<3;i++)
 		{
-			//swing leg in B
-			pEE[6*i+3]=param.swingPee[param.count%totalCount-totalCount][6*i+3];
-			pEE[6*i+4]=param.swingPee[param.count%totalCount-totalCount][6*i+4];
-			pEE[6*i+5]=(param.swingPee[param.count%totalCount-totalCount][6*i+5]-initPee[6*i+5])*ratio+initPee[6*i+5];
-			//stance leg in B
-			pEE[6*i]=initPee[6*i];
-			pEE[6*i+1]=initPee[6*i+1];
-			pEE[6*i+2]=-bodyVel*(param.count%totalCount-totalCount)/totalCount/2*ratio+initPee[6*i+2];
+			if(i==0)
+			{
+				Kv=vLmt[1]/fabs(tem[i]);
+			}
+			else
+			{
+				if(Kv>=vLmt[1]/fabs(tem[i]))
+				{
+					Kv=vLmt[1]/fabs(tem[i]);
+				}
+			}
 		}
+		for (int i=0;i<3;i++)
+		{
+			maxVel[i]=Kv*direction[i];
+		}
+
+		//printf("alpha:%f ; tem:%f,%f,%f ; Kv:%f\n",alpha,tem[0],tem[1],tem[2],Kv);
+
+		//maxAcc
+		robot.pLegs[legID]->GetDifJvi(*dJvi,robot.body());
 	}
 
-	robot.SetPeb(pEB);
-	robot.SetPee(pEE,robot.body());
-
-	return param.n*2*totalCount - param.count - 1;
-}
-
-void fastTgByScrew()
-{
-	Robots::RobotTypeI robot;
-	robot.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
-	FastWalkByScrewParam param;
-	aris::dynamic::dlmread("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*param.swingPee);
-
-	double maxVel=0.5;//m/s
-	double bodyVel;
-	int totalCount=1000;
-	int accCount=round(param.bodyForwardVel/param.bodyForwardAcc*1000);
-	int decCount=round(param.bodyForwardVel/param.bodyForwardDec*1000);
-	double initPeb[6]{0,0,0,0,0,0};
-	double initPee[18]{ -0.3, -0.85, -0.65,
-					   -0.45, -0.85, 0,
-						-0.3, -0.85, 0.65,
-						 0.3, -0.85, -0.65,
-						0.45, -0.85, 0,
-						 0.3, -0.85, 0.65 };
-	double pEB[6]{0,0,0,0,0,0};
-	double ratio;
-	double pEE[18];
-	double pIn[18];
-	double pEB_last[6];
-	double pEE_last[6];
-	double pEE_output[2*param.n*totalCount][18];
-	double pIn_output[2*param.n*totalCount][18];
-
-	for(int count=0;count<totalCount*2*param.n;count++)
+	void maxVel()
 	{
-		if(count<accCount)
+		timeval tpstart,tpend;
+		float tused;
+		gettimeofday(&tpstart,NULL);
+
+		Robots::RobotTypeI rbt;
+		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+		double initPeb[6]{0,0,0,0,0,0};
+		double initPee[18]{ -0.3, -0.85, -0.65,
+						   -0.45, -0.85, 0,
+							-0.3, -0.85, 0.65,
+							 0.3, -0.85, -0.65,
+							0.45, -0.85, 0,
+							 0.3, -0.85, 0.65 };
+		double pEE[18];
+		int stepHNum=11;
+		int stepDNum=21;
+		int angleNum=36;
+		double alpha;
+		double maxVel[stepDNum*stepHNum*angleNum][18];
+		double maxAcc[stepDNum*stepHNum*angleNum][18];
+
+		for (int i=0;i<stepDNum;i++)
 		{
-			bodyVel=param.bodyForwardAcc*count/1000;
+			for (int j=0;j<stepHNum;j++)
+			{
+				for (int k=0;k<6;k++)
+				{
+					pEE[3*k]=initPee[3*k];
+					pEE[3*k+1]=initPee[3*k+1]-0.1+0.4*j/(stepHNum-1);
+					pEE[3*k+2]=initPee[3*k+2]-0.4+0.8*i/(stepDNum-1);
+				}
+				rbt.SetPeb(initPeb);
+				rbt.SetPee(pEE);
+
+				for(int a=0;a<angleNum;a++)
+				{
+					alpha=(double)a/angleNum*PI;
+					for (int k=0;k<6;k++)
+					{
+						maxCal(rbt,alpha,k,*maxVel+((i*stepHNum+j)*angleNum+a)*18+3*k,*maxAcc+((i*stepHNum+j)*angleNum+a)*18+3*k);
+					}
+				}
+			}
 		}
-		else if(count<param.n*2*totalCount-decCount)
+
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/maxVel.txt",*maxVel,stepDNum*stepHNum*angleNum,18);
+
+		gettimeofday(&tpend,NULL);
+		tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+		printf("UsedTime:%f\n",tused);
+	}
+
+	/*realtime gait of any given stepD by scaling the Pee, seems not to be reasonalbe*/
+	void parseFastWalkByPeeScaling(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	{
+		FastWalkByScrewParam param;
+
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*param.swingPee);
+		for(auto &i:params)
+		{
+			if(i.first=="bodyForwardAcc")
+			{
+				param.bodyForwardAcc=stod(i.second);
+			}
+			else if(i.first=="bodyForwardDec")
+			{
+				param.bodyForwardDec=stod(i.second);
+			}
+			else if(i.first=="bodyForwardVel")
+			{
+				param.bodyForwardVel=stod(i.second);
+			}
+			else if(i.first=="n")
+			{
+				param.n=stoi(i.second);
+			}
+			else
+			{
+				std::cout<<"parse failed"<<std::endl;
+			}
+		}
+
+		msg.copyStruct(param);
+
+		std::cout<<"finished parse"<<std::endl;
+	}
+
+	int fastWalkByPeeScaling(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const FastWalkByScrewParam &>(param_in);
+
+		double maxVel=0.5;//m/s
+		double bodyVel;
+		int totalCount=1000;
+		int accCount=round(param.bodyForwardVel/param.bodyForwardAcc*1000);
+		int decCount=round(param.bodyForwardVel/param.bodyForwardDec*1000);
+		double initPeb[6]{0,0,0,0,0,0};
+		double initPee[18]{ -0.3, -0.85, -0.65,
+						   -0.45, -0.85, 0,
+							-0.3, -0.85, 0.65,
+							 0.3, -0.85, -0.65,
+							0.45, -0.85, 0,
+							 0.3, -0.85, 0.65 };
+
+		if(param.count<accCount)
+		{
+			bodyVel=param.bodyForwardAcc*param.count/1000;
+		}
+		else if(param.count<param.n*2*totalCount-decCount)
 		{
 			bodyVel=param.bodyForwardVel;
 		}
 		else
 		{
-			bodyVel=param.bodyForwardVel-param.bodyForwardDec*(count-param.n*2*totalCount+decCount)/1000;
+			bodyVel=param.bodyForwardVel-param.bodyForwardDec*(param.count-param.n*2*totalCount+decCount)/1000;
 		}
 
-		ratio=bodyVel/maxVel;
+		double ratio=bodyVel/maxVel;
+		double pEB[6]{0,0,0,0,0,0};
+		double pEE[18];
+		double pEB_last[6];
+
 		robot.GetPeb(pEB_last);
-
-		if(count%100==0)
-		{
-			printf("Ratio:%.4f,Peb:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",ratio,pEB[0],pEB[1],pEB[2],pEB[3],pEB[4],pEB[5]);
-		}
 		memcpy(pEB,pEB_last,sizeof(pEB_last));
-		pEB[2]=pEB_last[2]-bodyVel/1000;
-		if(count%(2*totalCount)<totalCount)
+		pEB[2]=pEB_last[2]-bodyVel*param.count/1000;
+		if(param.count%(2*totalCount)<totalCount)
 		{
 			for(int i=0;i<3;i++)
 			{
 				//swing leg in B
-				pEE[6*i]=param.swingPee[count%totalCount][6*i];
-				pEE[6*i+1]=param.swingPee[count%totalCount][6*i+1];
-				pEE[6*i+2]=(param.swingPee[count%totalCount][6*i+2]-initPee[6*i+2])*ratio+initPee[6*i+2];
+				pEE[6*i]=param.swingPee[param.count%totalCount][6*i];
+				pEE[6*i+1]=param.swingPee[param.count%totalCount][6*i+1];
+				pEE[6*i+2]=(param.swingPee[param.count%totalCount][6*i+2]-initPee[6*i+2])*ratio+initPee[6*i+2];
 				//stance leg in B
 				pEE[6*i+3]=initPee[6*i+3];
 				pEE[6*i+4]=initPee[6*i+4];
-				pEE[6*i+5]=maxVel*(count%totalCount-totalCount/2)/1000*ratio+initPee[6*i+5];
+				pEE[6*i+5]=-bodyVel*(param.count%totalCount)/totalCount/2*ratio+initPee[6*i+5];
 			}
 		}
 		else
@@ -943,24 +827,114 @@ void fastTgByScrew()
 			for(int i=0;i<3;i++)
 			{
 				//swing leg in B
-				pEE[6*i+3]=param.swingPee[count%totalCount][6*i+3];
-				pEE[6*i+4]=param.swingPee[count%totalCount][6*i+4];
-				pEE[6*i+5]=(param.swingPee[count%totalCount][6*i+5]-initPee[6*i+5])*ratio+initPee[6*i+5];
+				pEE[6*i+3]=param.swingPee[param.count%totalCount-totalCount][6*i+3];
+				pEE[6*i+4]=param.swingPee[param.count%totalCount-totalCount][6*i+4];
+				pEE[6*i+5]=(param.swingPee[param.count%totalCount-totalCount][6*i+5]-initPee[6*i+5])*ratio+initPee[6*i+5];
 				//stance leg in B
 				pEE[6*i]=initPee[6*i];
 				pEE[6*i+1]=initPee[6*i+1];
-				pEE[6*i+2]=maxVel*(count%totalCount-totalCount/2)/1000*ratio+initPee[6*i+2];
+				pEE[6*i+2]=-bodyVel*(param.count%totalCount-totalCount)/totalCount/2*ratio+initPee[6*i+2];
 			}
 		}
 
 		robot.SetPeb(pEB);
 		robot.SetPee(pEE,robot.body());
-		robot.GetPin(pIn);
-		memcpy(*pEE_output+18*count,pEE,sizeof(pEE));
-		memcpy(*pIn_output+18*count,pIn,sizeof(pIn));
+
+		return param.n*2*totalCount - param.count - 1;
 	}
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_output.txt",*pEE_output,param.n*2*totalCount,18);
-	aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_output.txt",*pIn_output,param.n*2*totalCount,18);
+
+	/*analyse the Pee after scaling*/
+	void fastTgByPeeScaling()
+	{
+		Robots::RobotTypeI robot;
+		robot.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+		FastWalkByScrewParam param;
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*param.swingPee);
+
+		double maxVel=0.5;//m/s
+		double bodyVel;
+		int totalCount=1000;
+		int accCount=round(param.bodyForwardVel/param.bodyForwardAcc*1000);
+		int decCount=round(param.bodyForwardVel/param.bodyForwardDec*1000);
+		double initPeb[6]{0,0,0,0,0,0};
+		double initPee[18]{ -0.3, -0.85, -0.65,
+						   -0.45, -0.85, 0,
+							-0.3, -0.85, 0.65,
+							 0.3, -0.85, -0.65,
+							0.45, -0.85, 0,
+							 0.3, -0.85, 0.65 };
+		double pEB[6]{0,0,0,0,0,0};
+		double ratio;
+		double pEE[18];
+		double pIn[18];
+		double pEB_last[6];
+		double pEE_last[6];
+		double pEE_output[2*param.n*totalCount][18];
+		double pIn_output[2*param.n*totalCount][18];
+
+		for(int count=0;count<totalCount*2*param.n;count++)
+		{
+			if(count<accCount)
+			{
+				bodyVel=param.bodyForwardAcc*count/1000;
+			}
+			else if(count<param.n*2*totalCount-decCount)
+			{
+				bodyVel=param.bodyForwardVel;
+			}
+			else
+			{
+				bodyVel=param.bodyForwardVel-param.bodyForwardDec*(count-param.n*2*totalCount+decCount)/1000;
+			}
+
+			ratio=bodyVel/maxVel;
+			robot.GetPeb(pEB_last);
+
+			if(count%100==0)
+			{
+				printf("Ratio:%.4f,Peb:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",ratio,pEB[0],pEB[1],pEB[2],pEB[3],pEB[4],pEB[5]);
+			}
+			memcpy(pEB,pEB_last,sizeof(pEB_last));
+			pEB[2]=pEB_last[2]-bodyVel/1000;
+			if(count%(2*totalCount)<totalCount)
+			{
+				for(int i=0;i<3;i++)
+				{
+					//swing leg in B
+					pEE[6*i]=param.swingPee[count%totalCount][6*i];
+					pEE[6*i+1]=param.swingPee[count%totalCount][6*i+1];
+					pEE[6*i+2]=(param.swingPee[count%totalCount][6*i+2]-initPee[6*i+2])*ratio+initPee[6*i+2];
+					//stance leg in B
+					pEE[6*i+3]=initPee[6*i+3];
+					pEE[6*i+4]=initPee[6*i+4];
+					pEE[6*i+5]=maxVel*(count%totalCount-totalCount/2)/1000*ratio+initPee[6*i+5];
+				}
+			}
+			else
+			{
+				for(int i=0;i<3;i++)
+				{
+					//swing leg in B
+					pEE[6*i+3]=param.swingPee[count%totalCount][6*i+3];
+					pEE[6*i+4]=param.swingPee[count%totalCount][6*i+4];
+					pEE[6*i+5]=(param.swingPee[count%totalCount][6*i+5]-initPee[6*i+5])*ratio+initPee[6*i+5];
+					//stance leg in B
+					pEE[6*i]=initPee[6*i];
+					pEE[6*i+1]=initPee[6*i+1];
+					pEE[6*i+2]=maxVel*(count%totalCount-totalCount/2)/1000*ratio+initPee[6*i+2];
+				}
+			}
+
+			robot.SetPeb(pEB);
+			robot.SetPee(pEE,robot.body());
+			robot.GetPin(pIn);
+			memcpy(*pEE_output+18*count,pEE,sizeof(pEE));
+			memcpy(*pIn_output+18*count,pIn,sizeof(pIn));
+		}
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_output.txt",*pEE_output,param.n*2*totalCount,18);
+		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_output.txt",*pIn_output,param.n*2*totalCount,18);
+	}
+
 }
 
 

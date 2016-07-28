@@ -24,8 +24,9 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	screwInterpolationTraj();
-	fastTgByScrew();
+	FastWalk::screwInterpolationTraj();
+	FastWalk::fastTgByScrew();
+
 	ForceTask::StartRecordData();
 
 	std::string xml_address;

@@ -150,26 +150,69 @@ struct MoveRotateParam final :public aris::server::GaitParamBase
 	double targetBodyPE213[6]{0};
 	std::int32_t totalCount;
 };
-struct FastWalkByScrewParam final:public aris::server::GaitParamBase
-{
-	double swingPee[1000][18];
-	double bodyForwardAcc{0.5};
-	double bodyForwardDec{0.5};
-	double bodyForwardVel{0.5};
-	std::int32_t n{2};
-};
+
 
 void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-void parseFastWalkByScrew(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-int fastWalkByScrew(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-void fastTgByScrew();
-void fastTg();
-void ellipseTrajAnalyse();
-void screwInterpolationTraj();
-void fastTgByPYAnalyse();
-void wkByPYAnalyse();
-void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
-void maxVel();
+
+
+namespace FastWalk
+{
+	void fastTgByScrew();
+	void fastTgByPeeScaling();
+	void fastTg();
+	void ellipseTrajAnalyse();
+	void screwInterpolationTraj();
+	void fastTgByPYAnalyse();
+	void wkByPYAnalyse();
+	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
+	void maxVel();
+
+	struct FastWalkByScrewParam final:public aris::server::GaitParamBase
+	{
+		double swingPee[1000][18];
+		double bodyForwardAcc{0.5};
+		double bodyForwardDec{0.5};
+		double bodyForwardVel{0.5};
+		std::int32_t n{2};
+	};
+	void parseFastWalkByPeeScaling(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+	int fastWalkByPeeScaling(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+
+	struct JointSpaceWalkParam final:public aris::server::GaitParamBase{};
+	enum WalkState
+	{
+		None,
+		Init,
+		Acc,
+		Const,
+		Dec,
+		Stop,
+	};
+	class JointSpaceWalk
+	{
+		public:
+			JointSpaceWalk();
+			~JointSpaceWalk();
+			void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+			int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+		private:
+			static double bodyAcc;
+			static double bodyDec;
+			static double beginPeb[6];
+			static double beginPee[18];
+			static double beginVb[6];
+			static double beginVee[18];
+			static double endPeb[6];
+			static double endPee[18];
+			static double endVb[6];
+			static double endVee[18];
+			static bool gaitPhase[6];//swing true, stance false
+			static WalkState walkState;
+	};
+}
+
 
 #endif // MOVE_GAIT_H
