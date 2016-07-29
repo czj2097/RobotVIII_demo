@@ -303,7 +303,6 @@ namespace FastWalk
 							 0.3, -0.85, 0.65 };
 		double initVee[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-		double pEB[6];
 		double pEE[18];
 		double pEE_B[18];
 
@@ -316,7 +315,7 @@ namespace FastWalk
 		double keyPin[keyPointNum][18];
 		double keyVin[keyPointNum][18];
 
-		rbt.SetPeb(pEB);
+		rbt.SetPeb(initPeb);
 		rbt.SetVb(initVeb);
 
 		for (int i=0;i<6;i++)
@@ -550,24 +549,32 @@ namespace FastWalk
 			{
 				walkState=WalkState::Init;
 				msg.copyStruct(param);
-				break;
 			}
 			else if(i.first=="acc")
 			{
 				bodyAcc=stod(i.second);
 				walkState=WalkState::Acc;
-				break;
 			}
 			else if(i.first=="dec")
 			{
 				bodyDec=stod(i.second);
 				walkState=WalkState::Dec;
-				break;
 			}
 			else if(i.first=="stop")
 			{
 				walkState=WalkState::Stop;
-				break;
+			}
+			else if(i.first=="totalCount")
+			{
+				totalCount=stoi(i.second);
+			}
+			else if(i.first=="height")
+			{
+				height=stod(i.second);
+			}
+			else if(i.first=="beta")
+			{
+				beta=stod(i.second);
 			}
 			else
 			{
@@ -578,12 +585,166 @@ namespace FastWalk
 		std::cout<<"finished parse"<<std::endl;
 	}
 
+	void JointSpaceWalk::swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
+
+		int i=legID;
+		double ratio{0.7};//control point, from middle to edge [0,1]
+		double stepH=height;
+		double stepD=distance;
+		double vLmt{0.9};
+		double aLmt{3.2};
+
+		int keyPointNum{3};
+		double keyPee_B[keyPointNum][3];
+		double keyVee_B[keyPointNum][3];
+		std::fill_n(*keyVee_B,keyPointNum*3,0);
+		double keyPin[keyPointNum][3];
+		double keyVin[keyPointNum][3];
+
+		double halfGaitTime;
+		double totalTime=(double)totalCount/1000;
+		double totalT[3];
+		double t1[3],t2[3],t3[3],t4[3],t5[3],t6[3];
+		double s1[3],s2[3],s3[3],s4[3],s5[3],s6[3];
+		double pIn_adjust[3];
+
+		//keyPee_B
+		keyPee_B[0][0]=beginPee[0];
+		keyPee_B[0][1]=beginPee[1];
+		keyPee_B[0][2]=beginPee[2];
+
+		keyPee_B[1][0]=beginPee[0];
+		keyPee_B[1][1]=beginPee[1]+stepH;
+		if(i==0 || i==3)
+		{
+			keyPee_B[1][2]=beginPee[2]-stepD/2*(1+ratio);
+		}
+		else if (i==2 || i==5)
+		{
+			keyPee_B[1][2]=beginPee[2]-stepD/2*(1-ratio);
+		}
+		else
+		{
+			keyPee_B[1][2]=beginPee[2];
+		}
+
+		keyPee_B[2][0]=beginPee[0];
+		keyPee_B[2][1]=beginPee[1];
+		keyPee_B[2][2]=beginPee[2]-stepD;
+
+		//keyVee_B
+		keyVee_B[0][2]=beginVel;
+		keyVee_B[2][2]=endVel;
+
+		//keyPin & keyVin
+		robot.pLegs[i]->SetPee(*keyPee_B);
+		robot.pLegs[i]->SetVee(*keyVee_B);
+		robot.pLegs[i]->GetPin(*keyPin);
+		robot.pLegs[i]->GetVin(*keyVin);
+
+		robot.pLegs[i]->SetPee(*keyPee_B+3);
+		robot.pLegs[i]->GetPin(*keyPin+3);
+
+		robot.pLegs[i]->SetPee(*keyPee_B+6);
+		robot.pLegs[i]->SetVee(*keyVee_B+6);
+		robot.pLegs[i]->GetPin(*keyPin+6);
+		robot.pLegs[i]->GetVin(*keyVin+6);
+
+		for (int i=0;i<3;i++)
+		{
+			//cal t1[i]~t6[i]
+			s1[i]=(vLmt*vLmt-keyVin[0][i]*keyVin[0][i])/2/aLmt;
+			s3[i]=vLmt*vLmt/2/aLmt;
+			s2[i]=keyPin[0]-keyPin[1]-s1[i]-s3[i];
+			if(s2[i]>=0)
+			{
+				//printf("s2_const exist, the s2 is %.4f\n",s2[i]);
+				t1[i]=(vLmt+keyVin[0][i])/aLmt;//dec
+				t2[i]=s2[i]/vLmt;//const
+				t3[i]=vLmt/aLmt;//acc
+			}
+			else
+			{
+				//printf("s2_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i]));
+				t1[i]=(sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])+keyVin[0][i])/aLmt;//dec
+				t2[i]=0;
+				t3[i]=sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])/aLmt;//acc
+			}
+
+			s4[i]=vLmt*vLmt/2/aLmt;
+			s6[i]=(vLmt*vLmt-keyVin[2][i]*keyVin[2][i])/2/aLmt;
+			s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
+
+			if(s5[i]>=0)
+			{
+				//printf("s5_const exist, the s5 is %.4f\n",s5[i]);
+				t4[i]=vLmt/aLmt;
+				t5[i]=s5[i]/vLmt;
+				t6[i]=(vLmt-keyVin[2][i])/aLmt;
+			}
+			else
+			{
+				//printf("s5_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i]));
+				t4[i]=sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])/aLmt;
+				t5[i]=0;
+				t6[i]=(sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])-keyVin[2][i])/aLmt;
+			}
+
+			totalT[i]=t1[i]+t2[i]+t3[i]+t4[i]+t5[i]+t6[i];
+
+			//cal s1[i]~s6[i]
+			s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 ( vector with direction)
+			s3[i]=-0.5*aLmt*t3[i]*t3[i];
+			s2[i]=keyPin[1][i]-keyPin[0][i]-s1[i]-s3[i];
+			s4[i]=0.5*aLmt*t4[i]*t4[i];
+			s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
+			s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
+
+			//scaling to adjust to the totalCount
+			halfGaitTime=(double)(param.count%totalCount)/1000;
+			if(halfGaitTime<(t1[i]*totalTime/totalT[i]))
+			{
+				pIn_adjust[i]=keyPin[0][i]+keyVin[0][i]*(halfGaitTime*totalT[i]/totalTime)-0.5*aLmt*(halfGaitTime*totalT[i]/totalTime)*(halfGaitTime*totalT[i]/totalTime);
+			}
+			else if(halfGaitTime<((t1[i]+t2[i])*totalTime/totalT[i]))
+			{
+				pIn_adjust[i]=keyPin[0][i]+s1[i]-vLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]);
+			}
+			else if(halfGaitTime<((t1[i]+t2[i]+t3[i]+t4[i])*totalTime/totalT[i]))
+			{
+				pIn_adjust[i]=keyPin[0][i]+s1[i]+s2[i]+(keyVin[0][i]-aLmt*t1[i])*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i])+0.5*aLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i])*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]);
+			}
+			else if(halfGaitTime<((t1[i]+t2[i]+t3[i]+t4[i]+t5[i])*totalTime/totalT[i]))
+			{
+				pIn_adjust[i]=keyPin[0][i]+s1[i]+s2[i]+s3[i]+s4[i]+vLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]);
+			}
+			else if(halfGaitTime<((t1[i]+t2[i]+t3[i]+t4[i]+t5[i]+t6[i])*totalTime/totalT[i]))
+			{
+				pIn_adjust[i]=keyPin[0][i]+s1[i]+s2[i]+s3[i]+s4[i]+s5[i]+(keyVin[0][i]-aLmt*t1[i]+aLmt*(t3[i]+t4[i]))*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]-t5[i])-0.5*aLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]-t5[i])*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]-t5[i]);
+			}
+			else
+			{
+				pIn_adjust[i]=keyPin[2][i];
+			}
+		}
+
+		robot.pLegs[i]->SetPin(pIn_adjust);
+	}
+
+	void JointSpaceWalk::stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
+	}
+
 	int JointSpaceWalk::jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
 
-		int totalCount=1000;
 		if(param.count%(2*totalCount)<totalCount)
 		{
 			for (int i=0;i<3;i++)
@@ -601,36 +762,59 @@ namespace FastWalk
 			}
 		}
 
-		switch(walkState)
+		if(param.count%totalCount==0)
 		{
-		case WalkState::None:
-			return 1;
-			break;
+			beginVel=endVel;
+			memcpy(beginPee,endPee,sizeof(endPee));
 
-		case WalkState::Init:
-			robot.GetPeb(beginPeb);
-			robot.GetPee(beginPee);
-			std::fill_n(beginVb,6,0);
-			std::fill_n(beginVee,18,0);
+			switch(walkState)
+			{
+			case WalkState::None:
+				return 1;
+				break;
 
-			return 1;
-			break;
+			case WalkState::Init:
+				robot.GetPee(beginPee,robot.body());
+				robot.GetPee(endPee,robot.body());
+				beginVel=0;
+				endVel=0;
+				return 1;
+				break;
 
-		case WalkState::Acc:
+			case WalkState::Acc:
+				endVel=beginVel+bodyAcc*totalCount/1000;
+				break;
 
-			break;
+			case WalkState::Const:
+				endVel=beginVel;
+				break;
 
-		case WalkState::Const:
+			case WalkState::Dec:
+				endVel=beginVel-bodyDec*totalCount/1000;
+				break;
 
-			break;
+			case WalkState::Stop:
+				return 0;
+				break;
+			}
+		}
+		distance=(beginVel+endVel)/2*totalCount/1000;
 
-		case WalkState::Dec:
+		double initPeb[6]{0,0,0,0,0,0};
+		double initVeb[6]{0,0,0,0,0,0};
+		robot.SetPeb(initPeb);
+		robot.SetVb(initVeb);
 
-			break;
-
-		case WalkState::Stop:
-
-			break;
+		for (int i=0;i<6;i++)
+		{
+			if(gaitPhase[i]==true)
+			{
+				swingLegTg(robot,param,i);
+			}
+			else
+			{
+				stanceLegTg(robot,param,i);
+			}
 		}
 	}
 

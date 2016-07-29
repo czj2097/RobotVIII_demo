@@ -197,20 +197,25 @@ namespace FastWalk
 			~JointSpaceWalk();
 			void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 			int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+			void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+			void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
 
 		private:
 			static double bodyAcc;
 			static double bodyDec;
-			static double beginPeb[6];
-			static double beginPee[18];
-			static double beginVb[6];
-			static double beginVee[18];
-			static double endPeb[6];
-			static double endPee[18];
-			static double endVb[6];
-			static double endVee[18];
-			static bool gaitPhase[6];//swing true, stance false
+			static double totalCount;
+			static double height;
+			static double beta;
 			static WalkState walkState;
+
+			static double beginPee[18];
+			static double beginVel;
+			static double endPee[18];
+			static double endVel;
+			static double distance;
+
+			static bool gaitPhase[6];//swing true, stance false
+
 	};
 }
 
