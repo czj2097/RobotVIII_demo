@@ -537,8 +537,6 @@ namespace FastWalk
 	{
 	}
 
-	WalkState JointSpaceWalk::walkState=WalkState::None;
-
 	void JointSpaceWalk::parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		JointSpaceWalkParam param;
@@ -604,7 +602,7 @@ namespace FastWalk
 		double keyPin[keyPointNum][3];
 		double keyVin[keyPointNum][3];
 
-		double halfGaitTime;
+		double halfGaitTime=(double)(param.count%totalCount)/1000;
 		double totalTime=(double)totalCount/1000;
 		double totalT[3];
 		double t1[3],t2[3],t3[3],t4[3],t5[3],t6[3];
@@ -634,6 +632,7 @@ namespace FastWalk
 		keyPee_B[2][0]=beginPee[0];
 		keyPee_B[2][1]=beginPee[1];
 		keyPee_B[2][2]=beginPee[2]-stepD;
+		memcpy(endPee+3*i,*keyPee_B+6,3*sizeof(double));
 
 		//keyVee_B
 		keyVee_B[0][2]=beginVel;
@@ -704,7 +703,6 @@ namespace FastWalk
 			s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
 
 			//scaling to adjust to the totalCount
-			halfGaitTime=(double)(param.count%totalCount)/1000;
 			if(halfGaitTime<(t1[i]*totalTime/totalT[i]))
 			{
 				pIn_adjust[i]=keyPin[0][i]+keyVin[0][i]*(halfGaitTime*totalT[i]/totalTime)-0.5*aLmt*(halfGaitTime*totalT[i]/totalTime)*(halfGaitTime*totalT[i]/totalTime);
@@ -738,6 +736,15 @@ namespace FastWalk
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
+
+		int i=legID;
+		double pEE_B[3];
+		double halfGaitTime=(double)(param.count%totalCount)/1000;
+
+		pEE_B[0]=beginPee[3*i];
+		pEE_B[1]=beginPee[3*i+1];
+		pEE_B[2]=beginPee[3*i+2]-(beginVel*halfGaitTime
+
 	}
 
 	int JointSpaceWalk::jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -762,6 +769,19 @@ namespace FastWalk
 			}
 		}
 
+		if(param.count==0)
+		{
+			walkState=WalkState::Init;
+			constFlag=false;
+		}
+		if(param.count%totalCount==(totalCount-1))
+		{
+			if((walkState==WalkState::Acc || walkState==WalkState::Dec) && constFlag==true)
+			{
+				walkState=WalkState::Const;
+				constFlag=false;
+			}
+		}
 		if(param.count%totalCount==0)
 		{
 			beginVel=endVel;
@@ -769,10 +789,6 @@ namespace FastWalk
 
 			switch(walkState)
 			{
-			case WalkState::None:
-				return 1;
-				break;
-
 			case WalkState::Init:
 				robot.GetPee(beginPee,robot.body());
 				robot.GetPee(endPee,robot.body());
@@ -783,6 +799,7 @@ namespace FastWalk
 
 			case WalkState::Acc:
 				endVel=beginVel+bodyAcc*totalCount/1000;
+				constFlag=true;
 				break;
 
 			case WalkState::Const:
@@ -791,6 +808,7 @@ namespace FastWalk
 
 			case WalkState::Dec:
 				endVel=beginVel-bodyDec*totalCount/1000;
+				constFlag=true;
 				break;
 
 			case WalkState::Stop:

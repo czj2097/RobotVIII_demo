@@ -183,7 +183,6 @@ namespace FastWalk
 	struct JointSpaceWalkParam final:public aris::server::GaitParamBase{};
 	enum WalkState
 	{
-		None,
 		Init,
 		Acc,
 		Const,
@@ -215,6 +214,7 @@ namespace FastWalk
 			static double distance;
 
 			static bool gaitPhase[6];//swing true, stance false
+			static bool constFlag;
 
 	};
 }
