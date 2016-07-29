@@ -25,10 +25,9 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 	FastWalk::screwInterpolationTraj();
-	FastWalk::fastTgByScrew();
 
+	FastWalk::JointSpaceWalk walker;
 	ForceTask::StartRecordData();
-
 	std::string xml_address;
 
 	if (argc <= 1)
@@ -60,12 +59,15 @@ int main(int argc, char *argv[])
 	rs.addCmd("wk", Robots::walkParse, Robots::walkGait);
 	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
 
-	rs.addCmd("mwr",parseMoveWithRotate,moveWithRotate);
+	rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
+
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
     rs.addCmd("odb",ForceTask::parseOpenDoorBegin,ForceTask::openDoor);
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
     rs.addCmd("fwk",Robots::walkParse, ForceTask::forceWalk);
+
+    rs.addCmd("jfw",walker.parseJointSpaceFastWalk,walker.jointSpaceFastWalk);
 
 	rs.open();
 

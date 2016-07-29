@@ -144,21 +144,19 @@ namespace ForceTask
 extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
 static std::thread openDoorThread;
 
-
-struct MoveRotateParam final :public aris::server::GaitParamBase
+namespace NormalGait
 {
-	double targetBodyPE213[6]{0};
-	std::int32_t totalCount;
-};
-
-
-void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
+	struct MoveRotateParam final :public aris::server::GaitParamBase
+	{
+		double targetBodyPE213[6]{0};
+		std::int32_t totalCount;
+	};
+	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+}
 
 namespace FastWalk
 {
-	void fastTgByScrew();
 	void fastTgByPeeScaling();
 	void fastTg();
 	void ellipseTrajAnalyse();
@@ -180,7 +178,14 @@ namespace FastWalk
 	int fastWalkByPeeScaling(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 
-	struct JointSpaceWalkParam final:public aris::server::GaitParamBase{};
+	struct JointSpaceWalkParam final:public aris::server::GaitParamBase
+	{
+	};
+	struct outputParam
+	{
+		double outputPin[18];
+		double outputPee[18];
+	};
 	enum WalkState
 	{
 		Init,
@@ -194,15 +199,17 @@ namespace FastWalk
 		public:
 			JointSpaceWalk();
 			~JointSpaceWalk();
-			void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-			int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-			void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
-			void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+			static void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+			static int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
 
 		private:
+			static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+			static void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+
 			static double bodyAcc;
 			static double bodyDec;
-			static double totalCount;
+			static int totalCount;
 			static double height;
 			static double beta;
 			static WalkState walkState;
@@ -218,6 +225,7 @@ namespace FastWalk
 
 	};
 }
-
+extern Pipe<FastWalk::outputParam> fastWalkPipe;
+static std::thread fastWalkThread;
 
 #endif // MOVE_GAIT_H
