@@ -635,15 +635,15 @@ namespace FastWalk
 		keyPee_B[1][1]=beginPee[3*legID+1]+stepH;
 		if(legID==0 || legID==3)
 		{
-			keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2*(1+ratio);
+			keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2*(1-ratio);
 		}
 		else if (legID==2 || legID==5)
 		{
-			keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2*(1-ratio);
+			keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2*(1+ratio);
 		}
 		else
 		{
-			keyPee_B[1][2]=beginPee[3*legID+2];
+			keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2;
 		}
 
 		keyPee_B[2][0]=beginPee[3*legID];
@@ -758,7 +758,7 @@ namespace FastWalk
 
 		pEE_B[0]=beginPee[3*legID];
 		pEE_B[1]=beginPee[3*legID+1];
-		pEE_B[2]=beginPee[3*legID+2]-(beginVel*halfGaitTime+0.5*(endVel-beginVel)/totalCount*1000*halfGaitTime*halfGaitTime);
+		pEE_B[2]=beginPee[3*legID+2]+(beginVel*halfGaitTime+0.5*(endVel-beginVel)/totalCount*1000*halfGaitTime*halfGaitTime);
 
 		robot.pLegs[legID]->SetPee(pEE_B,robot.body());
 	}
@@ -789,10 +789,18 @@ namespace FastWalk
 
 		if(param.count%totalCount==(totalCount-1))
 		{
-			if((walkState==WalkState::Acc || walkState==WalkState::Dec) && constFlag==true)
+			if(walkState==WalkState::Acc && constFlag==true)
 			{
 				walkState=WalkState::Const;
 				constFlag=false;
+				rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
+			}
+
+			if(walkState==WalkState::Dec && constFlag==true)
+			{
+				walkState=WalkState::Const;
+				constFlag=false;
+				rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
 			}
 		}
 		if(param.count%totalCount==0)
@@ -857,11 +865,21 @@ namespace FastWalk
 			}
 		}
 
-		rt_printf("beginVel:%.4f,endVel:%.4f,distance:%.4f\n",beginVel,endVel,distance);
+		//rt_printf("beginVel:%.4f,endVel:%.4f,distance:%.4f\n",beginVel,endVel,distance);
+		//rt_printf("beginPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",beginPee[2],beginPee[5],beginPee[8],beginPee[11],beginPee[14],beginPee[17]);
+		//rt_printf("endPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",endPee[2],endPee[5],endPee[8],endPee[11],endPee[14],endPee[17]);
 
 		robot.GetPin(OPP.outputPin);
 		robot.GetPee(OPP.outputPee,robot.body());
 		fastWalkPipe.sendToNrt(OPP);
+
+		/*
+		rt_printf("outputPee:");
+		for (int i=0;i<6;i++)
+		{
+			rt_printf("%.4f,",OPP.outputPee[3*i+2]);
+		}
+		rt_printf("\n");*/
 
 		if(walkState==WalkState::Stop)
 		{
