@@ -211,6 +211,56 @@ namespace FastWalk
 		printf("UsedTime:%f\n",tused);
 	}
 
+	double FastWalkPY::pIn_acc[900][18];
+	double FastWalkPY::pIn_const[1800][18];
+	double FastWalkPY::pIn_dec[900][18];
+	FastWalkPY::FastWalkPY()
+	{
+	}
+	FastWalkPY::~FastWalkPY()
+	{
+	}
+	void FastWalkPY::parseFastWalkByPY(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	{
+		FastWalkByPYParam param;
+
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_acc.txt",*pIn_acc);
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_const.txt",*pIn_const);
+		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_dec.txt",*pIn_dec);
+		for(auto &i:params)
+		{
+			if(i.first=="n")
+			{
+				param.n=stoi(i.second);
+			}
+			else
+			{
+				std::cout<<"parse failed"<<std::endl;
+			}
+		}
+		msg.copyStruct(param);
+		std::cout<<"finished parse"<<std::endl;
+	}
+	int FastWalkPY::fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const FastWalkByPYParam &>(param_in);
+
+		if (param.count<param.totalCount)
+		{
+			robot.SetPin(*pIn_acc+18*param.count);
+		}
+		else if(param.count<param.totalCount*(2*param.n-1))
+		{
+			robot.SetPin(*pIn_const+18*((param.count-param.totalCount)%(2*param.totalCount)));
+		}
+		else
+		{
+			robot.SetPin(*pIn_dec+18*(param.count-param.totalCount*(2*param.n-1)));
+		}
+		return param.count-param.totalCount*2*param.n+1;
+	}
+
 	void fastTgByPYAnalyse()
 	{
 		Robots::RobotTypeI rbt;

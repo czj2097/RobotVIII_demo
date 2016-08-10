@@ -543,6 +543,11 @@
 					<totalCount abbreviation="t" type="double" default="3000"/>
 				</mwr_param>
 			</mwr>
+			<fw default="fw_param">
+				<fw_param type="group">
+					<n abbreviation="n" type="int" default="1"/>
+				</fw_param>
+			</fw>
 			<fwk>
                 <fwk_param type="group">
                     <totalCount abbreviation="t" type="int" default="3000"/>

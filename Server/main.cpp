@@ -26,7 +26,8 @@ int main(int argc, char *argv[])
 {
 	FastWalk::screwInterpolationTraj();
 
-	FastWalk::JointSpaceWalk walker;
+	FastWalk::JointSpaceWalk jointspacewalker;
+	FastWalk::FastWalkPY pyfastwalker;
 	ForceTask::StartRecordData();
 	std::string xml_address;
 
@@ -67,7 +68,8 @@ int main(int argc, char *argv[])
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
     rs.addCmd("fwk",Robots::walkParse, ForceTask::forceWalk);
 
-    rs.addCmd("jfw",walker.parseJointSpaceFastWalk,walker.jointSpaceFastWalk);
+    rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
+    rs.addCmd("fw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
 
 	rs.open();
 

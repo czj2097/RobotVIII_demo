@@ -177,6 +177,25 @@ namespace FastWalk
 	void parseFastWalkByPeeScaling(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	int fastWalkByPeeScaling(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
+	struct FastWalkByPYParam final:public aris::server::GaitParamBase
+	{
+		std::int32_t n{2};
+		int totalCount{900};
+	};
+	class FastWalkPY
+	{
+	public:
+		FastWalkPY();
+		~FastWalkPY();
+		static void parseFastWalkByPY(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+		static int fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+	private:
+		static double pIn_acc[900][18];
+		static double pIn_const[1800][18];
+		static double pIn_dec[900][18];
+	};
+
 
 	struct JointSpaceWalkParam final:public aris::server::GaitParamBase
 	{
