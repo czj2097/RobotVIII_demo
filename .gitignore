@@ -2,8 +2,12 @@
 *.config
 *.creator
 *.files
-RobotVIII_demo.includes
+*.includes
 *.user
 
 #txt files
 *.txt
+
+
+#~ files
+*~
