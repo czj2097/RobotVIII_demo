@@ -2532,7 +2532,7 @@ namespace ForceTask
 		}
 	}
 
-	/*
+
 	ForceWalk::ForceWalk()
 	{
 	}
@@ -2591,6 +2591,8 @@ namespace ForceTask
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
+        const double frcRange[6]{0,0,0,0,0,0};
+
 		if(param.count%(2*totalCount)<totalCount)
 		{
 			for (int i=0;i<3;i++)
@@ -2607,6 +2609,10 @@ namespace ForceTask
 				gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;//swing
 			}
 		}
+        for(int i=0;i<6;i++)
+        {
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing && param.force_data->at(i)>frcRange[i])
+        }
 
 		if(param.count%totalCount==(totalCount-1))
 		{
@@ -2703,5 +2709,5 @@ namespace ForceTask
 		{
 			return 1;
 		}
-	}*/
+    }
 }

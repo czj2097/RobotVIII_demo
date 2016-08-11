@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
     rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
     rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
-    /*rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);*/
+    rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);
 
 	rs.open();
 

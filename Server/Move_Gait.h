@@ -166,7 +166,7 @@ namespace ForceTask
 		bool pauseFlag;
 	};
 
-	/*
+
 	struct ForceWalkParam final:public aris::server::GaitParamBase
 	{
 	};
@@ -191,7 +191,7 @@ namespace ForceTask
 		static void followLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
 
 
-	};*/
+    };
 }
 
 namespace FastWalk
