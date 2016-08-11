@@ -532,6 +532,17 @@
                     <beta abbreviation="b" type="double" default="0"/>
                 </wk_param>
             </wk>
+            <swk default="swk_param">
+                <swk_param type="group">
+                    <totalCount abbreviation="t" type="int" default="3000"/>
+                    <n abbreviation="n" type="int" default="1"/>
+                    <distance abbreviation="d" type="double" default="0.5"/>
+                    <height abbreviation="h" type="double" default="0.05"/>
+                    <alpha abbreviation="a" type="double" default="0"/>
+                    <beta abbreviation="b" type="double" default="0"/>
+                    <offset abbreviation="o" type="double" default="0"/>
+                </swk_param>
+            </swk>
             <mwr>
 				<mwr_param type="group">
 					<u abbreviation="u" type="double" default="0"/>
@@ -543,21 +554,21 @@
 					<totalCount abbreviation="t" type="double" default="3000"/>
 				</mwr_param>
 			</mwr>
-			<fw default="fw_param">
-				<fw_param type="group">
+			<fsw default="fsw_param">
+				<fsw_param type="group">
 					<n abbreviation="n" type="int" default="1"/>
-				</fw_param>
-			</fw>
-			<fwk>
-                <fwk_param type="group">
+				</fsw_param>
+			</fsw>
+			<ffd>
+                <ffd_param type="group">
                     <totalCount abbreviation="t" type="int" default="3000"/>
                     <n abbreviation="n" type="int" default="1"/>
                     <distance abbreviation="d" type="double" default="0.5"/>
                     <height abbreviation="h" type="double" default="0.05"/>
                     <alpha abbreviation="a" type="double" default="0"/>
                     <beta abbreviation="b" type="double" default="0"/>
-                </fwk_param>
-            </fwk>
+                </ffd_param>
+            </ffd>
             <jfw>
             	<jfw_param type="group">
             		<state_param type="unique">
@@ -571,6 +582,19 @@
         			<beta abbreviation="b" type="double" default="0"/>
             	</jfw_param>
             </jfw>
+            <fcw>
+            	<fcw_param type="group">
+            		<state_param type="unique">
+            			<init abbreviation="i"/>
+            			<acc abbreviation="a" type="double" default="0"/>
+            			<dec abbreviation="d" type="double" default="0"/>
+            			<stop abbreviation="s"/>
+        			</state_param>
+        			<totalCount abbreviation="t" type="int" default="1000"/>
+        			<height abbreviation="h" type="double" default="0.05"/>
+        			<beta abbreviation="b" type="double" default="0"/>
+            	</fcw_param>
+            </fcw>
 			<cmb>
 				<cmb_param type="group">
 					<u abbreviation="u" type="double" default="0"/>

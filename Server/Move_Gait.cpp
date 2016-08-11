@@ -90,6 +90,156 @@ namespace NormalGait
 
 		return param.totalCount - param.count - 1;
 	}
+
+	void parseSpecialWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	{
+		SpecialWalkParam param;
+
+		for (auto &i : params)
+		{
+			if (i.first == "totalCount")
+			{
+				param.totalCount = std::stoi(i.second);
+			}
+			else if (i.first == "n")
+			{
+				param.n = stoi(i.second);
+			}
+			else if (i.first == "distance")
+			{
+				param.d = stod(i.second);
+			}
+			else if (i.first == "height")
+			{
+				param.h = stod(i.second);
+			}
+			else if (i.first == "alpha")
+			{
+				param.alpha = stod(i.second);
+			}
+			else if (i.first == "beta")
+			{
+				param.beta = stod(i.second);
+			}
+			else if (i.first == "offset")
+			{
+				param.offset = stod(i.second);
+			}
+		}
+		msg.copyStruct(param);
+
+		std::cout<<"finished parse"<<std::endl;
+	}
+
+	int specialWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const SpecialWalkParam &>(param_in);
+
+		double pEB[6];
+		double pEE[18];
+		Robots::walkGait(robot,param);
+		robot.GetPeb(pEB);
+		robot.GetPee(pEE);
+
+		double deltaPosInB[3]{0,0,0};
+		double deltaPosInG[3];
+		double bodyPm[4][4];
+		robot.GetPmb(*bodyPm);
+		deltaPosInB[0]=param.offset*sin((double)param.count/param.totalCount*PI);
+		rt_printf("%.4f,%.4f\n",param.offset,deltaPosInB[0]);
+		aris::dynamic::s_pm_dot_v3(*bodyPm,deltaPosInB,deltaPosInG);
+		
+		rt_printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",pEB[0],pEB[1],pEB[2],pEB[3],pEB[4],pEB[5]);
+		for(int i=0;i<3;i++)
+		{
+			pEB[i]+=deltaPosInG[i];
+		}
+		rt_printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",pEB[0],pEB[1],pEB[2],pEB[3],pEB[4],pEB[5]);
+
+		robot.SetPeb(pEB);
+		robot.SetPee(pEE);
+
+		return 2*param.n*param.totalCount - param.count - 1;
+	}
+
+	void StartRecordData()
+	{
+		fastWalkThread = std::thread([&]()
+		{
+			struct FastWalk::outputParam param;
+			static std::fstream fileGait;
+			std::string name = aris::core::logFileName();
+			name.replace(name.rfind("log.txt"), std::strlen("jointSpaceWalk.txt"), "jointSpaceWalk.txt");
+			fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
+
+			long long count = -1;
+			while (1)
+			{
+				fastWalkPipe.recvInNrt(param);
+
+				//fileGait << ++count << " ";
+				for (int i = 0; i < 18; i++)
+				{
+					fileGait << param.outputPin[i] << "  ";
+				}
+				for (int i = 0; i < 18; i++)
+				{
+					fileGait << param.outputPee[i] << "  ";
+				}
+				fileGait << std::endl;
+			}
+
+			fileGait.close();
+		});
+	}
+
+	void inv3(double * matrix,double * invmatrix)
+	{
+		double a1=matrix[0];
+		double b1=matrix[1];
+		double c1=matrix[2];
+		double a2=matrix[3];
+		double b2=matrix[4];
+		double c2=matrix[5];
+		double a3=matrix[6];
+		double b3=matrix[7];
+		double c3=matrix[8];
+
+		double value_matrix=a1*(b2*c3-c2*b3)-a2*(b1*c3-c1*b3)+a3*(b1*c2-c1*b2);
+
+		invmatrix[0]=(b2*c3-c2*b3)/value_matrix;
+		invmatrix[1]=(c1*b3-b1*c3)/value_matrix;
+		invmatrix[2]=(b1*c2-c1*b2)/value_matrix;
+		invmatrix[3]=(c2*a3-a2*c3)/value_matrix;
+		invmatrix[4]=(a1*c3-c1*a3)/value_matrix;
+		invmatrix[5]=(a2*c1-a1*c2)/value_matrix;
+		invmatrix[6]=(a2*b3-a3*b2)/value_matrix;
+		invmatrix[7]=(b1*a3-a1*b3)/value_matrix;
+		invmatrix[8]=(a1*b2-b1*a2)/value_matrix;
+	}
+
+	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out)
+	{
+		vector_out[0]=vector_in1[1]*vector_in2[2]-vector_in1[2]*vector_in2[1];
+		vector_out[1]=vector_in1[2]*vector_in2[0]-vector_in1[0]*vector_in2[2];
+		vector_out[2]=vector_in1[0]*vector_in2[1]-vector_in1[1]*vector_in2[0];
+	}
+
+	double dotMultiply(double *vector_in1, double *vector_in2)
+	{
+		double sum{0};
+		for(int i=0;i<3;i++)
+		{
+			sum+=vector_in1[i]*vector_in2[i];
+		}
+		return sum;
+	}
+
+	double norm(double * vector_in)
+	{
+		return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
+	}
 }
 
 namespace FastWalk
@@ -341,7 +491,7 @@ namespace FastWalk
 		float tused;
 		gettimeofday(&tpstart,NULL);
 
-		double totalTime{3};
+		double totalTime{1.5};
 
 		double ratio{0.7};//control point, from middle to edge [0,1]
 
@@ -362,7 +512,7 @@ namespace FastWalk
 
 		double aEE[18];
 		double vLmt{0.9};
-		double aLmt{3.2};
+		double aLmt{3.2*2};
 
 		int keyPointNum{3};
 		double keyPee_B[keyPointNum][18];
@@ -584,7 +734,7 @@ namespace FastWalk
 	}
 
 
-	WalkState JointSpaceWalk::walkState;
+	NormalGait::WalkState JointSpaceWalk::walkState;
 	double JointSpaceWalk::bodyAcc;
 	double JointSpaceWalk::bodyDec;
 	int JointSpaceWalk::totalCount;
@@ -595,7 +745,7 @@ namespace FastWalk
 	double JointSpaceWalk::endPee[18];
 	double JointSpaceWalk::endVel;
 	double JointSpaceWalk::distance;
-	bool JointSpaceWalk::gaitPhase[6];//swing true, stance false
+	NormalGait::GaitPhase JointSpaceWalk::gaitPhase[6];//swing true, stance false
 	bool JointSpaceWalk::constFlag;
 
 	JointSpaceWalk::JointSpaceWalk()
@@ -613,22 +763,22 @@ namespace FastWalk
 		{
 			if(i.first=="init")
 			{
-				walkState=WalkState::Init;
+				walkState=NormalGait::WalkState::Init;
 				msg.copyStruct(param);
 			}
 			else if(i.first=="acc")
 			{
 				bodyAcc=stod(i.second);
-				walkState=WalkState::Acc;
+				walkState=NormalGait::WalkState::Acc;
 			}
 			else if(i.first=="dec")
 			{
 				bodyDec=stod(i.second);
-				walkState=WalkState::Dec;
+				walkState=NormalGait::WalkState::Dec;
 			}
 			else if(i.first=="stop")
 			{
-				walkState=WalkState::Stop;
+				walkState=NormalGait::WalkState::Stop;
 			}
 			else if(i.first=="totalCount")
 			{
@@ -824,31 +974,31 @@ namespace FastWalk
 		{
 			for (int i=0;i<3;i++)
 			{
-				gaitPhase[2*i]=true;//swing
-				gaitPhase[2*i+1]=false;//stance
+				gaitPhase[2*i]=NormalGait::GaitPhase::Swing;//swing
+				gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;//stance
 			}
 		}
 		else
 		{
 			for (int i=0;i<3;i++)
 			{
-				gaitPhase[2*i]=false;//stance
-				gaitPhase[2*i+1]=true;//swing
+				gaitPhase[2*i]=NormalGait::GaitPhase::Stance;//stance
+				gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;//swing
 			}
 		}
 
 		if(param.count%totalCount==(totalCount-1))
 		{
-			if(walkState==WalkState::Acc && constFlag==true)
+			if(walkState==NormalGait::WalkState::Acc && constFlag==true)
 			{
-				walkState=WalkState::Const;
+				walkState=NormalGait::WalkState::Const;
 				constFlag=false;
 				rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
 			}
 
-			if(walkState==WalkState::Dec && constFlag==true)
+			if(walkState==NormalGait::WalkState::Dec && constFlag==true)
 			{
-				walkState=WalkState::Const;
+				walkState=NormalGait::WalkState::Const;
 				constFlag=false;
 				rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
 			}
@@ -860,7 +1010,7 @@ namespace FastWalk
 
 			switch(walkState)
 			{
-			case WalkState::Init:
+			case NormalGait::WalkState::Init:
 				robot.GetPee(beginPee,robot.body());
 				robot.GetPee(endPee,robot.body());
 				beginVel=0;
@@ -868,16 +1018,16 @@ namespace FastWalk
 				constFlag=false;
 				break;
 
-			case WalkState::Acc:
+			case NormalGait::WalkState::Acc:
 				endVel=beginVel+bodyAcc*totalCount/1000;
 				constFlag=true;
 				break;
 
-			case WalkState::Const:
+			case NormalGait::WalkState::Const:
 				endVel=beginVel;
 				break;
 
-			case WalkState::Dec:
+			case NormalGait::WalkState::Dec:
 				endVel=beginVel-bodyDec*totalCount/1000;
 				constFlag=true;
 				break;
@@ -905,11 +1055,11 @@ namespace FastWalk
 
 		for (int i=0;i<6;i++)
 		{
-			if(gaitPhase[i]==true)
+			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 			{
 				swingLegTg(robot,param,i);
 			}
-			else
+			else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
 			{
 				stanceLegTg(robot,param,i);
 			}
@@ -931,7 +1081,7 @@ namespace FastWalk
 		}
 		rt_printf("\n");*/
 
-		if(walkState==WalkState::Stop)
+		if(walkState==NormalGait::WalkState::Stop && param.count%totalCount==(totalCount-1))
 		{
 			return 0;
 		}
@@ -1242,8 +1392,28 @@ namespace FastWalk
 		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_output.txt",*pIn_output,param.n*2*totalCount,18);
 	}
 
-}
+	//when this function called, make sure that the robot model is at the state set in last ms.
+	void getMaxPin(double* maxPin,aris::dynamic::Model &model,maxVelParam &param_in)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		//param not casted? problems may appear
 
+		double Jvi[9][6];
+		double difJvi[9][6];
+		double bodyVel_spatial[6];
+		double bodyAcc_spatial[6];
+		double aIn[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		double vIn[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+		//if(param_in.legState==false)
+
+		robot.GetJvi(*Jvi,"000111000111000111");
+		robot.GetDifJvi(*difJvi,"000111000111000111");
+		robot.GetVb(bodyVel_spatial);//cannot get
+		robot.GetAb(bodyAcc_spatial);//cannot get
+
+	}
+}
 
 
 namespace ForceTask
@@ -1275,7 +1445,7 @@ namespace ForceTask
 		aris::dynamic::s_f2f(forcePm,forceInF,forceInB_out);
 	}
 
-	int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const Robots::WalkParam &>(param_in);
@@ -1337,28 +1507,6 @@ namespace ForceTask
 				return realParam.count%param.totalCount;
 			}
 		}
-	}
-
-	//when this function called, make sure that the robot model is at the state set in last ms.
-	void getMaxPin(double* maxPin,aris::dynamic::Model &model,ForceTask::maxVelParam &param_in)
-	{
-		auto &robot = static_cast<Robots::RobotBase &>(model);
-		//param not casted? problems may appear
-
-		double Jvi[9][6];
-		double difJvi[9][6];
-		double bodyVel_spatial[6];
-		double bodyAcc_spatial[6];
-		double aIn[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-		double vIn[18]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-		//if(param_in.legState==false)
-
-		robot.GetJvi(*Jvi,"000111000111000111");
-		robot.GetDifJvi(*difJvi,"000111000111000111");
-		robot.GetVb(bodyVel_spatial);//cannot get
-		robot.GetAb(bodyAcc_spatial);//cannot get
-
 	}
 
 	std::atomic_bool isForce;
@@ -1709,54 +1857,6 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
-	void inv3(double * matrix,double * invmatrix)
-	{
-		double a1=matrix[0];
-		double b1=matrix[1];
-		double c1=matrix[2];
-		double a2=matrix[3];
-		double b2=matrix[4];
-		double c2=matrix[5];
-		double a3=matrix[6];
-		double b3=matrix[7];
-		double c3=matrix[8];
-
-		double value_matrix=a1*(b2*c3-c2*b3)-a2*(b1*c3-c1*b3)+a3*(b1*c2-c1*b2);
-
-		invmatrix[0]=(b2*c3-c2*b3)/value_matrix;
-		invmatrix[1]=(c1*b3-b1*c3)/value_matrix;
-		invmatrix[2]=(b1*c2-c1*b2)/value_matrix;
-		invmatrix[3]=(c2*a3-a2*c3)/value_matrix;
-		invmatrix[4]=(a1*c3-c1*a3)/value_matrix;
-		invmatrix[5]=(a2*c1-a1*c2)/value_matrix;
-		invmatrix[6]=(a2*b3-a3*b2)/value_matrix;
-		invmatrix[7]=(b1*a3-a1*b3)/value_matrix;
-		invmatrix[8]=(a1*b2-b1*a2)/value_matrix;
-	}
-
-	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out)
-	{
-		vector_out[0]=vector_in1[1]*vector_in2[2]-vector_in1[2]*vector_in2[1];
-		vector_out[1]=vector_in1[2]*vector_in2[0]-vector_in1[0]*vector_in2[2];
-		vector_out[2]=vector_in1[0]*vector_in2[1]-vector_in1[1]*vector_in2[0];
-	}
-
-	double dotMultiply(double *vector_in1, double *vector_in2)
-	{
-		double sum{0};
-		for(int i=0;i<3;i++)
-		{
-			sum+=vector_in1[i]*vector_in2[i];
-		}
-		return sum;
-	}
-
-	double norm(double * vector_in)
-	{
-		return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
-	}
-
-
 	//*****only for Robot VIII*****
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
@@ -1895,12 +1995,12 @@ namespace ForceTask
 					ODP.moveState=MoveState::LocateAjust;
 
 					//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-					inv3(*ODP.location,*invLocation);
+					NormalGait::inv3(*ODP.location,*invLocation);
 					aris::dynamic::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 					aris::dynamic::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 					aris::dynamic::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
 					ODP.planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
-					ODP.planeYPR[1]=-asin(planeVerticalInB[1]/norm(planeVerticalInB));
+					ODP.planeYPR[1]=-asin(planeVerticalInB[1]/NormalGait::norm(planeVerticalInB));
 					ODP.planeYPR[2]=0;
 
 					//Set now param of now2start in LocateAjust
@@ -2146,9 +2246,9 @@ namespace ForceTask
 						ODP.vector2[i]=touchPE[i]-ODP.beginPE[i];
 					}
 
-					ODP.handleLocation[2]=-norm(ODP.vector0);
-					ODP.handleLocation[0]=norm(ODP.vector1);
-					ODP.handleLocation[1]=-norm(ODP.vector2);
+					ODP.handleLocation[2]=-NormalGait::norm(ODP.vector0);
+					ODP.handleLocation[0]=NormalGait::norm(ODP.vector1);
+					ODP.handleLocation[1]=-NormalGait::norm(ODP.vector2);
 
 					rt_printf("handleLocation:%f,%f,%f\n",ODP.handleLocation[0],ODP.handleLocation[1],ODP.handleLocation[2]);
 				}
@@ -2216,8 +2316,8 @@ namespace ForceTask
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,xBodyInB,ODP.xNowInG);
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,yBodyInB,ODP.yNowInG);
 
-					ODP.now2startDistanceInB[0]=dotMultiply(ODP.now2startDistance,ODP.xNowInG);
-					ODP.now2startDistanceInB[1]=dotMultiply(ODP.now2startDistance,ODP.yNowInG)+h0;
+					ODP.now2startDistanceInB[0]=NormalGait::dotMultiply(ODP.now2startDistance,ODP.xNowInG);
+					ODP.now2startDistanceInB[1]=NormalGait::dotMultiply(ODP.now2startDistance,ODP.yNowInG)+h0;
 					ODP.now2startDistanceInB[2]=0;
 
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,ODP.now2startDistanceInB,ODP.now2startDistanceInG);
@@ -2250,7 +2350,7 @@ namespace ForceTask
 							ODP.walkParam.alpha=PI/2;
 							ODP.walkParam.beta=0;
 							ODP.walkParam.totalCount=2000;
-							ODP.walkParam.d=(d0-fabs(dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
+							ODP.walkParam.d=(d0-fabs(NormalGait::dotMultiply(ODP.handle2startDistance,ODP.xNowInG)))/3*2;
 						}
 						else//pause, tested useless
 						{
@@ -2432,34 +2532,176 @@ namespace ForceTask
 		}
 	}
 
-	void StartRecordData()
+	/*
+	ForceWalk::ForceWalk()
 	{
-		fastWalkThread = std::thread([&]()
+	}
+	ForceWalk::~ForceWalk()
+	{
+	}
+
+	void ForceWalk::parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	{
+		ForceWalkParam param;
+
+		for(auto &i:params)
 		{
-			struct FastWalk::outputParam param;
-			static std::fstream fileGait;
-			std::string name = aris::core::logFileName();
-			name.replace(name.rfind("log.txt"), std::strlen("jointSpaceWalk.txt"), "jointSpaceWalk.txt");
-			fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
-
-			long long count = -1;
-			while (1)
+			if(i.first=="init")
 			{
-				fastWalkPipe.recvInNrt(param);
+				walkState=NormalGait::WalkState::Init;
+				msg.copyStruct(param);
+			}
+			else if(i.first=="acc")
+			{
+				bodyAcc=stod(i.second);
+				walkState=NormalGait::WalkState::Acc;
+			}
+			else if(i.first=="dec")
+			{
+				bodyDec=stod(i.second);
+				walkState=NormalGait::WalkState::Dec;
+			}
+			else if(i.first=="stop")
+			{
+				walkState=NormalGait::WalkState::Stop;
+			}
+			else if(i.first=="totalCount")
+			{
+				totalCount=stoi(i.second);
+			}
+			else if(i.first=="height")
+			{
+				height=stod(i.second);
+			}
+			else if(i.first=="beta")
+			{
+				beta=stod(i.second);
+			}
+			else
+			{
+				std::cout<<"parse failed"<<std::endl;
+			}
+		}
 
-				//fileGait << ++count << " ";
-				for (int i = 0; i < 18; i++)
-				{
-					fileGait << param.outputPin[i] << "  ";
-				}
-				for (int i = 0; i < 18; i++)
-				{
-					fileGait << param.outputPee[i] << "  ";
-				}
-				fileGait << std::endl;
+		std::cout<<"finished parse"<<std::endl;
+	}
+
+	int ForceWalk::forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+	{
+		auto &robot = static_cast<Robots::RobotBase &>(model);
+		auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+		if(param.count%(2*totalCount)<totalCount)
+		{
+			for (int i=0;i<3;i++)
+			{
+				gaitPhase[2*i]=NormalGait::GaitPhase::Swing;//swing
+				gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;//stance
+			}
+		}
+		else
+		{
+			for (int i=0;i<3;i++)
+			{
+				gaitPhase[2*i]=NormalGait::GaitPhase::Stance;//stance
+				gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;//swing
+			}
+		}
+
+		if(param.count%totalCount==(totalCount-1))
+		{
+			if(walkState==NormalGait::WalkState::Acc && constFlag==true)
+			{
+				walkState=NormalGait::WalkState::Const;
+				constFlag=false;
+				rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
 			}
 
-			fileGait.close();
-		});
-	}
+			if(walkState==NormalGait::WalkState::Dec && constFlag==true)
+			{
+				walkState=NormalGait::WalkState::Const;
+				constFlag=false;
+				rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
+			}
+		}
+		if(param.count%totalCount==0)
+		{
+			beginVel=endVel;
+			memcpy(beginPee,endPee,sizeof(endPee));
+
+			switch(walkState)
+			{
+			case NormalGait::WalkState::Init:
+				robot.GetPee(beginPee,robot.body());
+				robot.GetPee(endPee,robot.body());
+				beginVel=0;
+				endVel=0;
+				constFlag=false;
+				break;
+
+			case NormalGait::WalkState::Acc:
+				endVel=beginVel+bodyAcc*totalCount/1000;
+				constFlag=true;
+				break;
+
+			case NormalGait::WalkState::Const:
+				endVel=beginVel;
+				break;
+
+			case NormalGait::WalkState::Dec:
+				endVel=beginVel-bodyDec*totalCount/1000;
+				constFlag=true;
+				break;
+			}
+			distance=(beginVel+endVel)/2*totalCount/1000;
+			for (int i=0;i<6;i++)
+			{
+				endPee[3*i]=beginPee[3*i];
+				endPee[3*i+1]=beginPee[3*i+1];
+				if(gaitPhase[i]==true)
+				{
+					endPee[3*i+2]=beginPee[3*i+2]-distance;
+				}
+				else
+				{
+					endPee[3*i+2]=beginPee[3*i+2]+distance;
+				}
+			}
+		}
+
+		double initPeb[6]{0,0,0,0,0,0};
+		double initVeb[6]{0,0,0,0,0,0};
+		robot.SetPeb(initPeb);
+		robot.SetVb(initVeb);
+
+		for (int i=0;i<6;i++)
+		{
+			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
+			{
+				swingLegTg(robot,param,i);
+			}
+			else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
+			{
+				stanceLegTg(robot,param,i);
+			}
+		}
+
+		//rt_printf("beginVel:%.4f,endVel:%.4f,distance:%.4f\n",beginVel,endVel,distance);
+		//rt_printf("beginPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",beginPee[2],beginPee[5],beginPee[8],beginPee[11],beginPee[14],beginPee[17]);
+		//rt_printf("endPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",endPee[2],endPee[5],endPee[8],endPee[11],endPee[14],endPee[17]);
+
+		robot.GetPin(OPP.outputPin);
+		robot.GetPee(OPP.outputPee,robot.body());
+		fastWalkPipe.sendToNrt(OPP);
+
+
+		if(walkState==NormalGait::WalkState::Stop && param.count%totalCount==(totalCount-1))
+		{
+			return 0;
+		}
+		else
+		{
+			return 1;
+		}
+	}*/
 }

@@ -15,6 +15,45 @@
 using namespace aris::control;
 
 //static const double PI = 3.141592653589793;
+namespace NormalGait
+{
+	enum WalkState
+	{
+		Init,
+		Acc,
+		Const,
+		Dec,
+		Stop,
+	};
+	enum GaitPhase
+	{
+		Swing,
+		Stance,
+		Follow,
+	};
+
+	struct MoveRotateParam final :public aris::server::GaitParamBase
+	{
+		double targetBodyPE213[6]{0};
+		std::int32_t totalCount;
+	};
+	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+	struct SpecialWalkParam final:public Robots::WalkParam
+	{
+		double offset;
+	};
+	void parseSpecialWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+	int specialWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+	void StartRecordData();
+	void inv3(double * matrix,double * invmatrix);
+	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
+	void s_admdm(int m, int n, int k, double alpha, double *matrix_in1, double *matrix_in2, double *matrix_out);
+	double dotMultiply(double *vector_in1, double *vector_in2);
+	double norm(double * vector_in);
+}
 
 namespace ForceTask
 {
@@ -25,14 +64,8 @@ namespace ForceTask
 	void forceInit(int count, const double* forceRaw_in, const double* forcePm, double* forceInB_out);
 	int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-	int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
-	void StartRecordData();
-	void inv3(double * matrix,double * invmatrix);
-	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
-	void s_admdm(int m, int n, int k, double alpha, double *matrix_in1, double *matrix_in2, double *matrix_out);
-	double dotMultiply(double *vector_in1, double *vector_in2);
-	double norm(double * vector_in);
 
 	enum MoveState
 	{
@@ -59,13 +92,6 @@ namespace ForceTask
 		leftWalk,
 		forwardWalk,
 	};
-
-	struct maxVelParam
-	{
-		double bodyVel_last_spatial[6]{0,0,0,0,0,0};
-		bool legState{false};
-	};
-	void getMaxPin(double* maxPin, aris::dynamic::Model &model, ForceTask::maxVelParam &param_in);
 
 	struct ContinueMoveParam final :public aris::server::GaitParamBase
 	{
@@ -139,20 +165,33 @@ namespace ForceTask
 		int pauseCount{0};
 		bool pauseFlag;
 	};
-};
 
-extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
-static std::thread openDoorThread;
-
-namespace NormalGait
-{
-	struct MoveRotateParam final :public aris::server::GaitParamBase
+	/*
+	struct ForceWalkParam final:public aris::server::GaitParamBase
 	{
-		double targetBodyPE213[6]{0};
-		std::int32_t totalCount;
 	};
-	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+	class ForceWalk
+	{
+	public:
+		ForceWalk();
+		~ForceWalk();
+		static void parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+		static int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+	private:
+		static double bodyAcc;
+		static double bodyDec;
+		static int totalCount;
+		static double height;
+		static double beta;
+		static NormalGait::WalkState walkState;
+		static NormalGait::GaitPhase gaitPhase[6];
+		static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+		static void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+		static void followLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
+
+
+	};*/
 }
 
 namespace FastWalk
@@ -165,6 +204,13 @@ namespace FastWalk
 	void wkByPYAnalyse();
 	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
 	void maxVel();
+
+	struct maxVelParam
+	{
+		double bodyVel_last_spatial[6]{0,0,0,0,0,0};
+		bool legState{false};
+	};
+	void getMaxPin(double* maxPin, aris::dynamic::Model &model, maxVelParam &param_in);
 
 	struct FastWalkByScrewParam final:public aris::server::GaitParamBase
 	{
@@ -205,14 +251,7 @@ namespace FastWalk
 		double outputPin[18];
 		double outputPee[18];
 	};
-	enum WalkState
-	{
-		Init,
-		Acc,
-		Const,
-		Dec,
-		Stop,
-	};
+
 	class JointSpaceWalk
 	{
 		public:
@@ -220,7 +259,6 @@ namespace FastWalk
 			~JointSpaceWalk();
 			static void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 			static int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
 
 		private:
 			static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
@@ -231,7 +269,7 @@ namespace FastWalk
 			static int totalCount;
 			static double height;
 			static double beta;
-			static WalkState walkState;
+			static NormalGait::WalkState walkState;
 
 			static double beginPee[18];
 			static double beginVel;
@@ -239,11 +277,13 @@ namespace FastWalk
 			static double endVel;
 			static double distance;
 
-			static bool gaitPhase[6];//swing true, stance false
+			static NormalGait::GaitPhase gaitPhase[6];//swing true, stance false
 			static bool constFlag;
-
 	};
 }
+
+extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
+static std::thread openDoorThread;
 extern Pipe<FastWalk::outputParam> fastWalkPipe;
 static std::thread fastWalkThread;
 

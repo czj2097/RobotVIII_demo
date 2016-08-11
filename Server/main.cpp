@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
 
 	FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
-	ForceTask::StartRecordData();
+	//ForceTask::ForceWalk forcewalker;
+	NormalGait::StartRecordData();
 	std::string xml_address;
 
 	if (argc <= 1)
@@ -61,15 +62,17 @@ int main(int argc, char *argv[])
 	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
 
 	rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
+	rs.addCmd("swk",NormalGait::parseSpecialWalk,NormalGait::specialWalk);
 
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
     rs.addCmd("odb",ForceTask::parseOpenDoorBegin,ForceTask::openDoor);
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
-    rs.addCmd("fwk",Robots::walkParse, ForceTask::forceWalk);
+    rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
     rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
-    rs.addCmd("fw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
+    rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
+    /*rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);*/
 
 	rs.open();
 
