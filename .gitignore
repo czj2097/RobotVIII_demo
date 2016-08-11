@@ -2,7 +2,7 @@
 *.config
 *.creator
 *.files
-*.includes
+RobotVIII_demo.includes
 *.user
 
 #txt files
