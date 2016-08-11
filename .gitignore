@@ -1,0 +1,9 @@
+#qt files
+*.config
+*.creator
+*.files
+*.includes
+*.user
+
+#txt files
+*.txt
