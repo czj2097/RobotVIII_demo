@@ -118,6 +118,8 @@ target_link_libraries(Server ${ALL_LINK_LIB})
 add_executable(rbt Client/client.cpp)
 target_link_libraries(rbt ${ALL_LINK_LIB})
 
+add_executable(LogReader Server/LogReader.cpp)
+
 ################################### install ####################################
 if(UNIX)
 	set(CMAKE_INSTALL_PREFIX "/usr/Robots/CMakeDemo/")
