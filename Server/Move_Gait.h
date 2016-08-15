@@ -184,6 +184,17 @@ namespace ForceTask
 		static int totalCount;
 		static double height;
 		static double beta;
+
+        static double beginVel;
+        static double endVel;
+        static double distance;
+        static double beginPee[18];
+        static double endPee[18];
+        static bool constFlag;
+        static bool followFlag[6];
+        static double followBegin[18];
+        static double followEnd[18];
+        static double followDist[18];//followEnd - followBegin
 		static NormalGait::WalkState walkState;
 		static NormalGait::GaitPhase gaitPhase[6];
 		static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
