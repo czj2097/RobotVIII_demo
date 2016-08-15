@@ -1348,7 +1348,7 @@ int ForceTask::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPa
     			{
     				//leg 0,2,4
     				followPeeInB[6*i]=ODP.startPeeInB[6*i]+(ODP.endPeeInB[6*i]-ODP.startPeeInB[6*i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
-    				followPeeInB[6*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+    				followPeeInB[6*i+1]=ODP.startPeeInB[6*i+1]+0.025*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
 					followPeeInB[6*i+2]=ODP.startPeeInB[6*i+2];
 					//leg 1,3,5
 					followPeeInB[6*i+3]=ODP.startPeeInB[6*i+3];
@@ -1362,7 +1362,7 @@ int ForceTask::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPa
 				{
 					//leg 1,3,5
 					followPeeInB[6*i+3]=ODP.startPeeInB[6*i+3]+(ODP.endPeeInB[6*i+3]-ODP.startPeeInB[6*i+3])/2*(1-cos((param.count-ODP.countIter-ODP.followCount)*PI/ODP.followCount));
-					followPeeInB[6*i+4]=ODP.startPeeInB[6*i+4]+0.05*(1-cos((param.count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
+					followPeeInB[6*i+4]=ODP.startPeeInB[6*i+4]+0.025*(1-cos((param.count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
 					followPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
 					//leg 0,2,4
 					followPeeInB[6*i]=ODP.endPeeInB[6*i];
