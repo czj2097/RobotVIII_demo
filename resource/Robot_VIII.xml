@@ -20,7 +20,7 @@
             <S2jpe type="matrix">{ 0, 0,      0,     0, -PI / 2, 0 }</S2jpe>
             <S3ipe type="matrix">{ 0, 0.059, -0.034, 0, -PI / 2, 0 }</S3ipe>
             <S3jpe type="matrix">{ 0, 0,      0,     0, -PI / 2, 0 }</S3jpe>
-            <Sfipe type="matrix">{ 0.065, 0, 0, 0, 0, 0 }</Sfipe>
+            <Sfipe type="matrix">{ 0.114, -0.024, 0, 0, 0, 0 }</Sfipe>
             <Sfjpe type="matrix">{ 0,   0, 0, 0, 0, 0 }</Sfjpe>
             <LFpe type="matrix">{-0.05433 , 0 , -0.3300 + 0.0047, PI/2,  PI* 5/6,   -PI/2-PI*75/180}</LFpe>
             <LMpe type="matrix">{-0.10241 , 0 ,  0,         PI/2,  PI* 6/6,   -PI/2-PI*75/180}</LMpe>
@@ -544,22 +544,22 @@
                 </swk_param>
             </swk>
             <mwr>
-				<mwr_param type="group">
-					<u abbreviation="u" type="double" default="0"/>
-					<v abbreviation="v" type="double" default="0"/>
-					<w abbreviation="w" type="double" default="0"/>
-					<roll abbreviation="r" type="double" default="0"/>
-					<pitch abbreviation="p" type="double" default="0"/>
-					<yaw abbreviation="y" type="double" default="0"/>
-					<totalCount abbreviation="t" type="double" default="3000"/>
-				</mwr_param>
-			</mwr>
-			<fsw default="fsw_param">
-				<fsw_param type="group">
-					<n abbreviation="n" type="int" default="1"/>
-				</fsw_param>
-			</fsw>
-			<ffd>
+                <mwr_param type="group">
+                    <u abbreviation="u" type="double" default="0"/>
+                    <v abbreviation="v" type="double" default="0"/>
+                    <w abbreviation="w" type="double" default="0"/>
+                    <roll abbreviation="r" type="double" default="0"/>
+                    <pitch abbreviation="p" type="double" default="0"/>
+                    <yaw abbreviation="y" type="double" default="0"/>
+                    <totalCount abbreviation="t" type="double" default="3000"/>
+                </mwr_param>
+            </mwr>
+            <fsw default="fsw_param">
+                <fsw_param type="group">
+                    <n abbreviation="n" type="int" default="1"/>
+                </fsw_param>
+            </fsw>
+            <ffd>
                 <ffd_param type="group">
                     <totalCount abbreviation="t" type="int" default="3000"/>
                     <n abbreviation="n" type="int" default="1"/>
@@ -571,75 +571,75 @@
             </ffd>
             <jfw>
             	<jfw_param type="group">
-            		<state_param type="unique">
-            			<init abbreviation="i"/>
-            			<acc abbreviation="a" type="double" default="0"/>
-            			<dec abbreviation="d" type="double" default="0"/>
-            			<stop abbreviation="s"/>
-        			</state_param>
-        			<totalCount abbreviation="t" type="int" default="1000"/>
-        			<height abbreviation="h" type="double" default="0.05"/>
-        			<beta abbreviation="b" type="double" default="0"/>
+                    <state_param type="unique">
+                        <init abbreviation="i"/>
+                        <acc abbreviation="a" type="double" default="0"/>
+                        <dec abbreviation="d" type="double" default="0"/>
+                        <stop abbreviation="s"/>
+                    </state_param>
+                    <totalCount abbreviation="t" type="int" default="1000"/>
+                    <height abbreviation="h" type="double" default="0.05"/>
+                    <beta abbreviation="b" type="double" default="0"/>
             	</jfw_param>
             </jfw>
             <fcw>
             	<fcw_param type="group">
-            		<state_param type="unique">
-            			<init abbreviation="i"/>
-            			<acc abbreviation="a" type="double" default="0"/>
-            			<dec abbreviation="d" type="double" default="0"/>
-            			<stop abbreviation="s"/>
-        			</state_param>
-        			<totalCount abbreviation="t" type="int" default="1000"/>
-        			<height abbreviation="h" type="double" default="0.05"/>
-        			<beta abbreviation="b" type="double" default="0"/>
+                    <state_param type="unique">
+                        <init abbreviation="i"/>
+                        <acc abbreviation="a" type="double" default="0"/>
+                        <dec abbreviation="d" type="double" default="0"/>
+                        <stop abbreviation="s"/>
+                    </state_param>
+                    <totalCount abbreviation="t" type="int" default="1000"/>
+                    <height abbreviation="h" type="double" default="0.05"/>
+                    <beta abbreviation="b" type="double" default="0"/>
             	</fcw_param>
             </fcw>
-			<cmb>
-				<cmb_param type="group">
-					<u abbreviation="u" type="double" default="0"/>
-					<v abbreviation="v" type="double" default="0"/>
-					<w abbreviation="w" type="double" default="0"/>
-					<roll abbreviation="r" type="double" default="0"/>
-					<pitch abbreviation="p" type="double" default="0"/>
-					<yaw abbreviation="y" type="double" default="0"/>
-				</cmb_param>
-			</cmb>
-			<cmj>
-				<cmj_param type="group">
-					<isStop abbreviation="s" type="int" default="0"/>
-					<isForce abbreviation="f" type="int" default="0"/>
-					<u abbreviation="u" type="int" default="0"/>
-					<v abbreviation="v" type="int" default="0"/>
-					<w abbreviation="w" type="int" default="0"/>
-					<roll abbreviation="r" type="int" default="0"/>
-					<pitch abbreviation="p" type="int" default="0"/>
-					<yaw abbreviation="y" type="int" default="0"/>
-				</cmj_param>
-			</cmj>
-			<odb>
-				<odb_param type="group">
-					<u abbreviation="u" type="double" default="0"/>
-					<v abbreviation="v" type="double" default="0"/>
-					<w abbreviation="w" type="double" default="0"/>
-					<roll abbreviation="r" type="double" default="0"/>
-					<pitch abbreviation="p" type="double" default="0"/>
-					<yaw abbreviation="y" type="double" default="0"/>
-				</odb_param>
-			</odb>
-			<odj>
-				<odj_param type="group">
-					<isPull abbreviation="i" type="int" default="1"/>
-					<isStop abbreviation="s" type="int" default="0"/>    	  
-					<isConfirm abbreviation="c" type="int" default="0"/>
-					<u abbreviation="u" type="int" default="0"/>
-					<v abbreviation="v" type="int" default="0"/>
-					<w abbreviation="w" type="int" default="0"/>
-					<roll abbreviation="r" type="int" default="0"/>
-					<pitch abbreviation="p" type="int" default="0"/>
-					<yaw abbreviation="y" type="int" default="0"/>
-				</odj_param>
-			</odj>
+            <cmb>
+                <cmb_param type="group">
+                    <u abbreviation="u" type="double" default="0"/>
+                    <v abbreviation="v" type="double" default="0"/>
+                    <w abbreviation="w" type="double" default="0"/>
+                    <roll abbreviation="r" type="double" default="0"/>
+                    <pitch abbreviation="p" type="double" default="0"/>
+                    <yaw abbreviation="y" type="double" default="0"/>
+                </cmb_param>
+            </cmb>
+            <cmj>
+                <cmj_param type="group">
+                    <isStop abbreviation="s" type="int" default="0"/>
+                    <isForce abbreviation="f" type="int" default="0"/>
+                    <u abbreviation="u" type="int" default="0"/>
+                    <v abbreviation="v" type="int" default="0"/>
+                    <w abbreviation="w" type="int" default="0"/>
+                    <roll abbreviation="r" type="int" default="0"/>
+                    <pitch abbreviation="p" type="int" default="0"/>
+                    <yaw abbreviation="y" type="int" default="0"/>
+                </cmj_param>
+            </cmj>
+            <odb>
+                <odb_param type="group">
+                    <u abbreviation="u" type="double" default="0"/>
+                    <v abbreviation="v" type="double" default="0"/>
+                    <w abbreviation="w" type="double" default="0"/>
+                    <roll abbreviation="r" type="double" default="0"/>
+                    <pitch abbreviation="p" type="double" default="0"/>
+                    <yaw abbreviation="y" type="double" default="0"/>
+                </odb_param>
+            </odb>
+            <odj>
+                <odj_param type="group">
+                    <isPull abbreviation="i" type="int" default="1"/>
+                    <isStop abbreviation="s" type="int" default="0"/>
+                    <isConfirm abbreviation="c" type="int" default="0"/>
+                    <u abbreviation="u" type="int" default="0"/>
+                    <v abbreviation="v" type="int" default="0"/>
+                    <w abbreviation="w" type="int" default="0"/>
+                    <roll abbreviation="r" type="int" default="0"/>
+                    <pitch abbreviation="p" type="int" default="0"/>
+                    <yaw abbreviation="y" type="int" default="0"/>
+                </odj_param>
+            </odj>
             <ro/>
         </Commands>
     </Server>

@@ -2586,32 +2586,82 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
+    void ForceWalk::bodyTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+
+    }
+
+    void ForceWalk::swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+
+    }
+
+    void ForceWalk::stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+        double pEE_B[3];
+        double halfGaitTime=(double)(param.count%totalCount)/1000;
+
+        pEE_B[0]=beginPee[3*legID];
+        pEE_B[1]=beginPee[3*legID+1];
+        pEE_B[2]=beginPee[3*legID+2]+(beginVel*halfGaitTime+0.5*(endVel-beginVel)/totalCount*1000*halfGaitTime*halfGaitTime);
+
+        robot.pLegs[legID]->SetPee(pEE_B,robot.body());
+    }
+
+    void ForceWalk::followLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
+    {
+
+    }
+
 	int ForceWalk::forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
-        const double frcRange[6]{0,0,0,0,0,0};
+        const double frcRange[6]{-50,-50,-50,-50,-50,-50};//zForce for six leg
 
-		if(param.count%(2*totalCount)<totalCount)
+        if(param.count%(2*totalCount)==0)
 		{
 			for (int i=0;i<3;i++)
 			{
-				gaitPhase[2*i]=NormalGait::GaitPhase::Swing;//swing
-				gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;//stance
+                gaitPhase[2*i]=NormalGait::GaitPhase::Swing;
+                gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;
 			}
 		}
-		else
+        else if(param.count%(2*totalCount)==totalCount)
 		{
 			for (int i=0;i<3;i++)
 			{
-				gaitPhase[2*i]=NormalGait::GaitPhase::Stance;//stance
-				gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;//swing
+                gaitPhase[2*i]=NormalGait::GaitPhase::Stance;
+                gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;
 			}
 		}
         for(int i=0;i<6;i++)
         {
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing && param.force_data->at(i)>frcRange[i])
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(i)<frcRange[i])
+            {
+                gaitPhase[i]=NormalGait::GaitPhase::Follow;
+                followFlag[i]=true;
+                robot.pLegs[i]->GetPee(followBegin+3*i);
+            }
+            if(gaitPhase[i]==NormalGait::GaitPhase::Stance && param.count%totalCount==0)
+            {
+                followFlag[i]=false;
+                robot.pLegs[i]->GetPee(followEnd+3*i);
+                for(int j=0;j<3;j++)
+                {
+                    followDist[3*i+j]=followEnd[3*i+j]-followBegin[3*i+j];
+                }
+            }
         }
 
 		if(param.count%totalCount==(totalCount-1))
@@ -2630,6 +2680,7 @@ namespace ForceTask
 				rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
 			}
 		}
+
 		if(param.count%totalCount==0)
 		{
 			beginVel=endVel;
@@ -2638,11 +2689,17 @@ namespace ForceTask
 			switch(walkState)
 			{
 			case NormalGait::WalkState::Init:
-				robot.GetPee(beginPee,robot.body());
-				robot.GetPee(endPee,robot.body());
+                robot.GetPee(beginPee);
+                robot.GetPee(endPee);
+                robot.GetPee(followBegin);
+                robot.GetPee(followEnd);
 				beginVel=0;
 				endVel=0;
 				constFlag=false;
+                for(int i=0;i<6;i++)
+                {
+                    followFlag[i]=false;
+                }
 				break;
 
 			case NormalGait::WalkState::Acc:
@@ -2659,26 +2716,25 @@ namespace ForceTask
 				constFlag=true;
 				break;
 			}
-			distance=(beginVel+endVel)/2*totalCount/1000;
+            distance=(beginVel+endVel)*totalCount/1000;//positive in -z axis
 			for (int i=0;i<6;i++)
-			{
-				endPee[3*i]=beginPee[3*i];
-				endPee[3*i+1]=beginPee[3*i+1];
-				if(gaitPhase[i]==true)
+			{				
+                if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 				{
-					endPee[3*i+2]=beginPee[3*i+2]-distance;
+                    endPee[3*i]=beginPee[3*i]-followDist[3*i];
+                    endPee[3*i+1]=beginPee[3*i+1]-followDist[3*i+1];
+                    endPee[3*i+2]=beginPee[3*i+2]-distance-followDist[3*i+2];
 				}
-				else
+                else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
 				{
+                    endPee[3*i]=beginPee[3*i];
+                    endPee[3*i+1]=beginPee[3*i+1];
 					endPee[3*i+2]=beginPee[3*i+2]+distance;
 				}
 			}
 		}
 
-		double initPeb[6]{0,0,0,0,0,0};
-		double initVeb[6]{0,0,0,0,0,0};
-		robot.SetPeb(initPeb);
-		robot.SetVb(initVeb);
+        bodyTg(robot,param);
 
 		for (int i=0;i<6;i++)
 		{
@@ -2690,15 +2746,19 @@ namespace ForceTask
 			{
 				stanceLegTg(robot,param,i);
 			}
+            else if(gaitPhase[i]==NormalGait::GaitPhase::Follow)
+            {
+                followLegTg(robot,param,i);
+            }
 		}
 
 		//rt_printf("beginVel:%.4f,endVel:%.4f,distance:%.4f\n",beginVel,endVel,distance);
 		//rt_printf("beginPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",beginPee[2],beginPee[5],beginPee[8],beginPee[11],beginPee[14],beginPee[17]);
 		//rt_printf("endPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",endPee[2],endPee[5],endPee[8],endPee[11],endPee[14],endPee[17]);
 
-		robot.GetPin(OPP.outputPin);
-		robot.GetPee(OPP.outputPee,robot.body());
-		fastWalkPipe.sendToNrt(OPP);
+        //robot.GetPin(OPP.outputPin);
+        //robot.GetPee(OPP.outputPee,robot.body());
+        //fastWalkPipe.sendToNrt(OPP);
 
 
 		if(walkState==NormalGait::WalkState::Stop && param.count%totalCount==(totalCount-1))
