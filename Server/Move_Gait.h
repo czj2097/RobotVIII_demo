@@ -197,11 +197,11 @@ namespace ForceTask
         static double followDist[18];//followEnd - followBegin
 		static NormalGait::WalkState walkState;
 		static NormalGait::GaitPhase gaitPhase[6];
+
 		static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
 		static void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
 		static void followLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
-
-
+        static void bodyTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
     };
 }
 

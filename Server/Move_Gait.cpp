@@ -2586,6 +2586,14 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
+    void ForceWalk::bodyTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+
+    }
+
     void ForceWalk::swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
     {
         auto &robot = static_cast<Robots::RobotBase &>(model);
@@ -2619,7 +2627,7 @@ namespace ForceTask
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
-        const double frcRange[6]{-10,-10,-10,-10,-10,-10};//zForce for six leg
+        const double frcRange[6]{-50,-50,-50,-50,-50,-50};//zForce for six leg
 
         if(param.count%(2*totalCount)==0)
 		{
@@ -2639,7 +2647,7 @@ namespace ForceTask
 		}
         for(int i=0;i<6;i++)
         {
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing && followFlag[i]==false && param.force_data->at(i)<frcRange[i])
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(i)<frcRange[i])
             {
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;
                 followFlag[i]=true;
@@ -2726,10 +2734,7 @@ namespace ForceTask
 			}
 		}
 
-		double initPeb[6]{0,0,0,0,0,0};
-		double initVeb[6]{0,0,0,0,0,0};
-		robot.SetPeb(initPeb);
-		robot.SetVb(initVeb);
+        bodyTg(robot,param);
 
 		for (int i=0;i<6;i++)
 		{
