@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
 	FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
-	//ForceTask::ForceWalk forcewalker;
+    ForceTask::ForceWalk forcewalker;
 	NormalGait::StartRecordData();
 	std::string xml_address;
 

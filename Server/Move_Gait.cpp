@@ -2533,6 +2533,26 @@ namespace ForceTask
 	}
 
 
+    double ForceWalk::bodyAcc;
+    double ForceWalk::bodyDec;
+    int ForceWalk::totalCount;
+    double ForceWalk::height;
+    double ForceWalk::beta;
+
+    double ForceWalk::beginVel;
+    double ForceWalk::endVel;
+    double ForceWalk::pEB[6];
+    double ForceWalk::swingPee[18];
+    double ForceWalk::beginPee[18];
+    double ForceWalk::endPee[18];
+    bool ForceWalk::constFlag;
+    bool ForceWalk::followFlag[6];
+    double ForceWalk::followBegin[18];
+    double ForceWalk::followEnd[18];
+    double ForceWalk::followDist[18];//followEnd - followBegin
+    NormalGait::WalkState ForceWalk::walkState;
+    NormalGait::GaitPhase ForceWalk::gaitPhase[6];
+
 	ForceWalk::ForceWalk()
 	{
 	}
@@ -2592,7 +2612,6 @@ namespace ForceTask
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         int period_count = param.count%totalCount;
-        double pEE[3];
         double distance=followDist[3*legID+2]+(beginVel+endVel)*totalCount*0.001;
         double theta=atan(-followDist[3*legID]/distance);
 
@@ -2605,23 +2624,16 @@ namespace ForceTask
         }
 
         double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
-        pEE[0]=(beginPee[3*legID]+endPee[3*legID])/2+distance/2*cos(s)*sin(theta);
-        pEE[2]=(beginPee[3*legID+2]+endPee[3*legID+2])/2+distance/2*cos(s)*cos(theta);
+        swingPee[0]=(beginPee[3*legID]+endPee[3*legID])/2+distance/2*cos(s)*sin(theta);
+        swingPee[2]=(beginPee[3*legID+2]+endPee[3*legID+2])/2+distance/2*cos(s)*cos(theta);
         if(s<PI/2)
         {
-            pEE[1]=beginPee[3*legID+1]+(height-followDist[3*legID+1])*sin(s);
+            swingPee[1]=beginPee[3*legID+1]+(height-followDist[3*legID+1])*sin(s);
         }
         else
         {
-            pEE[1]=endPee[3*legID+1]+height*sin(s);
+            swingPee[1]=endPee[3*legID+1]+height*sin(s);
         }
-
-        robot.pLegs[legID]->SetPee(pEE);
-    }
-
-    void ForceWalk::followLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
-    {
-
     }
 
 	int ForceWalk::forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -2630,9 +2642,9 @@ namespace ForceTask
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         const double frcRange[6]{-50,-50,-50,-50,-50,-50};//zForce for six leg
+        static aris::dynamic::FloatMarker beginMak{robot.ground()};
         if (param.count == 0)
         {
-            beginMak=robot.ground();
             beginMak.setPrtPm(*robot.body().pm());
             beginMak.update();
 
@@ -2661,7 +2673,7 @@ namespace ForceTask
 		}
         for(int i=0;i<6;i++)
         {
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(i)<frcRange[i])
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(i).Fz<frcRange[i])
             {
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;
                 followFlag[i]=true;
@@ -2731,6 +2743,7 @@ namespace ForceTask
 			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 			{
 				swingLegTg(robot,param,i);
+                robot.pLegs[i]->SetPee(swingPee,beginMak);
 			}
             else if(gaitPhase[i]==NormalGait::GaitPhase::Stance || gaitPhase[i]==NormalGait::GaitPhase::Follow)
 			{
