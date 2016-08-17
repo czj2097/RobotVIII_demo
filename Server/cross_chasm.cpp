@@ -48,7 +48,7 @@ auto crossChasmGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamB
 		robot.GetPee(beginPee, beginMak);
 	}
 
-	double targetPeb_Y[13]{ 0, 0, 0, -0.1, 0, 0.1, 0, -0.1, 0, 0.1, 0, 0, 0 };
+    double targetPeb_Y[13]{ 0, 0, 0, -0.05, 0, 0.05, 0, -0.05, 0, 0.05, 0, 0, 0 };
 	double targetPeb_Z[13]{ -0.1, -0.175, 0, -0.275, -0.25, -0.37, 0, -0.37, -0.25, -0.275, 0, -0.175, -0.1 };
 	int legSequence[13]{ -1, 2, 1, 0, -1, 2, 1, 0, -1, 2, 1, 0, -1 };
 	double stepLength[13]{ 0, 0.55, 0.65, 1.04, 0, 0.75, 1.04, 0.75, 0, 1.04, 0.65, 0.55, 0 };
