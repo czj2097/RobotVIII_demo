@@ -65,6 +65,7 @@ namespace NormalGait
 
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
+		rt_printf("Line 1");
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const MoveRotateParam &>(param_in);
 
@@ -84,9 +85,11 @@ namespace NormalGait
 		}
 
 		double pBody[6];
+		rt_printf("Line 2");
 
 		robot.SetPeb(realBodyPE213,"213");
 		robot.SetPee(pEE);
+		rt_printf("Line 3");
 
 		return param.totalCount - param.count - 1;
 	}

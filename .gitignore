@@ -6,7 +6,8 @@
 *.user
 
 #txt files
-*.txt
+build
+
 
 
 #~ files
