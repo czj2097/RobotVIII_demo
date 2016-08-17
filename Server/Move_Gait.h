@@ -187,7 +187,7 @@ namespace ForceTask
 
         static double beginVel;
         static double endVel;
-        static double distance;
+        static double pEB[6];
         static double beginPee[18];
         static double endPee[18];
         static bool constFlag;
@@ -197,6 +197,7 @@ namespace ForceTask
         static double followDist[18];//followEnd - followBegin
 		static NormalGait::WalkState walkState;
 		static NormalGait::GaitPhase gaitPhase[6];
+        static aris::dynamic::FloatMarker beginMak;
 
 		static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
 		static void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
