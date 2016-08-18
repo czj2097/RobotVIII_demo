@@ -3,12 +3,10 @@
 *.creator
 *.files
 *.includes
-*.user
+*.creator.user
 
 #txt files
 build
-
-
 
 #~ files
 *~

@@ -28,7 +28,7 @@
             <RFpe type="matrix">{ 0.05433 , 0 , -0.3300 + 0.0047, PI/2,  PI* 1/6,   -PI/2-PI*75/180}</RFpe>
             <RMpe type="matrix">{ 0.10241 , 0 ,  0,         PI/2,  PI* 0/6,   -PI/2-PI*75/180}</RMpe>
             <RRpe type="matrix">{ 0.05433 , 0 ,  0.3300 - 0.0047, PI/2,  PI*11/6,   -PI/2-PI*75/180}</RRpe>
-            <ForceSensorMakPe type="matrix">{ 0,0,0,0,-PI / 2,PI / 2 }</ForceSensorMakPe>
+            <ForceSensorMakPe type="matrix">{ 0,0,0,0,0,0 }</ForceSensorMakPe>
             <BodyGamma type="matrix">{140,0,0,0,0,0,0,0,0,0}</BodyGamma>
             <P1aGamma type="matrix">{0,0,0,0,0,0,0,0,0,0}</P1aGamma>
             <P2aGamma type="matrix">{0,0,0,0,0,0,0,0,0,0}</P2aGamma>
@@ -457,6 +457,7 @@
             <RR_M1 type="single_component_motion" active="true" prt_m="RR_Thigh" prt_n="RR_P1a" mak_i="P1i" mak_j="P1j" frc_coe="Mot_friction" component="2"/>
             <RR_M2 type="single_component_motion" active="true" prt_m="RR_P2b" prt_n="RR_P2a" mak_i="P2i" mak_j="P2j" frc_coe="Mot_friction" component="2"/>
             <RR_M3 type="single_component_motion" active="true" prt_m="RR_P3b" prt_n="RR_P3a" mak_i="P3i" mak_j="P3j" frc_coe="Mot_friction" component="2"/>
+            <NEW_MOT type="single_component_motion" active="true" prt_m="RR_P3b" prt_n="RR_P3a" mak_i="P3i" mak_j="P3j" frc_coe="Mot_friction" component="2"/>
         </Motion>
         <Force>
             <LF_F1 type="single_component_force" active="true" prt_m="LF_Thigh" prt_n="LF_P1a" mak_i="P1i" mak_j="P1j" component="2"/>
@@ -509,6 +510,7 @@
                 <leg abbreviation="l" type="intArray" default="0"/>
             </hm>
             <fake_home/>
+            <zo/>
             <rc default="rc_param">
                 <rc_param type="group">
                     <leg_param type="unique" default="all">
@@ -707,14 +709,14 @@
                         <TorqueUnit index="0x2040" subindex="0x32" type="int32" write="false"/>
                     </SDO>
                 </AtiForceSensor>
-                <EK1100 product_code="0x044c2c52" vender_id="0x00000002" alias="0" >
-                    <PDO></PDO>
-                    <SDO></SDO>
-                </EK1100>
-                <EK1122 product_code="0x04622c52" vender_id="0x00000002" alias="0" >
-                    <PDO></PDO>
-                    <SDO></SDO>
-                </EK1122>
+				<EK1100 product_code="0x044c2c52" vender_id="0x00000002" alias="0" >
+		    		<PDO></PDO>
+		    		<SDO></SDO>
+				</EK1100>
+				<EK1122 product_code="0x04622c52" vender_id="0x00000002" alias="0" >
+		    		<PDO></PDO>
+		    		<SDO></SDO>
+				</EK1122>
             </SlaveType>
             <Slave>
                 <Motion1 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 1"/>
@@ -736,16 +738,16 @@
                 <Motion17 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="9"/>
                 <Motion18 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="11"/>
                 <Motion19 type="ElmoSoloWhistle" min_pos="-100" max_pos="100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="18"/>
-                <SlaveStation1 type="EK1100" />
-                <Junction1 type="EK1122" />
-                <ForceSensor1 type="AtiForceSensor"/>
-                <ForceSensor2 type="AtiForceSensor"/>
-                <Junction2 type="EK1122" />
-                <ForceSensor3 type="AtiForceSensor"/>
-                <ForceSensor4 type="AtiForceSensor"/>
-                <Junction3 type="EK1122" />
-                <ForceSensor5 type="AtiForceSensor"/>
-                <ForceSensor6 type="AtiForceSensor"/>
+				<SlaveStation1 type="EK1100" />
+				<Junction1 type="EK1122" />
+            	<ForceSensor1 type="AtiForceSensor"/>
+            	<ForceSensor6 type="AtiForceSensor"/>
+				<Junction2 type="EK1122" />
+            	<ForceSensor2 type="AtiForceSensor"/>
+            	<ForceSensor3 type="AtiForceSensor"/>
+				<Junction3 type="EK1122" />
+            	<ForceSensor4 type="AtiForceSensor"/>
+            	<ForceSensor5 type="AtiForceSensor"/>
             </Slave>
         </EtherCat>
     </Controller>
