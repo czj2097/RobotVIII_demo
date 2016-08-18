@@ -1040,7 +1040,7 @@ namespace FastWalk
 			{
 				endPee[3*i]=beginPee[3*i];
 				endPee[3*i+1]=beginPee[3*i+1];
-				if(gaitPhase[i]==true)
+                if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 				{
 					endPee[3*i+2]=beginPee[3*i+2]-distance;
 				}
@@ -2694,8 +2694,16 @@ namespace ForceTask
             }
             if(gaitPhase[i]==NormalGait::GaitPhase::Stance && param.count%totalCount==0)
             {
-                followFlag[i]=false;
-                robot.pLegs[i]->GetPee(followEnd+3*i,beginMak);
+                if(followFlag[i]==false)
+                {
+                    robot.pLegs[i]->GetPee(followEnd+3*i,beginMak);
+                    robot.pLegs[i]->GetPee(followBegin+3*i,beginMak);
+                }
+                else
+                {
+                    followFlag[i]=false;
+                    robot.pLegs[i]->GetPee(followEnd+3*i,beginMak);
+                }
                 for(int j=0;j<3;j++)
                 {
                     followDist[3*i+j]=followEnd[3*i+j]-followBegin[3*i+j];
@@ -2755,10 +2763,8 @@ namespace ForceTask
 		{
 			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 			{
-                //rt_printf("%d swingPee:%.4f,%.4f,%.4f\n",i,swingPee[3*i],swingPee[3*i+1],swingPee[3*i+2]);
 				swingLegTg(robot,param,i);
                 robot.pLegs[i]->SetPee(swingPee+3*i,beginMak);
-                //rt_printf("%d swingPee:%.4f,%.4f,%.4f\n",i,swingPee[3*i],swingPee[3*i+1],swingPee[3*i+2]);
 			}
             else if(gaitPhase[i]==NormalGait::GaitPhase::Stance || gaitPhase[i]==NormalGait::GaitPhase::Follow)
 			{

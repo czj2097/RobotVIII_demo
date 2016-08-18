@@ -24,8 +24,6 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	FastWalk::screwInterpolationTraj();
-
 	FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
     ForceTask::ForceWalk forcewalker;
