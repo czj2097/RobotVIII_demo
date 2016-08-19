@@ -189,6 +189,7 @@ namespace ForceTask
         static double endVel;
         static double pEB[6];
         static double swingPee[18];
+        static double stancePee[18];
         static double beginPee[18];
         static double endPee[18];
         static bool constFlag;

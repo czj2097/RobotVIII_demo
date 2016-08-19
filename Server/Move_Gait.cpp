@@ -2540,6 +2540,7 @@ namespace ForceTask
     double ForceWalk::endVel;
     double ForceWalk::pEB[6];
     double ForceWalk::swingPee[18];
+    double ForceWalk::stancePee[18];
     double ForceWalk::beginPee[18];
     double ForceWalk::endPee[18];
     bool ForceWalk::constFlag;
@@ -2609,7 +2610,7 @@ namespace ForceTask
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         int period_count = param.count%totalCount;
-        double distance=followDist[3*legID+2]+(beginVel+endVel)*totalCount*0.001;
+        double distance=followDist[3*legID+2]-(beginVel+endVel)*totalCount*0.001;
         double theta;
         if(distance==0)
         {
@@ -2617,28 +2618,23 @@ namespace ForceTask
         }
         else
         {
-            theta=atan(-followDist[3*legID]/distance);
+            theta=atan(followDist[3*legID]/distance);
         }
 
+        rt_printf("%.4f,%.4f,%.4f\n",followDist[3*legID],followDist[3*legID+1],followDist[3*legID+2]);
         if(period_count==0)
         {
-            memcpy(beginPee+3*legID,followEnd+3*legID,3*sizeof(double));
-            endPee[3*legID]=beginPee[3*legID]-followDist[3*legID];
-            endPee[3*legID+1]=beginPee[3*legID+1]-followDist[3*legID+1];
-            endPee[3*legID+2]=beginPee[3*legID+2]-distance;
+            endPee[3*legID]=beginPee[3*legID]+followDist[3*legID];
+            endPee[3*legID+1]=beginPee[3*legID+1];
+            endPee[3*legID+2]=beginPee[3*legID+2]+distance;
         }
 
         double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
-        swingPee[3*legID]=(beginPee[3*legID]+endPee[3*legID])/2+distance/2*cos(s)*sin(theta);
-        swingPee[3*legID+2]=(beginPee[3*legID+2]+endPee[3*legID+2])/2+distance/2*cos(s)*cos(theta);
-        if(s<PI/2)
-        {
-            swingPee[3*legID+1]=beginPee[3*legID+1]+(height-followDist[3*legID+1])*sin(s);
-        }
-        else
-        {
-            swingPee[3*legID+1]=endPee[3*legID+1]+height*sin(s);
-        }
+        swingPee[3*legID]=(beginPee[3*legID]+endPee[3*legID])/2-distance/2*cos(s)*sin(theta);
+        swingPee[3*legID+2]=(beginPee[3*legID+2]+endPee[3*legID+2])/2-distance/2*cos(s)*cos(theta);
+        swingPee[3*legID+1]=beginPee[3*legID+1]+height*sin(s);
+
+        rt_printf("theta: %.4f%, leg %d: %.4f,%.4f,%.4f\n",theta,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
     }
 
 	int ForceWalk::forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -2647,6 +2643,7 @@ namespace ForceTask
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         const double frcRange[6]{-50,-50,-50,-50,-50,-50};//zForce for six leg
+        const int leg2frc[6]{3,5,1,0,2,4};
 
         static aris::dynamic::FloatMarker beginMak{robot.ground()};
         if (param.count == 0)
@@ -2658,9 +2655,56 @@ namespace ForceTask
             robot.GetPee(followBegin,beginMak);
             robot.GetPee(followEnd,beginMak);
             robot.GetPee(swingPee,beginMak);
+            robot.GetPee(beginPee,beginMak);
+            robot.GetPee(endPee,beginMak);
             std::fill_n(followDist,18,0);
             std::fill_n(followFlag,6,false);
         }
+        if(param.count%totalCount==0)
+        {
+            beginVel=endVel;
+            switch(walkState)
+            {
+            case NormalGait::WalkState::Init:
+                robot.GetPee(beginPee,beginMak);
+                robot.GetPee(endPee,beginMak);
+                beginVel=0;
+                endVel=0;
+                constFlag=false;
+                break;
+
+            case NormalGait::WalkState::Acc:
+                endVel=beginVel+bodyAcc*totalCount/1000;
+                constFlag=true;
+                break;
+
+            case NormalGait::WalkState::Const:
+                endVel=beginVel;
+                break;
+
+            case NormalGait::WalkState::Dec:
+                endVel=beginVel-bodyDec*totalCount/1000;
+                constFlag=true;
+                break;
+            }
+        }
+        if(param.count%totalCount==(totalCount-1))
+        {
+            if(walkState==NormalGait::WalkState::Acc && constFlag==true)
+            {
+                walkState=NormalGait::WalkState::Const;
+                constFlag=false;
+                rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
+            }
+
+            if(walkState==NormalGait::WalkState::Dec && constFlag==true)
+            {
+                walkState=NormalGait::WalkState::Const;
+                constFlag=false;
+                rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
+            }
+        }
+
 
         if(param.count%(2*totalCount)==0)
 		{
@@ -2680,7 +2724,7 @@ namespace ForceTask
 		}
         for(int i=0;i<6;i++)
         {
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(i).Fz<frcRange[i])
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(leg2frc[i]).Fz<frcRange[i])
             {
                 rt_printf("leg %d transfer into Follow at count %d\n",i,param.count);
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;
@@ -2701,56 +2745,11 @@ namespace ForceTask
                 }
                 for(int j=0;j<3;j++)
                 {
-                    followDist[3*i+j]=followEnd[3*i+j]-followBegin[3*i+j];
+                    followDist[3*i+j]=endPee[3*i+j]-followEnd[3*i+j];
                 }
+                memcpy(stancePee,followEnd,sizeof(followEnd));
             }
         }
-
-		if(param.count%totalCount==(totalCount-1))
-		{
-			if(walkState==NormalGait::WalkState::Acc && constFlag==true)
-			{
-				walkState=NormalGait::WalkState::Const;
-				constFlag=false;
-				rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
-			}
-
-			if(walkState==NormalGait::WalkState::Dec && constFlag==true)
-			{
-				walkState=NormalGait::WalkState::Const;
-				constFlag=false;
-				rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
-			}
-		}
-
-		if(param.count%totalCount==0)
-		{
-			beginVel=endVel;
-			switch(walkState)
-			{
-			case NormalGait::WalkState::Init:
-                robot.GetPee(beginPee,beginMak);
-                robot.GetPee(endPee,beginMak);
-				beginVel=0;
-				endVel=0;
-				constFlag=false;
-				break;
-
-			case NormalGait::WalkState::Acc:
-				endVel=beginVel+bodyAcc*totalCount/1000;
-				constFlag=true;
-				break;
-
-			case NormalGait::WalkState::Const:
-				endVel=beginVel;
-				break;
-
-			case NormalGait::WalkState::Dec:
-				endVel=beginVel-bodyDec*totalCount/1000;
-				constFlag=true;
-				break;
-			}
-		}
 
         pEB[2]-=(beginVel+(endVel-beginVel)/totalCount*(param.count%totalCount))*0.001;
         robot.SetPeb(pEB,beginMak);
@@ -2758,26 +2757,26 @@ namespace ForceTask
 		{
 			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 			{
-				swingLegTg(robot,param,i);
+                if(param.count%totalCount==0)
+                {
+                    robot.pLegs[i]->GetPee(beginPee,beginMak);
+                }
+                swingLegTg(robot,param,i);
                 robot.pLegs[i]->SetPee(swingPee+3*i,beginMak);
 			}
-            else if(gaitPhase[i]==NormalGait::GaitPhase::Stance || gaitPhase[i]==NormalGait::GaitPhase::Follow)
+            else if(gaitPhase[i]==gaitPhase[i]==NormalGait::GaitPhase::Follow)
 			{
-                robot.pLegs[i]->SetPee(followEnd+3*i,beginMak);
+                robot.pLegs[i]->SetPee(followBegin+3*i,beginMak);
 			}
+            else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
+            {
+                stancePee[3*i+1]=followEnd[3*i+1]+followDist[3*i+1]/2*(1-cos((double)(param.count%totalCount)/totalCount*PI));
+                robot.pLegs[i]->SetPee(stancePee+3*i,beginMak);
+            }
 		}
 
-		//rt_printf("beginVel:%.4f,endVel:%.4f,distance:%.4f\n",beginVel,endVel,distance);
-		//rt_printf("beginPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",beginPee[2],beginPee[5],beginPee[8],beginPee[11],beginPee[14],beginPee[17]);
-		//rt_printf("endPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",endPee[2],endPee[5],endPee[8],endPee[11],endPee[14],endPee[17]);
-
-        //robot.GetPin(OPP.outputPin);
-        //robot.GetPee(OPP.outputPee,robot.body());
-        //fastWalkPipe.sendToNrt(OPP);
-
-
 		if(walkState==NormalGait::WalkState::Stop && param.count%totalCount==(totalCount-1))
-		{
+        {
 			return 0;
 		}
 		else
