@@ -24,7 +24,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	FastWalk::JointSpaceWalk jointspacewalker;
+    FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
     ForceTask::ForceWalk forcewalker;
 	NormalGait::StartRecordData();

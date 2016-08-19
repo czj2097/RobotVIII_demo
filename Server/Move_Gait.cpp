@@ -2688,6 +2688,7 @@ namespace ForceTask
         {
             if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(i).Fz<frcRange[i])
             {
+                rt_printf("leg %d transfer into Follow at count %d\n",i,param.count);
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;
                 followFlag[i]=true;
                 robot.pLegs[i]->GetPee(followBegin+3*i,beginMak);
