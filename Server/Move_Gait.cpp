@@ -1068,21 +1068,15 @@ namespace FastWalk
 			}
 		}
 
-		//rt_printf("beginVel:%.4f,endVel:%.4f,distance:%.4f\n",beginVel,endVel,distance);
-		//rt_printf("beginPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",beginPee[2],beginPee[5],beginPee[8],beginPee[11],beginPee[14],beginPee[17]);
-		//rt_printf("endPee:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",endPee[2],endPee[5],endPee[8],endPee[11],endPee[14],endPee[17]);
+        /*
+        //test IMU//
+        double eul[3];
+        param.imu_data->toEulBody2Ground(eul,"213");
+        rt_printf("eul:%.4f,%.4f,%.4f\n",eul[0],eul[1],eul[2]);*/
 
 		robot.GetPin(OPP.outputPin);
 		robot.GetPee(OPP.outputPee,robot.body());
 		fastWalkPipe.sendToNrt(OPP);
-
-		/*
-		rt_printf("outputPee:");
-		for (int i=0;i<6;i++)
-		{
-			rt_printf("%.4f,",OPP.outputPee[3*i+2]);
-		}
-		rt_printf("\n");*/
 
 		if(walkState==NormalGait::WalkState::Stop && param.count%totalCount==(totalCount-1))
 		{
