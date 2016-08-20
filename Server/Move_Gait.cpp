@@ -2536,20 +2536,26 @@ namespace ForceTask
     double ForceWalk::height;
     double ForceWalk::beta;
 
+    NormalGait::WalkState ForceWalk::walkState;
+    bool ForceWalk::constFlag;
+
     double ForceWalk::beginVel;
     double ForceWalk::endVel;
     double ForceWalk::pEB[6];
-    double ForceWalk::swingPee[18];
-    double ForceWalk::stancePee[18];
-    double ForceWalk::beginPee[18];
-    double ForceWalk::endPee[18];
-    bool ForceWalk::constFlag;
-    bool ForceWalk::followFlag[6];
-    double ForceWalk::followBegin[18];
-    double ForceWalk::followEnd[18];
-    double ForceWalk::followDist[18];//followEnd - followBegin
-    NormalGait::WalkState ForceWalk::walkState;
+
     NormalGait::GaitPhase ForceWalk::gaitPhase[6];
+    double ForceWalk::swingPee[18];
+    double ForceWalk::swingBeginPee[18];
+    double ForceWalk::swingEndPee[18];
+    double ForceWalk::stancePee[18];
+    double ForceWalk::stanceBeginPee[18];
+    double ForceWalk::stanceEndPee[18];
+    bool ForceWalk::followFlag[6];
+    double ForceWalk::followBeginPee[18];
+    double ForceWalk::followEndPee[18];
+    double ForceWalk::followDist[18];//followEndPee - followBeginPee
+    double ForceWalk::avgRealH;
+    double ForceWalk::planH;
 
 	ForceWalk::ForceWalk()
 	{
@@ -2604,9 +2610,8 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
-    void ForceWalk::swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
+    void ForceWalk::swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
     {
-        auto &robot = static_cast<Robots::RobotBase &>(model);
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         int period_count = param.count%totalCount;
@@ -2621,20 +2626,45 @@ namespace ForceTask
             theta=atan(followDist[3*legID]/distance);
         }
 
-        rt_printf("%.4f,%.4f,%.4f\n",followDist[3*legID],followDist[3*legID+1],followDist[3*legID+2]);
+        //rt_printf("followDist: %.4f,%.4f,%.4f\n",followDist[3*legID],followDist[3*legID+1],followDist[3*legID+2]);
         if(period_count==0)
         {
-            endPee[3*legID]=beginPee[3*legID]+followDist[3*legID];
-            endPee[3*legID+1]=beginPee[3*legID+1];
-            endPee[3*legID+2]=beginPee[3*legID+2]+distance;
+            swingEndPee[3*legID]=swingBeginPee[3*legID]+followDist[3*legID];
+            swingEndPee[3*legID+1]=swingBeginPee[3*legID+1]+followDist[3*legID+1];
+            swingEndPee[3*legID+2]=swingBeginPee[3*legID+2]+distance;
         }
 
         double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
-        swingPee[3*legID]=(beginPee[3*legID]+endPee[3*legID])/2-distance/2*cos(s)*sin(theta);
-        swingPee[3*legID+2]=(beginPee[3*legID+2]+endPee[3*legID+2])/2-distance/2*cos(s)*cos(theta);
-        swingPee[3*legID+1]=beginPee[3*legID+1]+height*sin(s);
+        swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-distance/2*cos(s)*sin(theta);
+        swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-distance/2*cos(s)*cos(theta);
+        if(s<PI/2)
+        {
+            swingPee[3*legID+1]=swingBeginPee[3*legID+1]+(height+followDist[3*legID+1])*sin(s);
+        }
+        else
+        {
+            swingPee[3*legID+1]=swingEndPee[3*legID+1]+height*sin(s);
+        }
 
-        rt_printf("theta: %.4f%, leg %d: %.4f,%.4f,%.4f\n",theta,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
+        //rt_printf("theta: %.4f,followDist:%.4f\n",theta,followDist[3*legID+2] );
+        //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
+    }
+
+    void ForceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
+    {
+        auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+        int period_count = param.count%totalCount;
+        memcpy(stancePee,stanceBeginPee,sizeof(stanceBeginPee));
+        if(period_count>=totalCount/4 && period_count<3*totalCount/4)
+        {
+            stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH)/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
+        }
+        else if(period_count>=3*totalCount/4)
+        {
+            stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH);
+        }
+        //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
     }
 
 	int ForceWalk::forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -2652,22 +2682,21 @@ namespace ForceTask
             beginMak.update();
 
             robot.GetPeb(pEB,beginMak);
-            robot.GetPee(followBegin,beginMak);
-            robot.GetPee(followEnd,beginMak);
-            robot.GetPee(swingPee,beginMak);
-            robot.GetPee(beginPee,beginMak);
-            robot.GetPee(endPee,beginMak);
+            robot.GetPee(followBeginPee,beginMak);
+            robot.GetPee(followEndPee,beginMak);
+            robot.GetPee(swingEndPee,beginMak);
             std::fill_n(followDist,18,0);
             std::fill_n(followFlag,6,false);
+
+            planH=followBeginPee[1];//any Y of any leg
         }
+
         if(param.count%totalCount==0)
         {
             beginVel=endVel;
             switch(walkState)
             {
             case NormalGait::WalkState::Init:
-                robot.GetPee(beginPee,beginMak);
-                robot.GetPee(endPee,beginMak);
                 beginVel=0;
                 endVel=0;
                 constFlag=false;
@@ -2712,7 +2741,10 @@ namespace ForceTask
 			{
                 gaitPhase[2*i]=NormalGait::GaitPhase::Swing;
                 gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;
+                robot.pLegs[2*i]->GetPee(swingBeginPee+6*i,beginMak);
+                robot.pLegs[2*i+1]->GetPee(stanceBeginPee+6*i+3,beginMak);
 			}
+            avgRealH=(stanceBeginPee[3*1+1]+stanceBeginPee[3*3+1]+stanceBeginPee[3*5+1])/3;
 		}
         else if(param.count%(2*totalCount)==totalCount)
 		{
@@ -2720,7 +2752,10 @@ namespace ForceTask
 			{
                 gaitPhase[2*i]=NormalGait::GaitPhase::Stance;
                 gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;
+                robot.pLegs[2*i]->GetPee(stanceBeginPee+6*i,beginMak);
+                robot.pLegs[2*i+1]->GetPee(swingBeginPee+6*i+3,beginMak);
 			}
+            avgRealH=(stanceBeginPee[3*0+1]+stanceBeginPee[3*2+1]+stanceBeginPee[3*4+1])/3;
 		}
         for(int i=0;i<6;i++)
         {
@@ -2729,25 +2764,24 @@ namespace ForceTask
                 rt_printf("leg %d transfer into Follow at count %d\n",i,param.count);
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;
                 followFlag[i]=true;
-                robot.pLegs[i]->GetPee(followBegin+3*i,beginMak);
+                robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
             }
             if(gaitPhase[i]==NormalGait::GaitPhase::Stance && param.count%totalCount==0)
             {
                 if(followFlag[i]==false)
                 {
-                    robot.pLegs[i]->GetPee(followEnd+3*i,beginMak);
-                    robot.pLegs[i]->GetPee(followBegin+3*i,beginMak);
+                    robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
+                    robot.pLegs[i]->GetPee(followEndPee+3*i,beginMak);
                 }
                 else
                 {
                     followFlag[i]=false;
-                    robot.pLegs[i]->GetPee(followEnd+3*i,beginMak);
+                    robot.pLegs[i]->GetPee(followEndPee+3*i,beginMak);
                 }
                 for(int j=0;j<3;j++)
                 {
-                    followDist[3*i+j]=endPee[3*i+j]-followEnd[3*i+j];
+                    followDist[3*i+j]=swingEndPee[3*i+j]-followEndPee[3*i+j];
                 }
-                memcpy(stancePee,followEnd,sizeof(followEnd));
             }
         }
 
@@ -2757,21 +2791,21 @@ namespace ForceTask
 		{
 			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
 			{
-                if(param.count%totalCount==0)
-                {
-                    robot.pLegs[i]->GetPee(beginPee,beginMak);
-                }
-                swingLegTg(robot,param,i);
+                swingLegTg(param,i);
                 robot.pLegs[i]->SetPee(swingPee+3*i,beginMak);
 			}
-            else if(gaitPhase[i]==gaitPhase[i]==NormalGait::GaitPhase::Follow)
+            else if(gaitPhase[i]==NormalGait::GaitPhase::Follow)
 			{
-                robot.pLegs[i]->SetPee(followBegin+3*i,beginMak);
+                robot.pLegs[i]->SetPee(followBeginPee+3*i,beginMak);
 			}
             else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
             {
-                stancePee[3*i+1]=followEnd[3*i+1]+followDist[3*i+1]/2*(1-cos((double)(param.count%totalCount)/totalCount*PI));
+                stanceLegTg(param,i);
                 robot.pLegs[i]->SetPee(stancePee+3*i,beginMak);
+            }
+            else
+            {
+                rt_printf("Error: unknown gaitphase!\n");
             }
 		}
 
