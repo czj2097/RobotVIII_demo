@@ -2630,7 +2630,7 @@ namespace ForceTask
         if(period_count==0)
         {
             swingEndPee[3*legID]=swingBeginPee[3*legID]+followDist[3*legID];
-            swingEndPee[3*legID+1]=swingBeginPee[3*legID+1]+followDist[3*legID+1];
+            swingEndPee[3*legID+1]=planH;
             swingEndPee[3*legID+2]=swingBeginPee[3*legID+2]+distance;
         }
 
@@ -2639,7 +2639,7 @@ namespace ForceTask
         swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-distance/2*cos(s)*cos(theta);
         if(s<PI/2)
         {
-            swingPee[3*legID+1]=swingBeginPee[3*legID+1]+(height+followDist[3*legID+1])*sin(s);
+            swingPee[3*legID+1]=swingBeginPee[3*legID+1]+(height+swingEndPee[3*legID+1]-swingBeginPee[3*legID+1])*sin(s);
         }
         else
         {
@@ -2688,7 +2688,7 @@ namespace ForceTask
             std::fill_n(followDist,18,0);
             std::fill_n(followFlag,6,false);
 
-            planH=followBeginPee[1];//any Y of any leg
+            planH=-0.9;
         }
 
         if(param.count%totalCount==0)
