@@ -719,24 +719,24 @@
                 </EK1122>
             </SlaveType>
             <Slave>
-                <Motion1 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 1"/>
-                <Motion2 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="0"/>
-                <Motion3 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 2"/>
-                <Motion4 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 5"/>
-                <Motion5 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="3"/>
-                <Motion6 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 4"/>
-                <Motion7 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 7"/>
-                <Motion8 type="ElmoSoloWhistle"  min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="6"/>
-                <Motion9 type="ElmoSoloWhistle"  min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 8"/>
-                <Motion10 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="16"/>
-                <Motion11 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="15"/>
-                <Motion12 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="17"/>
-                <Motion13 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="14"/>
-                <Motion14 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="12"/>
-                <Motion15 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="13"/>
-                <Motion16 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="10"/>
-                <Motion17 type="ElmoSoloWhistle" min_pos="0.0669" max_pos="10.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="9"/>
-                <Motion18 type="ElmoSoloWhistle" min_pos="0.0690" max_pos="10.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="11"/>
+                <Motion1 type="ElmoSoloWhistle"  min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="2048000" abs_id=" 1" kp="120"/>
+                <Motion2 type="ElmoSoloWhistle"  min_pos="0.669" max_pos="1.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="0"/>
+                <Motion3 type="ElmoSoloWhistle"  min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 2"/>
+                <Motion4 type="ElmoSoloWhistle"  min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 5"/>
+                <Motion5 type="ElmoSoloWhistle"  min_pos="0.669" max_pos="1.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="3"/>
+                <Motion6 type="ElmoSoloWhistle"  min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 4"/>
+                <Motion7 type="ElmoSoloWhistle"  min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 7"/>
+                <Motion8 type="ElmoSoloWhistle"  min_pos="0.669" max_pos="1.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="6"/>
+                <Motion9 type="ElmoSoloWhistle"  min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id=" 8"/>
+                <Motion10 type="ElmoSoloWhistle" min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="16"/>
+                <Motion11 type="ElmoSoloWhistle" min_pos="0.669" max_pos="1.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="15"/>
+                <Motion12 type="ElmoSoloWhistle" min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="17"/>
+                <Motion13 type="ElmoSoloWhistle" min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="14"/>
+                <Motion14 type="ElmoSoloWhistle" min_pos="0.669" max_pos="1.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="12"/>
+                <Motion15 type="ElmoSoloWhistle" min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="13"/>
+                <Motion16 type="ElmoSoloWhistle" min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="10"/>
+                <Motion17 type="ElmoSoloWhistle" min_pos="0.669" max_pos="1.080" max_vel="0.9481" home_pos="0.669" input2count="9216000" abs_id="9"/>
+                <Motion18 type="ElmoSoloWhistle" min_pos="0.690" max_pos="1.100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="11"/>
                 <Motion19 type="ElmoSoloWhistle" min_pos="-100" max_pos="100" max_vel="0.9481" home_pos="0.69" input2count="9216000" abs_id="18"/>
                 <SlaveStation1 type="EK1100" />
                 <Junction1 type="EK1122" />
@@ -752,7 +752,7 @@
         </EtherCat>
     </Controller>
     <Sensors>
-        <IMU active="false" type="xsens_imu" portLinux="/dev/ttyUSB0" baudRate="921600" sampleRate="400" PeImuGround2BodyGound="{0,0,0,PI,PI/2,3*PI/2}" PeImu2Body="{0,0,0,0,PI/2,PI/2}"/>
+        <IMU active="true" type="xsens_imu" portLinux="/dev/ttyUSB0" baudRate="921600" sampleRate="400" PeImuGround2BodyGound="{0,0,0,PI,PI/2,3*PI/2}" PeImu2Body="{0,0,0,0,PI/2,PI/2}"/>
         <Vision type="kinect2.0"/>
     </Sensors>
     <UDP remote_ip="192.168.1.101" remote_port="6661" local_port="6660"/>

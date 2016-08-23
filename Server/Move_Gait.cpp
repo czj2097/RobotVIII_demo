@@ -2552,10 +2552,14 @@ namespace ForceTask
     double ForceWalk::stanceEndPee[18];
     bool ForceWalk::followFlag[6];
     double ForceWalk::followBeginPee[18];
-    double ForceWalk::followEndPee[18];
-    double ForceWalk::followDist[18];//followEndPee - followBeginPee
+
+    double ForceWalk::initPee[18];
     double ForceWalk::avgRealH;
     double ForceWalk::planH;
+
+    double ForceWalk::bodyEul213[3];
+    double ForceWalk::sumEul[3];
+    double ForceWalk::avgEul[3];
 
 	ForceWalk::ForceWalk()
 	{
@@ -2615,28 +2619,27 @@ namespace ForceTask
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         int period_count = param.count%totalCount;
-        double distance=followDist[3*legID+2]-(beginVel+endVel)*totalCount*0.001;
+        if(period_count==0)
+        {
+            for(int i=0;i<3;i++)
+            {
+                swingEndPee[3*legID+i]=initPee[3*legID+i]-endVel*totalCount*0.001;
+            }
+        }
+        /*
         double theta;
-        if(distance==0)
+        if(swingEndPee[3*legID+2]==swingBeginPee[3*legID+2])
         {
             theta=0;
         }
         else
         {
-            theta=atan(followDist[3*legID]/distance);
-        }
-
-        //rt_printf("followDist: %.4f,%.4f,%.4f\n",followDist[3*legID],followDist[3*legID+1],followDist[3*legID+2]);
-        if(period_count==0)
-        {
-            swingEndPee[3*legID]=swingBeginPee[3*legID]+followDist[3*legID];
-            swingEndPee[3*legID+1]=planH;
-            swingEndPee[3*legID+2]=swingBeginPee[3*legID+2]+distance;
-        }
+            theta=atan((swingEndPee[3*legID]-swingBeginPee[3*legID])/(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2]));
+        }*/
 
         double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
-        swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-distance/2*cos(s)*sin(theta);
-        swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-distance/2*cos(s)*cos(theta);
+        swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
+        swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2])/2*cos(s);
         if(s<PI/2)
         {
             swingPee[3*legID+1]=swingBeginPee[3*legID+1]+(height+swingEndPee[3*legID+1]-swingBeginPee[3*legID+1])*sin(s);
@@ -2646,8 +2649,11 @@ namespace ForceTask
             swingPee[3*legID+1]=swingEndPee[3*legID+1]+height*sin(s);
         }
 
-        //rt_printf("theta: %.4f,followDist:%.4f\n",theta,followDist[3*legID+2] );
-        //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
+        if(period_count==0)
+        {
+            //rt_printf("leg:%d, swingBegin:%.4f,%.4f,%.4f\n",legID,swingBeginPee[3*legID],swingBeginPee[3*legID+1],swingBeginPee[3*legID+2]);
+            //rt_printf("leg %d, swingPee:  %.4f,%.4f,%.4f\n",legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
+        }
     }
 
     void ForceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
@@ -2655,16 +2661,83 @@ namespace ForceTask
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
         int period_count = param.count%totalCount;
+        double pe[6]{0,0,0,0,0,0};
+        double pm[4][4];
+        double invPm[4][4];
+        double stanceEul[3];
+        double stancePee_tem[3];
         memcpy(stancePee,stanceBeginPee,sizeof(stanceBeginPee));
-        if(period_count>=totalCount/4 && period_count<3*totalCount/4)
+
+        if(period_count==0)
+        {
+            std::fill_n(sumEul,3,0);
+        }
+        else if(period_count>=(totalCount/4-50) && period_count<totalCount/4)
+        {
+            if(legID==0 || legID==1)
+            {
+                param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
+                for (int i=0;i<3;i++)
+                {
+                    if(bodyEul213[i]>PI)
+                    {
+                        bodyEul213[i]-=2*PI;
+                    }
+                    sumEul[i]+=bodyEul213[i];
+                    if(period_count==(totalCount/4-1))
+                    {
+                        avgEul[i]=sumEul[i]/50;
+                        //change yaw to realize turning
+                        if(i==0)
+                        {
+                            avgEul[i]-=beta;
+                        }
+                    }
+                }
+            }
+        }    
+        else if(period_count>=totalCount/4 && period_count<3*totalCount/4)
         {
             stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH)/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
+
+            for(int i=0;i<3;i++)
+            {
+                stanceEul[i]=avgEul[i]/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
+            }
+            memcpy(pe+3,stanceEul,sizeof(stanceEul));
+            aris::dynamic::s_pe2pm(pe,*pm,"213");
+            aris::dynamic::s_inv_pm(*pm,*invPm);
+            memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
+            aris::dynamic::s_pm_dot_pnt(*invPm,stancePee_tem,stancePee+3*legID);
+
+            if(period_count%100==0)
+            {
+                //rt_printf("count:%d,leg %d: %.4f,%.4f,%.4f\n",period_count,legID,stancePee_tem[0],stancePee_tem[1],stancePee_tem[2]);
+                //rt_printf("avgIMU:%.4f,%.4f,%.4f; stanceIMU:%.4f,%.4f,%.4f\n",avgEul[0],avgEul[1],avgEul[2],stanceEul[0],stanceEul[1],stanceEul[2]);
+                //rt_printf("count:%d,,leg %d: %.4f,%.4f,%.4f\n",period_count,legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
+            }
         }
         else if(period_count>=3*totalCount/4)
         {
             stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH);
+
+            memcpy(pe+3,avgEul,sizeof(avgEul));
+            aris::dynamic::s_pe2pm(pe,*pm,"213");
+            aris::dynamic::s_inv_pm(*pm,*invPm);
+            memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
+            aris::dynamic::s_pm_dot_pnt(*invPm,stancePee_tem,stancePee+3*legID);
+
+            if(period_count%100==0)
+            {
+                //rt_printf("NO IMU,leg %d: %.4f,%.4f,%.4f\n",legID,stancePee_tem[0],stancePee_tem[1],stancePee_tem[2]);
+                //rt_printf("YE IMU,leg %d: %.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
+            }
         }
-        //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
+        if(period_count==(totalCount-1))
+        {
+            //rt_printf("leg:%d, stanceEnd:%.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
+            //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
+        }
     }
 
 	int ForceWalk::forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -2675,24 +2748,29 @@ namespace ForceTask
         const double frcRange[6]{-50,-50,-50,-50,-50,-50};//zForce for six leg
         const int leg2frc[6]{3,5,1,0,2,4};
 
+        //param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
+        //rt_printf("213:%.4f,%.4f,%.4f\n",bodyEul213[0],bodyEul213[1],bodyEul213[2]);
+
         static aris::dynamic::FloatMarker beginMak{robot.ground()};
+
         if (param.count == 0)
         {
             beginMak.setPrtPm(*robot.body().pm());
             beginMak.update();
-
             robot.GetPeb(pEB,beginMak);
+            robot.GetPee(initPee,beginMak);
             robot.GetPee(followBeginPee,beginMak);
-            robot.GetPee(followEndPee,beginMak);
             robot.GetPee(swingEndPee,beginMak);
-            std::fill_n(followDist,18,0);
             std::fill_n(followFlag,6,false);
 
-            planH=-0.9;
+            planH=initPee[1];
         }
 
         if(param.count%totalCount==0)
         {
+            //beginMak.setPrtPm(*robot.body().pm());
+            //beginMak.update();
+
             beginVel=endVel;
             switch(walkState)
             {
@@ -2734,7 +2812,6 @@ namespace ForceTask
             }
         }
 
-
         if(param.count%(2*totalCount)==0)
 		{
 			for (int i=0;i<3;i++)
@@ -2771,16 +2848,10 @@ namespace ForceTask
                 if(followFlag[i]==false)
                 {
                     robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
-                    robot.pLegs[i]->GetPee(followEndPee+3*i,beginMak);
                 }
                 else
                 {
                     followFlag[i]=false;
-                    robot.pLegs[i]->GetPee(followEndPee+3*i,beginMak);
-                }
-                for(int j=0;j<3;j++)
-                {
-                    followDist[3*i+j]=swingEndPee[3*i+j]-followEndPee[3*i+j];
                 }
             }
         }

@@ -132,7 +132,7 @@ namespace ForceTask
 		//startPE
 		double beginPE[6];
 		double vector0[3];
-		double vector1[3];
+        double vector1[3];
 		double vector2[3];
 
 		//now2Start used twice
@@ -201,10 +201,14 @@ namespace ForceTask
         static double stanceEndPee[18];
         static bool followFlag[6];
         static double followBeginPee[18];
-        static double followEndPee[18];
-        static double followDist[18];//followEndPee - followBeginPee
+
+        static double initPee[18];
         static double avgRealH;
         static double planH;
+
+        static double bodyEul213[3];
+        static double sumEul[3];
+        static double avgEul[3];
 
         static void swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
         static void stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
