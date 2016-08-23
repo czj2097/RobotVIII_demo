@@ -2541,7 +2541,7 @@ namespace ForceTask
 
     double ForceWalk::beginVel;
     double ForceWalk::endVel;
-    double ForceWalk::pEB[6];
+    double ForceWalk::beginPeb[6];
 
     NormalGait::GaitPhase ForceWalk::gaitPhase[6];
     double ForceWalk::swingPee[18];
@@ -2621,10 +2621,8 @@ namespace ForceTask
         int period_count = param.count%totalCount;
         if(period_count==0)
         {
-            for(int i=0;i<3;i++)
-            {
-                swingEndPee[3*legID+i]=initPee[3*legID+i]-endVel*totalCount*0.001;
-            }
+            memcpy(swingEndPee+3*legID,initPee+3*legID,3*sizeof(double));
+            swingEndPee[3*legID+2]=initPee[3*legID+2]-endVel*totalCount*0.001;
         }
         /*
         double theta;
@@ -2649,7 +2647,7 @@ namespace ForceTask
             swingPee[3*legID+1]=swingEndPee[3*legID+1]+height*sin(s);
         }
 
-        if(period_count==0)
+        if(legID==0 || legID==1)
         {
             //rt_printf("leg:%d, swingBegin:%.4f,%.4f,%.4f\n",legID,swingBeginPee[3*legID],swingBeginPee[3*legID+1],swingBeginPee[3*legID+2]);
             //rt_printf("leg %d, swingPee:  %.4f,%.4f,%.4f\n",legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
@@ -2733,9 +2731,9 @@ namespace ForceTask
                 //rt_printf("YE IMU,leg %d: %.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
             }
         }
-        if(period_count==(totalCount-1))
+        if(legID==0 || legID==1)
         {
-            //rt_printf("leg:%d, stanceEnd:%.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
+            //rt_printf("leg:%d, stancePee:%.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
             //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
         }
     }
@@ -2757,7 +2755,6 @@ namespace ForceTask
         {
             beginMak.setPrtPm(*robot.body().pm());
             beginMak.update();
-            robot.GetPeb(pEB,beginMak);
             robot.GetPee(initPee,beginMak);
             robot.GetPee(followBeginPee,beginMak);
             robot.GetPee(swingEndPee,beginMak);
@@ -2768,8 +2765,9 @@ namespace ForceTask
 
         if(param.count%totalCount==0)
         {
-            //beginMak.setPrtPm(*robot.body().pm());
-            //beginMak.update();
+            beginMak.setPrtPm(*robot.body().pm());
+            beginMak.update();
+            robot.GetPeb(beginPeb,beginMak);
 
             beginVel=endVel;
             switch(walkState)
@@ -2856,7 +2854,9 @@ namespace ForceTask
             }
         }
 
-        pEB[2]-=(beginVel+(endVel-beginVel)/totalCount*(param.count%totalCount))*0.001;
+        double pEB[6];
+        memcpy(pEB,beginPeb,sizeof(beginPeb));
+        pEB[2]=beginPeb[2]-(beginVel+(endVel-beginVel)/totalCount*(param.count%totalCount))*0.001;
         robot.SetPeb(pEB,beginMak);
 		for (int i=0;i<6;i++)
 		{

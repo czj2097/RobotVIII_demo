@@ -190,7 +190,7 @@ namespace ForceTask
 
         static double beginVel;
         static double endVel;
-        static double pEB[6];
+        static double beginPeb[6];
 
         static NormalGait::GaitPhase gaitPhase[6];
         static double swingPee[18];
