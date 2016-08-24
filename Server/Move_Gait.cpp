@@ -2555,8 +2555,11 @@ namespace ForceTask
     double ForceWalk::stancePee[18];
     double ForceWalk::stanceBeginPee[18];
     double ForceWalk::stanceEndPee[18];
-    bool ForceWalk::followFlag[6];
+
     double ForceWalk::followBeginPee[18];
+    bool ForceWalk::followFlag[6];
+    bool ForceWalk::filterFlag[6];
+    int ForceWalk::filterCount[6];
 
     double ForceWalk::initPee[18];
     double ForceWalk::avgRealH;
@@ -2785,6 +2788,8 @@ namespace ForceTask
             robot.GetPee(followBeginPee,beginMak);
             robot.GetPee(swingEndPee,beginMak);
             std::fill_n(followFlag,6,false);
+            std::fill_n(filterFlag,6,false);
+            std::fill_n(filterCount,6,0);
 
             planH=initPee[1];
         }
@@ -2873,12 +2878,33 @@ namespace ForceTask
         for(int i=0;i<6;i++)
         {
             //if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(leg2frc[i]).Fz<frcRange[i])
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false && forceInF[6*i+2]<frcRange[i])
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false)
             {
-                rt_printf("leg %d transfer into Follow at count %d\n",i,param.count);
-                gaitPhase[i]=NormalGait::GaitPhase::Follow;
-                followFlag[i]=true;
-                robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
+                //detect 5 points to confirm touching ground
+                if(forceInF[6*i+2]<frcRange[i] && filterFlag[i]==false)
+                {
+                    filterFlag[i]=true;
+                    filterCount[i]=param.count;
+                    rt_printf("leg %d is going into Follow in 5 ms after count %d\n",i,filterCount[i]);
+                }
+                if(forceInF[6*i+2]>frcRange[i] && filterFlag[i]==true &&
+                   (param.count==filterCount[i]+1 || param.count==filterCount[i]+2 || param.count==filterCount[i]+3 || param.count==filterCount[i]+4))
+                {
+                    filterFlag[i]=false;
+                    filterCount[i]=0;
+                    rt_printf("leg %d get fake touching signal at count %d\n",i,filterCount[i]);
+                }
+
+                if(filterCount[i]!=0 && param.count>(filterCount[i]+4))
+                {
+                    rt_printf("leg %d transfer into Follow at count %d\n",i,param.count);
+                    gaitPhase[i]=NormalGait::GaitPhase::Follow;
+                    followFlag[i]=true;
+                    robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
+
+                    filterFlag[i]=false;
+                    filterCount[i]=0;
+                }
             }
             if(gaitPhase[i]==NormalGait::GaitPhase::Stance && param.count%totalCount==0)
             {
@@ -2894,7 +2920,8 @@ namespace ForceTask
         }
 
         memcpy(pEB,beginPeb,sizeof(beginPeb));
-        pEB[2]=beginPeb[2]-(beginVel*(param.count%totalCount)*0.001+0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
+        pEB[2]=beginPeb[2]-(beginVel*(param.count%totalCount)*0.001
+               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
         robot.SetPeb(pEB,beginMak);
 		for (int i=0;i<6;i++)
 		{

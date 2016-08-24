@@ -200,8 +200,11 @@ namespace ForceTask
         static double stancePee[18];
         static double stanceBeginPee[18];
         static double stanceEndPee[18];
+
+        static double followBeginPee[18]; 
         static bool followFlag[6];
-        static double followBeginPee[18];
+        static bool filterFlag[6];
+        static int filterCount[6];
 
         static double initPee[18];
         static double avgRealH;
