@@ -2562,6 +2562,9 @@ namespace ForceTask
     double ForceWalk::bodyEul213[3];
     double ForceWalk::sumEul[3];
     double ForceWalk::avgEul[3];
+    double ForceWalk::targetEul[3];
+    double ForceWalk::inputEul[3];
+    double ForceWalk::inputEul_tmp[3];
     double ForceWalk::forceInF[36];
 
 	ForceWalk::ForceWalk()
@@ -2604,10 +2607,18 @@ namespace ForceTask
 			{
 				height=stod(i.second);
 			}
-			else if(i.first=="beta")
+            else if(i.first=="roll")
 			{
-				beta=stod(i.second);
+                inputEul_tmp[2]=stod(i.second);
 			}
+            else if(i.first=="pitch")
+            {
+                inputEul_tmp[1]=stod(i.second);
+            }
+            else if(i.first=="yaw")
+            {
+                inputEul_tmp[0]=stod(i.second);
+            }
 			else
 			{
 				std::cout<<"parse failed"<<std::endl;
@@ -2671,7 +2682,6 @@ namespace ForceTask
         int period_count = param.count%totalCount;
         double pe[6]{0,0,0,0,0,0};
         double pm[4][4];
-        double invPm[4][4];
         double stanceEul[3];
         double stancePee_tem[3];
         memcpy(stancePee,stanceBeginPee,sizeof(stanceBeginPee));
@@ -2695,10 +2705,10 @@ namespace ForceTask
                     if(period_count==(totalCount/4-1))
                     {
                         avgEul[i]=sumEul[i]/50;
-                        //change yaw to realize turning
-                        if(i==0)
+			inputEul[i]=inputEul_tmp[i];
+                        if(param.count/totalCount==0)
                         {
-                            avgEul[i]-=beta;
+                            targetEul[i]=avgEul[i];
                         }
                     }
                 }
@@ -2710,11 +2720,10 @@ namespace ForceTask
 
             for(int i=0;i<3;i++)
             {
-                stanceEul[i]=avgEul[i]/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
+                stanceEul[i]=(avgEul[i]-targetEul[i]-inputEul[i])/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
             }
             memcpy(pe+3,stanceEul,sizeof(stanceEul));
             aris::dynamic::s_pe2pm(pe,*pm,"213");
-            aris::dynamic::s_inv_pm(*pm,*invPm);
             memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
             aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
 
@@ -2729,9 +2738,12 @@ namespace ForceTask
         {
             stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH);
 
-            memcpy(pe+3,avgEul,sizeof(avgEul));
+            for(int i=0;i<3;i++)
+            {
+                stanceEul[i]=avgEul[i]-targetEul[i]-inputEul[i];
+            }
+            memcpy(pe+3,stanceEul,sizeof(stanceEul));
             aris::dynamic::s_pe2pm(pe,*pm,"213");
-            aris::dynamic::s_inv_pm(*pm,*invPm);
             memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
             aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
 
