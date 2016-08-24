@@ -2568,7 +2568,11 @@ namespace ForceTask
     double ForceWalk::targetEul[3];
     double ForceWalk::inputEul[3];
     double ForceWalk::inputEul_tmp[3];
+
+    double ForceWalk::forceRaw[36];
     double ForceWalk::forceInF[36];
+    double ForceWalk::forceSum[36];
+    double ForceWalk::forceAvg[36];
 
 	ForceWalk::ForceWalk()
 	{
@@ -2631,14 +2635,34 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
+    void ForceWalk::forceInit(int count,int legID)
+    {
+        if(count==0)
+        {
+            std::fill(forceSum+6*legID,forceSum+6*legID+5,0);
+        }
+        if(count<100)
+        {
+            for(int i=6*legID;i<6*legID+6;i++)
+            {
+                forceSum[i]+=forceRaw[i];
+                forceAvg[i]=forceSum[i]/(count+1);
+            }
+        }
+        for(int i=6*legID;i<6*legID+6;i++)
+        {
+            forceInF[i]=forceRaw[i]-forceAvg[i];
+        }
+    }
+
     void ForceWalk::swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
     {
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
-        const int leg2frc[6]{3,5,1,0,2,4};
+        //const int leg2frc[6]{3,5,1,0,2,4};
         int period_count = param.count%totalCount;
         double bodyDist=(beginVel+endVel)*totalCount/2*0.001;
-        if(param.count%totalCount==0)
+        if(period_count==0)
         {
             memcpy(swingEndPee+3*legID,initPee+3*legID,3*sizeof(double));
             swingEndPee[3*legID+2]=initPee[3*legID+2]-endVel*totalCount/2*0.001-bodyDist;
@@ -2646,9 +2670,12 @@ namespace ForceTask
 
         if(period_count>=(totalCount/2-100))
         {
-            forceInit(period_count-totalCount/2+100,param.force_data->at(leg2frc[legID]).fce,forceInF+6*legID);
+            memcpy(forceRaw+6*legID,param.force_data->at(legID).fce,6*sizeof(double));
+            forceInit(period_count-totalCount/2+100,legID);
         }
-        rt_printf("count:%d,leg:%d,force:%.4f\n",period_count,legID,forceInF[6*legID+2]);
+        if((legID==0 || legID==3) && period_count>=(totalCount/2-100) && period_count<(totalCount/2+100))
+        rt_printf("count:%d,leg:%d,forceInF:%.4f\n",period_count,legID,forceInF[6*legID+2]);
+
 
         double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
         swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
@@ -2699,7 +2726,7 @@ namespace ForceTask
                     if(period_count==(totalCount/4-1))
                     {
                         avgEul[i]=sumEul[i]/50;
-			inputEul[i]=inputEul_tmp[i];
+                        inputEul[i]=inputEul_tmp[i];
                         if(param.count/totalCount==0)
                         {
                             targetEul[i]=avgEul[i];
@@ -2720,13 +2747,6 @@ namespace ForceTask
             aris::dynamic::s_pe2pm(pe,*pm,"213");
             memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
             aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
-
-            if(period_count%100==0)
-            {
-                //rt_printf("count:%d,leg %d: %.4f,%.4f,%.4f\n",period_count,legID,stancePee_tem[0],stancePee_tem[1],stancePee_tem[2]);
-                //rt_printf("avgIMU:%.4f,%.4f,%.4f; stanceIMU:%.4f,%.4f,%.4f\n",avgEul[0],avgEul[1],avgEul[2],stanceEul[0],stanceEul[1],stanceEul[2]);
-                //rt_printf("count:%d,,leg %d: %.4f,%.4f,%.4f\n",period_count,legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
-            }
         }
         else if(period_count>=3*totalCount/4)
         {
@@ -2740,12 +2760,6 @@ namespace ForceTask
             aris::dynamic::s_pe2pm(pe,*pm,"213");
             memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
             aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
-
-            if(period_count%100==0)
-            {
-                //rt_printf("NO IMU,leg %d: %.4f,%.4f,%.4f\n",legID,stancePee_tem[0],stancePee_tem[1],stancePee_tem[2]);
-                //rt_printf("YE IMU,leg %d: %.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
-            }
         }
         if(period_count==totalCount-1)
         {
@@ -2758,11 +2772,8 @@ namespace ForceTask
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
-        const double frcRange[6]{-50,-50,-50,-50,-50,-50};//zForce for six leg
-        const int leg2frc[6]{3,5,1,0,2,4};
-
-        //param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
-        //rt_printf("213:%.4f,%.4f,%.4f\n",bodyEul213[0],bodyEul213[1],bodyEul213[2]);
+        const double frcRange[6]{-100,-100,-100,-100,-100,-100};//zForce for six leg
+        //const int leg2frc[6]{3,5,1,0,2,4};
 
         static aris::dynamic::FloatMarker beginMak{robot.ground()};
 
@@ -2823,7 +2834,6 @@ namespace ForceTask
                 constFlag=false;
                 rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
             }
-            rt_printf("pEB:%.4f\n",pEB[2]);
         }
 
         if(param.count%(2*totalCount)==0)
@@ -2862,7 +2872,8 @@ namespace ForceTask
 		}
         for(int i=0;i<6;i++)
         {
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(leg2frc[i]).Fz<frcRange[i])
+            //if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(leg2frc[i]).Fz<frcRange[i])
+            if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false && forceInF[6*i+2]<frcRange[i])
             {
                 rt_printf("leg %d transfer into Follow at count %d\n",i,param.count);
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;

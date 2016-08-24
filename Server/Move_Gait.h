@@ -212,9 +212,14 @@ namespace ForceTask
         static double avgEul[3];
         static double targetEul[3];
         static double inputEul[3];
-	static double inputEul_tmp[3];
-        static double forceInF[36];
+        static double inputEul_tmp[3];
 
+        static double forceRaw[36];
+        static double forceInF[36];
+        static double forceSum[36];
+        static double forceAvg[36];
+
+        static void forceInit(int count, int legID);
         static void swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
         static void stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
     };
