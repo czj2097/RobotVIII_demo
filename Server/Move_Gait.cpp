@@ -1415,31 +1415,27 @@ namespace FastWalk
 
 namespace ForceTask
 {
-	void forceInit(int count, const double* forceRaw_in, const double* forcePm, double* forceInB_out)
+    void forceInit(int count, const double* forceRaw_in, double* forceInF_out)
 	{
 		static double forceSum[6];
 		static double forceAvg[6]{0,0,0,0,0,0};
-		double forceInF[6]{0,0,0,0,0,0};
+        //double forceInF[6]{0,0,0,0,0,0};
 		if(count==0)
 		{
-			for(int i=0;i<6;i++)
-			{
-				forceSum[i]=0;
-			}
+            std::fill_n(forceSum,6,0);
 		}
-		if(count<100)
-		{
-			for(int i=0;i<6;i++)
-			{
-				forceSum[i]+=forceRaw_in[i];
-				forceAvg[i]=forceSum[i]/(count+1);
-			}
-		}
+
+        for(int i=0;i<6;i++)
+        {
+            forceSum[i]+=forceRaw_in[i];
+            forceAvg[i]=forceSum[i]/(count+1);
+        }
+
 		for(int i=0;i<6;i++)
 		{
-			forceInF[i]=forceRaw_in[i]-forceAvg[i];
+            forceInF_out[i]=forceRaw_in[i]-forceAvg[i];
 		}
-		aris::dynamic::s_f2f(forcePm,forceInF,forceInB_out);
+        //aris::dynamic::s_f2f(forcePm,forceInF,forceInB_out);
 	}
 
 	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -1447,7 +1443,8 @@ namespace ForceTask
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const Robots::WalkParam &>(param_in);
 
-		double forceInB[6]{0,0,0,0,0,0};
+        double forceInF[6]{0,0,0,0,0,0};
+        double forceInB[6]{0,0,0,0,0,0};
 		double maxForce{200};
 		static bool actFlag=false;
 		static int countIter;
@@ -1456,7 +1453,8 @@ namespace ForceTask
 		static double pIn2[18];
 		double pIn[18];
 
-		forceInit(param.count, param.force_data->at(0).fce, *robot.forceSensorMak().prtPm(), forceInB);
+        forceInit(param.count, param.force_data->at(0).fce, forceInF);
+        aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,forceInB);
 
 		if((fabs(forceInB[0])>maxForce || fabs(forceInB[1])>maxForce || fabs(forceInB[2])>maxForce) && actFlag==false)
 		{
@@ -1650,7 +1648,9 @@ namespace ForceTask
 						FTP.bodyVel_last[i]=0;
 					}
 				}
-				forceInit(param.count,param.force_data->at(0).fce,*robot.forceSensorMak().prtPm(),FTP.forceInB);
+                double forceInF[6];
+                forceInit(param.count,param.force_data->at(0).fce,forceInF);
+                aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,FTP.forceInB);
 
 				//Find the max force direction & Set the direction as the move dircetion
 				int num1;
@@ -1929,7 +1929,9 @@ namespace ForceTask
 				//start param of now2start in LocateAjust
 				robot.GetPeb(ODP.startPE);
 			}
-			forceInit(param.count,param.force_data->at(0).fce,*robot.forceSensorMak().prtPm(),ODP.forceInB);
+            double forceInF[6];
+            forceInit(param.count,param.force_data->at(0).fce,forceInF);
+            aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,ODP.forceInB);
 
 			switch(ODP.moveState)
 			{
@@ -2560,6 +2562,7 @@ namespace ForceTask
     double ForceWalk::bodyEul213[3];
     double ForceWalk::sumEul[3];
     double ForceWalk::avgEul[3];
+    double ForceWalk::forceInF[36];
 
 	ForceWalk::ForceWalk()
 	{
@@ -2618,12 +2621,19 @@ namespace ForceTask
     {
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
+        const int leg2frc[6]{3,5,1,0,2,4};
         int period_count = param.count%totalCount;
         if(period_count==0)
         {
             memcpy(swingEndPee+3*legID,initPee+3*legID,3*sizeof(double));
             swingEndPee[3*legID+2]=initPee[3*legID+2]-endVel*totalCount*0.001;
         }
+
+        if(period_count>=(totalCount/2-100) && period_count<(totalCount/2))
+        {
+            forceInit(period_count-totalCount/2+100,param.force_data->at(leg2frc[legID]).fce,forceInF+6*legID);
+        }
+        rt_printf("leg:%d,force:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",forceInF[6*legID],forceInF[6*legID+1],forceInF[6*legID+2],forceInF[6*legID+3],forceInF[6*legID+4],forceInF[6*legID+5]);
         /*
         double theta;
         if(swingEndPee[3*legID+2]==swingBeginPee[3*legID+2])
@@ -2706,7 +2716,7 @@ namespace ForceTask
             aris::dynamic::s_pe2pm(pe,*pm,"213");
             aris::dynamic::s_inv_pm(*pm,*invPm);
             memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
-            aris::dynamic::s_pm_dot_pnt(*invPm,stancePee_tem,stancePee+3*legID);
+            aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
 
             if(period_count%100==0)
             {
@@ -2723,7 +2733,7 @@ namespace ForceTask
             aris::dynamic::s_pe2pm(pe,*pm,"213");
             aris::dynamic::s_inv_pm(*pm,*invPm);
             memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
-            aris::dynamic::s_pm_dot_pnt(*invPm,stancePee_tem,stancePee+3*legID);
+            aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
 
             if(period_count%100==0)
             {
@@ -2812,25 +2822,37 @@ namespace ForceTask
 
         if(param.count%(2*totalCount)==0)
 		{
+            double min{0};
 			for (int i=0;i<3;i++)
 			{
                 gaitPhase[2*i]=NormalGait::GaitPhase::Swing;
                 gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;
                 robot.pLegs[2*i]->GetPee(swingBeginPee+6*i,beginMak);
                 robot.pLegs[2*i+1]->GetPee(stanceBeginPee+6*i+3,beginMak);
+                if(stanceBeginPee[6*i+4]<min)
+                {
+                    min=stanceBeginPee[6*i+4];
+                }
 			}
-            avgRealH=(stanceBeginPee[3*1+1]+stanceBeginPee[3*3+1]+stanceBeginPee[3*5+1])/3;
+            avgRealH=min;
+            //avgRealH=(stanceBeginPee[3*1+1]+stanceBeginPee[3*3+1]+stanceBeginPee[3*5+1])/3;
 		}
         else if(param.count%(2*totalCount)==totalCount)
 		{
+            double min{0};
 			for (int i=0;i<3;i++)
 			{
                 gaitPhase[2*i]=NormalGait::GaitPhase::Stance;
                 gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;
                 robot.pLegs[2*i]->GetPee(stanceBeginPee+6*i,beginMak);
                 robot.pLegs[2*i+1]->GetPee(swingBeginPee+6*i+3,beginMak);
+                if(stanceBeginPee[6*i+1]<min)
+                {
+                    min=stanceBeginPee[6*i+1];
+                }
 			}
-            avgRealH=(stanceBeginPee[3*0+1]+stanceBeginPee[3*2+1]+stanceBeginPee[3*4+1])/3;
+            avgRealH=min;
+            //avgRealH=(stanceBeginPee[3*0+1]+stanceBeginPee[3*2+1]+stanceBeginPee[3*4+1])/3;
 		}
         for(int i=0;i<6;i++)
         {
@@ -2856,7 +2878,7 @@ namespace ForceTask
 
         double pEB[6];
         memcpy(pEB,beginPeb,sizeof(beginPeb));
-        pEB[2]=beginPeb[2]-(beginVel+(endVel-beginVel)/totalCount*(param.count%totalCount))*0.001;
+        pEB[2]=beginPeb[2]-(beginVel*(param.count%totalCount)*0.001+0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
         robot.SetPeb(pEB,beginMak);
 		for (int i=0;i<6;i++)
 		{

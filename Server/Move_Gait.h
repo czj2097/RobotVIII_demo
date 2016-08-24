@@ -61,7 +61,7 @@ namespace ForceTask
 	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-	void forceInit(int count, const double* forceRaw_in, const double* forcePm, double* forceInB_out);
+    void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
 	int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
@@ -209,6 +209,7 @@ namespace ForceTask
         static double bodyEul213[3];
         static double sumEul[3];
         static double avgEul[3];
+        static double forceInF[36];
 
         static void swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
         static void stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
