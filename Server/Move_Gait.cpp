@@ -1424,12 +1424,14 @@ namespace ForceTask
 		{
             std::fill_n(forceSum,6,0);
 		}
-
+		if(count<100)
+	{
         for(int i=0;i<6;i++)
         {
             forceSum[i]+=forceRaw_in[i];
             forceAvg[i]=forceSum[i]/(count+1);
         }
+	}
 
 		for(int i=0;i<6;i++)
 		{
@@ -2544,6 +2546,7 @@ namespace ForceTask
     double ForceWalk::beginVel;
     double ForceWalk::endVel;
     double ForceWalk::beginPeb[6];
+    double ForceWalk::pEB[6];
 
     NormalGait::GaitPhase ForceWalk::gaitPhase[6];
     double ForceWalk::swingPee[18];
@@ -2634,27 +2637,18 @@ namespace ForceTask
 
         const int leg2frc[6]{3,5,1,0,2,4};
         int period_count = param.count%totalCount;
-        if(period_count==0)
+        double bodyDist=(beginVel+endVel)*totalCount/2*0.001;
+        if(param.count%totalCount==0)
         {
             memcpy(swingEndPee+3*legID,initPee+3*legID,3*sizeof(double));
-            swingEndPee[3*legID+2]=initPee[3*legID+2]-endVel*totalCount*0.001;
+            swingEndPee[3*legID+2]=initPee[3*legID+2]-endVel*totalCount/2*0.001-bodyDist;
         }
 
-        if(period_count>=(totalCount/2-100) && period_count<(totalCount/2))
+        if(period_count>=(totalCount/2-100))
         {
             forceInit(period_count-totalCount/2+100,param.force_data->at(leg2frc[legID]).fce,forceInF+6*legID);
         }
-        rt_printf("leg:%d,force:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",forceInF[6*legID],forceInF[6*legID+1],forceInF[6*legID+2],forceInF[6*legID+3],forceInF[6*legID+4],forceInF[6*legID+5]);
-        /*
-        double theta;
-        if(swingEndPee[3*legID+2]==swingBeginPee[3*legID+2])
-        {
-            theta=0;
-        }
-        else
-        {
-            theta=atan((swingEndPee[3*legID]-swingBeginPee[3*legID])/(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2]));
-        }*/
+        rt_printf("count:%d,leg:%d,force:%.4f\n",period_count,legID,forceInF[6*legID+2]);
 
         double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
         swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
@@ -2668,7 +2662,7 @@ namespace ForceTask
             swingPee[3*legID+1]=swingEndPee[3*legID+1]+height*sin(s);
         }
 
-        if(legID==0 || legID==1)
+        if(period_count==totalCount-1)
         {
             //rt_printf("leg:%d, swingBegin:%.4f,%.4f,%.4f\n",legID,swingBeginPee[3*legID],swingBeginPee[3*legID+1],swingBeginPee[3*legID+2]);
             //rt_printf("leg %d, swingPee:  %.4f,%.4f,%.4f\n",legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
@@ -2753,10 +2747,9 @@ namespace ForceTask
                 //rt_printf("YE IMU,leg %d: %.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
             }
         }
-        if(legID==0 || legID==1)
+        if(period_count==totalCount-1)
         {
             //rt_printf("leg:%d, stancePee:%.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
-            //rt_printf("count: %d, leg %d: %.4f,%.4f,%.4f\n",param.count,legID,swingPee[3*legID],swingPee[3*legID+1],swingPee[3*legID+2]);
         }
     }
 
@@ -2830,6 +2823,7 @@ namespace ForceTask
                 constFlag=false;
                 rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
             }
+            rt_printf("pEB:%.4f\n",pEB[2]);
         }
 
         if(param.count%(2*totalCount)==0)
@@ -2888,7 +2882,6 @@ namespace ForceTask
             }
         }
 
-        double pEB[6];
         memcpy(pEB,beginPeb,sizeof(beginPeb));
         pEB[2]=beginPeb[2]-(beginVel*(param.count%totalCount)*0.001+0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
         robot.SetPeb(pEB,beginMak);
