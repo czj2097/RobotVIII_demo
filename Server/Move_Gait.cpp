@@ -64,7 +64,7 @@ namespace NormalGait
 	}
 
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
-	{
+    {
 		rt_printf("Line 1");
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const MoveRotateParam &>(param_in);
@@ -2679,8 +2679,8 @@ namespace ForceTask
         if((legID==0 || legID==3) && period_count>=(totalCount/2-100) && period_count<(totalCount/2+100))
         rt_printf("count:%d,leg:%d,forceInF:%.4f\n",period_count,legID,forceInF[6*legID+2]);
 
-
-        double s=-(PI/2)*cos(PI*(period_count+1)/totalCount)+PI/2;//0-PI
+        const double delayTouch=asin(0.01/height);
+        double s=-(PI/2+delayTouch/2)*cos(PI*(period_count+1)/totalCount)+PI/2+delayTouch/2;//0-PI
         swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
         swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2])/2*cos(s);
         if(s<PI/2)
