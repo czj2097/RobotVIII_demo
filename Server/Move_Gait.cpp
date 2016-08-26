@@ -461,26 +461,27 @@ namespace FastWalk
 		Robots::RobotTypeI rbt;
 		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
+        printf("wk analyse begin\n");
 		Robots::WalkParam param;
-		param.alpha=0;
-		param.beta=0;
-		param.d=1.0;
-		param.h=0.1;
-		param.totalCount=914;
-		param.n=2;
+        param.alpha=0;
+        param.beta=0.5236;
+        param.d=0.8;
+        param.h=0.05;
+        param.totalCount=1000;
+        param.n=3;
 
-		double pEE[4*param.totalCount][18];
-		double pIn[4*param.totalCount][18];
+        double pEE[2*param.n*param.totalCount][18];
+        double pIn[2*param.n*param.totalCount][18];
 
-		for(param.count=0;param.count<4*param.totalCount;param.count++)
+        for(param.count=0;param.count<2*param.n*param.totalCount;param.count++)
 		{
 			Robots::walkGait(rbt,param);
 			rbt.GetPee(*pEE+18*param.count,rbt.body());
 			rbt.GetPin(*pIn+18*param.count);
 		}
 
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_WK.txt",*pEE,4*param.totalCount,18);
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_WK.txt",*pIn,4*param.totalCount,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/log/pEE_WK.txt",*pEE,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/log/pIn_WK.txt",*pIn,2*param.n*param.totalCount,18);
 	}
 
 
@@ -2535,10 +2536,12 @@ namespace ForceTask
 
 
     double ForceWalk::bodyAcc;
-    double ForceWalk::bodyDec;
     int ForceWalk::totalCount;
     double ForceWalk::height;
     double ForceWalk::beta;
+    int ForceWalk::totalCount_tmp;
+    double ForceWalk::height_tmp;
+    double ForceWalk::beta_tmp;
 
     NormalGait::WalkState ForceWalk::walkState;
     bool ForceWalk::constFlag;
@@ -2600,22 +2603,17 @@ namespace ForceTask
 				bodyAcc=stod(i.second);
 				walkState=NormalGait::WalkState::Acc;
 			}
-			else if(i.first=="dec")
-			{
-				bodyDec=stod(i.second);
-				walkState=NormalGait::WalkState::Dec;
-			}
 			else if(i.first=="stop")
 			{
 				walkState=NormalGait::WalkState::Stop;
 			}
 			else if(i.first=="totalCount")
 			{
-				totalCount=stoi(i.second);
+                totalCount=stoi(i.second);
 			}
 			else if(i.first=="height")
 			{
-				height=stod(i.second);
+                height=stod(i.second);
 			}
             else if(i.first=="roll")
 			{
@@ -2662,7 +2660,6 @@ namespace ForceTask
     {
         auto &param = static_cast<const ForceWalkParam &>(param_in);
 
-        //const int leg2frc[6]{3,5,1,0,2,4};
         int period_count = param.count%totalCount;
         double bodyDist=(beginVel+endVel)*totalCount/2*0.001;
         if(period_count==0)
@@ -2676,10 +2673,10 @@ namespace ForceTask
             memcpy(forceRaw+6*legID,param.force_data->at(legID).fce,6*sizeof(double));
             forceInit(period_count-totalCount/2+100,legID);
         }
-        if((legID==0 || legID==3) && period_count>=(totalCount/2-100) && period_count<(totalCount/2+100))
+        if((legID==1 || legID==4) && period_count>=(totalCount/2-100) && period_count<(totalCount/2+100))
         rt_printf("count:%d,leg:%d,forceInF:%.4f\n",period_count,legID,forceInF[6*legID+2]);
 
-        const double delayTouch=asin(0.01/height);
+        const double delayTouch=asin(0/height);
         double s=-(PI/2+delayTouch/2)*cos(PI*(period_count+1)/totalCount)+PI/2+delayTouch/2;//0-PI
         swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
         swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2])/2*cos(s);
@@ -2707,7 +2704,7 @@ namespace ForceTask
         double pe[6]{0,0,0,0,0,0};
         double pm[4][4];
         double stanceEul[3];
-        double stancePee_tem[3];
+        double stancePee_tmp[3];
         memcpy(stancePee,stanceBeginPee,sizeof(stanceBeginPee));
 
         if(period_count==0)
@@ -2748,8 +2745,8 @@ namespace ForceTask
             }
             memcpy(pe+3,stanceEul,sizeof(stanceEul));
             aris::dynamic::s_pe2pm(pe,*pm,"213");
-            memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
-            aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
+            memcpy(stancePee_tmp,stancePee+3*legID,sizeof(stancePee_tmp));
+            aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tmp,stancePee+3*legID);
         }
         else if(period_count>=3*totalCount/4)
         {
@@ -2761,8 +2758,8 @@ namespace ForceTask
             }
             memcpy(pe+3,stanceEul,sizeof(stanceEul));
             aris::dynamic::s_pe2pm(pe,*pm,"213");
-            memcpy(stancePee_tem,stancePee+3*legID,sizeof(stancePee_tem));
-            aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tem,stancePee+3*legID);
+            memcpy(stancePee_tmp,stancePee+3*legID,sizeof(stancePee_tmp));
+            aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tmp,stancePee+3*legID);
         }
         if(period_count==totalCount-1)
         {
@@ -2775,8 +2772,7 @@ namespace ForceTask
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const ForceWalkParam &>(param_in);
 
-        const double frcRange[6]{-100,-100,-100,-100,-100,-100};//zForce for six leg
-        //const int leg2frc[6]{3,5,1,0,2,4};
+        const double frcRange[6]{-100,-100,-100,-100,-100,-100};
 
         static aris::dynamic::FloatMarker beginMak{robot.ground()};
 
@@ -2791,7 +2787,7 @@ namespace ForceTask
             std::fill_n(filterFlag,6,false);
             std::fill_n(filterCount,6,0);
 
-            planH=initPee[1];
+            planH=initPee[1]-0.005;
         }
 
         if(param.count%totalCount==0)
@@ -2799,6 +2795,8 @@ namespace ForceTask
             beginMak.setPrtPm(*robot.body().pm());
             beginMak.update();
             robot.GetPeb(beginPeb,beginMak);
+            //totalCount=totalCount_tmp;
+            //height=height_tmp;
 
             beginVel=endVel;
             switch(walkState)
@@ -2818,9 +2816,8 @@ namespace ForceTask
                 endVel=beginVel;
                 break;
 
-            case NormalGait::WalkState::Dec:
-                endVel=beginVel-bodyDec*totalCount/1000;
-                constFlag=true;
+            default:
+                rt_printf("Error: unknown walkstate!\n");
                 break;
             }
         }
@@ -2831,13 +2828,6 @@ namespace ForceTask
                 walkState=NormalGait::WalkState::Const;
                 constFlag=false;
                 rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
-            }
-
-            if(walkState==NormalGait::WalkState::Dec && constFlag==true)
-            {
-                walkState=NormalGait::WalkState::Const;
-                constFlag=false;
-                rt_printf("Dec finished, the coming Const Vel is: %.4f\n",endVel);
             }
         }
 
@@ -2875,13 +2865,13 @@ namespace ForceTask
             avgRealH=min;
             //avgRealH=(stanceBeginPee[3*0+1]+stanceBeginPee[3*2+1]+stanceBeginPee[3*4+1])/3;
 		}
+
         for(int i=0;i<6;i++)
         {
-            //if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(totalCount/2) && followFlag[i]==false && param.force_data->at(leg2frc[i]).Fz<frcRange[i])
             if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false)
             {
                 //detect 5 points to confirm touching ground
-                if(forceInF[6*i+2]<frcRange[i] && filterFlag[i]==false)
+                if(forceInF[6*i+2]<frcRange[i] && filterFlag[i]==false)//param.force_data->at(leg2frc[i]).Fz<frcRange[i]
                 {
                     filterFlag[i]=true;
                     filterCount[i]=param.count;

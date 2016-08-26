@@ -180,10 +180,12 @@ namespace ForceTask
 
 	private:
 		static double bodyAcc;
-		static double bodyDec;
 		static int totalCount;
+        static int totalCount_tmp;
 		static double height;
+        static double height_tmp;
 		static double beta;
+        static double beta_tmp;
 
         static NormalGait::WalkState walkState;
         static bool constFlag;

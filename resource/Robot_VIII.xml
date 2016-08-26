@@ -590,7 +590,6 @@
                     <state_param type="unique">
                         <init abbreviation="i"/>
                         <acc abbreviation="a" type="double" default="0"/>
-                        <dec abbreviation="d" type="double" default="0"/>
                         <stop abbreviation="s"/>
                     </state_param>
                     <totalCount abbreviation="t" type="int" default="1000"/>
