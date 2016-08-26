@@ -2613,7 +2613,7 @@ namespace ForceTask
 			}
 			else if(i.first=="height")
 			{
-                height=stod(i.second);
+                height_tmp=stod(i.second);
 			}
             else if(i.first=="roll")
 			{
@@ -2786,6 +2786,7 @@ namespace ForceTask
             std::fill_n(followFlag,6,false);
             std::fill_n(filterFlag,6,false);
             std::fill_n(filterCount,6,0);
+	    //totalCount=totalCount_tmp;//param.count%totalCount illegal at count 0
 
             planH=initPee[1]-0.005;
         }
@@ -2796,7 +2797,7 @@ namespace ForceTask
             beginMak.update();
             robot.GetPeb(beginPeb,beginMak);
             //totalCount=totalCount_tmp;
-            //height=height_tmp;
+            height=height_tmp;
 
             beginVel=endVel;
             switch(walkState)
