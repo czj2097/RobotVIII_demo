@@ -20,9 +20,9 @@ namespace NormalGait
 	enum WalkState
 	{
 		Init,
-		Acc,
-		Const,
-		Dec,
+        ForwardAcc,
+        TurnAcc,
+        Const,
 		Stop,
 	};
 	enum GaitPhase
@@ -179,22 +179,24 @@ namespace ForceTask
 		static int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	private:
-		static double bodyAcc;
+        static double forwardAcc;
+        static double turnAcc;
 		static int totalCount;
         static int totalCount_tmp;
 		static double height;
         static double height_tmp;
-		static double beta;
-        static double beta_tmp;
+        static double alpha;
+        static double alpha_tmp;
 
         static NormalGait::WalkState walkState;
         static bool constFlag;
-
         static double beginVel;
         static double endVel;
+        static double beginOmega;
+        static double endOmega;
+
         static double beginPeb[6];
         static double pEB[6];
-
         static NormalGait::GaitPhase gaitPhase[6];
         static double swingPee[18];
         static double swingBeginPee[18];
@@ -202,7 +204,6 @@ namespace ForceTask
         static double stancePee[18];
         static double stanceBeginPee[18];
         static double stanceEndPee[18];
-
         static double followBeginPee[18]; 
         static bool followFlag[6];
         static bool filterFlag[6];

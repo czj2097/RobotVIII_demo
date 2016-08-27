@@ -5,7 +5,7 @@
 *.includes
 *.creator.user
 
-#txt files
+#build files
 build
 
 #~ files

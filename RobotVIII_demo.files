@@ -1,5 +1,6 @@
 Client/client.cpp
 resource/Robot_VIII.xml
+Server/LogReader.cpp
 Server/main.cpp
 Server/Move_Gait.cpp
 Server/Move_Gait.h
