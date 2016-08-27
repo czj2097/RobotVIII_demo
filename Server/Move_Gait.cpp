@@ -2658,7 +2658,8 @@ namespace ForceTask
             double pmOmega[4][4];
             aris::dynamic::s_pe2pm(peOmega,*pmOmega);
             aris::dynamic::s_pm_dot_pnt(*pmOmega,initPee+3*legID,swingEndPee+3*legID);//rotate
-            swingEndPee[3*legID+2]=swingEndPee[3*legID+2]-endVel*totalCount/2*0.001-bodyDist;//translate
+            swingEndPee[3*legID]=swingEndPee[3*legID]-sin(alpha)*(endVel*totalCount/2*0.001+bodyDist);//translate
+            swingEndPee[3*legID+2]=swingEndPee[3*legID+2]-cos(alpha)*(endVel*totalCount/2*0.001+bodyDist);//translate
         }
 
         if(period_count>=(totalCount/2-100))
@@ -2924,7 +2925,9 @@ namespace ForceTask
         }
 
         memcpy(pEB,beginPeb,sizeof(beginPeb));
-        pEB[2]=beginPeb[2]-(beginVel*(param.count%totalCount)*0.001
+        pEB[0]=beginPeb[0]-sin(alpha)*(beginVel*(param.count%totalCount)*0.001
+               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
+        pEB[2]=beginPeb[2]-cos(alpha)*(beginVel*(param.count%totalCount)*0.001
                +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
         pEB[3]=PI/2;
         pEB[4]=beginPeb[4]+(beginOmega*(param.count%totalCount)*0.001
