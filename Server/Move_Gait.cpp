@@ -2529,8 +2529,10 @@ namespace ForceTask
 
     NormalGait::WalkState ForceWalk::walkState;
     bool ForceWalk::constFlag;
-    double ForceWalk::beginVel;
-    double ForceWalk::endVel;
+    double ForceWalk::beginXVel;
+    double ForceWalk::endXVel;
+    double ForceWalk::beginZVel;
+    double ForceWalk::endZVel;
     double ForceWalk::beginOmega;
     double ForceWalk::endOmega;
 
@@ -2652,14 +2654,15 @@ namespace ForceTask
         int period_count = param.count%totalCount;
         if(period_count==0)
         {
-            double bodyDist=(beginVel+endVel)*totalCount/2*0.001;
+            double bodyXDist=(beginXVel+endXVel)*totalCount/2*0.001;
+            double bodyZDist=(beginZVel+endZVel)*totalCount/2*0.001;
             double bodyAngle=(beginOmega+endOmega)*totalCount/2*0.001;
             double peOmega[6]{0,0,0,PI/2,endOmega*totalCount/2*0.001+bodyAngle,-PI/2};
             double pmOmega[4][4];
             aris::dynamic::s_pe2pm(peOmega,*pmOmega);
             aris::dynamic::s_pm_dot_pnt(*pmOmega,initPee+3*legID,swingEndPee+3*legID);//rotate
-            swingEndPee[3*legID]=swingEndPee[3*legID]-sin(alpha)*(endVel*totalCount/2*0.001+bodyDist);//translate
-            swingEndPee[3*legID+2]=swingEndPee[3*legID+2]-cos(alpha)*(endVel*totalCount/2*0.001+bodyDist);//translate
+            swingEndPee[3*legID]=swingEndPee[3*legID]-(endXVel*totalCount/2*0.001+bodyXDist);//translate
+            swingEndPee[3*legID+2]=swingEndPee[3*legID+2]-(endZVel*totalCount/2*0.001+bodyZDist);//translate
         }
 
         if(period_count>=(totalCount/2-100))
@@ -2791,43 +2794,51 @@ namespace ForceTask
             beginMak.update();
             robot.GetPeb(beginPeb,beginMak,"213");
 
+            //for test
             double pEBinG[6];
             double pEEinG[18];
             robot.GetPeb(pEBinG,"213");
             robot.GetPee(pEEinG);
             rt_printf("count:%d,pEBinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEBinG[0],pEBinG[1],pEBinG[2],pEBinG[3],pEBinG[4],pEBinG[5]);
             rt_printf("count:%d,pEEinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEEinG[0],pEEinG[1],pEEinG[2],pEEinG[3],pEEinG[4],pEEinG[5]);
+
             //totalCount=totalCount_tmp;
             height=height_tmp;
             alpha=alpha_tmp;
             memcpy(inputEul,inputEul_tmp,sizeof(inputEul_tmp));
 
-            beginVel=endVel;
+            beginXVel=endXVel;
+            beginZVel=endZVel;
             beginOmega=endOmega;
             switch(walkState)
             {
             case NormalGait::WalkState::Init:
-                beginVel=0;
-                endVel=0;
+                beginXVel=0;
+                endXVel=0;
+                beginZVel=0;
+                endZVel=0;
                 beginOmega=0;
                 endOmega=0;
                 constFlag=false;
                 break;
 
             case NormalGait::WalkState::ForwardAcc:
-                endVel=beginVel+forwardAcc*totalCount/1000;
+                endXVel=beginXVel+sin(alpha)*forwardAcc*totalCount/1000;
+                endZVel=beginZVel+cos(alpha)*forwardAcc*totalCount/1000;
                 endOmega=beginOmega;
                 constFlag=true;
                 break;
 
             case NormalGait::WalkState::TurnAcc:
-                endVel=beginVel;
+                endXVel=beginXVel;
+                endZVel=beginZVel;
                 endOmega=beginOmega+turnAcc*totalCount/1000;
                 constFlag=true;
                 break;
 
             case NormalGait::WalkState::Const:
-                endVel=beginVel;
+                endXVel=beginXVel;
+                endZVel=beginZVel;
                 endOmega=beginOmega;
                 break;
 
@@ -2842,13 +2853,13 @@ namespace ForceTask
             {
                 walkState=NormalGait::WalkState::Const;
                 constFlag=false;
-                rt_printf("ForwardAcc finished, the coming Const Vel is: %.4f, Omega is:%.4f\n",endVel,endOmega);
+                rt_printf("ForwardAcc finished, the coming Const Vel is:(-x)%.4f,(-z)%.4f,Omega is:%.4f\n",endXVel,endZVel,endOmega);
             }
             if(walkState==NormalGait::WalkState::TurnAcc && constFlag==true)
             {
                 walkState=NormalGait::WalkState::Const;
                 constFlag=false;
-                rt_printf("TurnAcc finished, the coming Const Vel is: %.4f, Omega is:%.4f\n",endVel,endOmega);
+                rt_printf("TurnAcc finished, the coming Const Vel is:(-x)%.4f,(-z)%.4f,Omega is:%.4f\n",endXVel,endZVel,endOmega);
             }
         }
 
@@ -2930,10 +2941,10 @@ namespace ForceTask
             }
         }
         memcpy(pEB,beginPeb,sizeof(beginPeb));
-        pEB[0]=beginPeb[0]-sin(alpha)*(beginVel*(param.count%totalCount+1)*0.001
-               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);
-        pEB[2]=beginPeb[2]-cos(alpha)*(beginVel*(param.count%totalCount+1)*0.001
-               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);
+        pEB[0]=beginPeb[0]-(beginXVel*(param.count%totalCount+1)*0.001
+               +0.5*(endXVel-beginXVel)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);
+        pEB[2]=beginPeb[2]-(beginZVel*(param.count%totalCount+1)*0.001
+               +0.5*(endZVel-beginZVel)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);
         pEB[3]=beginPeb[3]+(beginOmega*(param.count%totalCount+1)*0.001
                +0.5*(endOmega-beginOmega)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);;
         robot.SetPeb(pEB,beginMak,"213");

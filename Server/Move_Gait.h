@@ -66,7 +66,6 @@ namespace ForceTask
 	int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
-
 	enum MoveState
 	{
 		None,
@@ -190,8 +189,10 @@ namespace ForceTask
 
         static NormalGait::WalkState walkState;
         static bool constFlag;
-        static double beginVel;
-        static double endVel;
+        static double beginXVel;
+        static double endXVel;
+        static double beginZVel;
+        static double endZVel;
         static double beginOmega;
         static double endOmega;
 
