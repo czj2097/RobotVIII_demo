@@ -2769,7 +2769,6 @@ namespace ForceTask
         const double frcRange[6]{-100,-100,-100,-100,-100,-100};
 
         static aris::dynamic::FloatMarker beginMak{robot.ground()};
-
         if (param.count == 0)
         {
             beginMak.setPrtPm(*robot.body().pm());
@@ -2790,14 +2789,21 @@ namespace ForceTask
         {
             beginMak.setPrtPm(*robot.body().pm());
             beginMak.update();
-            robot.GetPeb(beginPeb,beginMak);
-            rt_printf("beginPeb:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",beginPeb[0],beginPeb[1],beginPeb[2],beginPeb[3],beginPeb[4],beginPeb[5]);
+            robot.GetPeb(beginPeb,beginMak,"213");
+
+            double pEBinG[6];
+            double pEEinG[18];
+            robot.GetPeb(pEBinG,"213");
+            robot.GetPee(pEEinG);
+            rt_printf("count:%d,pEBinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEBinG[0],pEBinG[1],pEBinG[2],pEBinG[3],pEBinG[4],pEBinG[5]);
+            rt_printf("count:%d,pEEinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEEinG[0],pEEinG[1],pEEinG[2],pEEinG[3],pEEinG[4],pEEinG[5]);
             //totalCount=totalCount_tmp;
             height=height_tmp;
             alpha=alpha_tmp;
             memcpy(inputEul,inputEul_tmp,sizeof(inputEul_tmp));
 
             beginVel=endVel;
+            beginOmega=endOmega;
             switch(walkState)
             {
             case NormalGait::WalkState::Init:
@@ -2923,17 +2929,14 @@ namespace ForceTask
                 }
             }
         }
-
         memcpy(pEB,beginPeb,sizeof(beginPeb));
-        pEB[0]=beginPeb[0]-sin(alpha)*(beginVel*(param.count%totalCount)*0.001
-               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
-        pEB[2]=beginPeb[2]-cos(alpha)*(beginVel*(param.count%totalCount)*0.001
-               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);
-        pEB[3]=PI/2;
-        pEB[4]=beginPeb[4]+(beginOmega*(param.count%totalCount)*0.001
-               +0.5*(endOmega-beginOmega)/totalCount*(param.count%totalCount)*(param.count%totalCount)*0.001);;
-        pEB[5]=-PI/2;
-        robot.SetPeb(pEB,beginMak);
+        pEB[0]=beginPeb[0]-sin(alpha)*(beginVel*(param.count%totalCount+1)*0.001
+               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);
+        pEB[2]=beginPeb[2]-cos(alpha)*(beginVel*(param.count%totalCount+1)*0.001
+               +0.5*(endVel-beginVel)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);
+        pEB[3]=beginPeb[3]+(beginOmega*(param.count%totalCount+1)*0.001
+               +0.5*(endOmega-beginOmega)/totalCount*(param.count%totalCount+1)*(param.count%totalCount+1)*0.001);;
+        robot.SetPeb(pEB,beginMak,"213");
 		for (int i=0;i<6;i++)
 		{
 			if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
