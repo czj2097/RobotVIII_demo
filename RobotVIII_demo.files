@@ -1,4 +1,5 @@
 Client/client.cpp
+resource/Robot_IX.xml
 resource/Robot_VIII.xml
 Server/LogReader.cpp
 Server/main.cpp

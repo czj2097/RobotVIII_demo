@@ -39,14 +39,14 @@ namespace NormalGait
 	};
 	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
+/*
 	struct SpecialWalkParam final:public Robots::WalkParam
 	{
 		double offset;
 	};
 	void parseSpecialWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	int specialWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
+*/
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);

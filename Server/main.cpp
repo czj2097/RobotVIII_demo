@@ -9,7 +9,8 @@
 using namespace std;
 
 #include <aris.h>
-#include <Robot_Type_I.h>
+#include <Robot_Type_III.h>
+#include <Basic_Gait.h>
 
 #ifdef WIN32
 #define rt_printf printf
@@ -98,27 +99,31 @@ int main(int argc, char *argv[])
 	NormalGait::StartRecordData();
 	std::string xml_address;
 
-	if (argc <= 1)
-	{
-		std::cout << "you did not type in robot name, in this case ROBOT-VIII will start" << std::endl;
-		xml_address = "/usr/Robots/resource/Robot_Type_I/Robot_VIII/Robot_VIII.xml";
-	}
-	else if (std::string(argv[1]) == "III")
-	{
-		xml_address = "/usr/Robots/resource/Robot_Type_I/Robot_III/Robot_III.xml";
-	}
-	else if (std::string(argv[1]) == "VIII")
-	{
-		xml_address = "/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml";
-	}
+    if (argc <= 1)
+    {
+        std::cout << "you did not type in robot name, in this case ROBOT-IX will start" << std::endl;
+        xml_address = "/usr/Robots/resource/Robot_Type_III/Robot_IX/Robot_IX.xml";
+    }
+    else if (std::string(argv[1]) == "IX")
+    {
+        xml_address = "/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_IX.xml";
+    }
+    else if (std::string(argv[1]) == "VIII")
+    {
+        xml_address = "/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml";
+    }
+    else if (std::string(argv[1]) == "III")
+    {
+        xml_address = "/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_III.xml";
+    }
 	else
 	{
-		throw std::runtime_error("invalid robot name, please type in III or VIII");
+        throw std::runtime_error("invalid robot name, please type in III, VIII or IX");
 	}
 
 	auto &rs = aris::server::ControlServer::instance();
 
-	rs.createModel<Robots::RobotTypeI>();
+    rs.createModel<Robots::RobotTypeIII>();
 	rs.loadXml(xml_address.c_str());
 	rs.addCmd("en", Robots::basicParse, nullptr);
 	rs.addCmd("ds", Robots::basicParse, nullptr);
@@ -127,9 +132,14 @@ int main(int argc, char *argv[])
 	rs.addCmd("rc", Robots::recoverParse, Robots::recoverGait);
 	rs.addCmd("wk", Robots::walkParse, Robots::walkGait);
 	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
+    rs.addCmd("ec", Robots::Gait::extendChainParse, Robots::Gait::extendChainGait);
+    //waist cmd
+    rs.addCmd("rcw", Robots::Gait::recoverWaistParse, Robots::Gait::recoverWaistGait);
+    rs.addCmd("aw", Robots::Gait::adjustWaistParse, Robots::Gait::adjustWaistGait);
+
 
 	rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
-	rs.addCmd("swk",NormalGait::parseSpecialWalk,NormalGait::specialWalk);
+    //rs.addCmd("swk",NormalGait::parseSpecialWalk,NormalGait::specialWalk);
 
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);

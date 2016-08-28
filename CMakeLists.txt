@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+set( CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # add prefix to every string in a variable
 FUNCTION(PREPEND var prefix)
@@ -59,7 +60,6 @@ endif(UNIX)
 
 # set include and lib folders
 if(UNIX)
-
 set(SYSTEM_LINK_LIB pthread)
 set(XENOMAI_INCL_DIR "/usr/xenomai/include")
 set(XENOMAI_LINK_DIR "/usr/xenomai/lib")
@@ -81,10 +81,10 @@ set(ARIS_LINK_DIR "/usr/aris2/lib")
 set(ARIS_LINK_LIB aris_server aris_sensor aris_dynamic aris_control aris_core)
 set(ROBOTS_INCL_DIR "/usr/Robots2/include")
 set(ROBOTS_LINK_DIR "/usr/Robots2/lib")
+set(ROBOTS_LINK_LIB Robot_Type_I Robot_Type_II Robot_Type_III Robot_Base)
 set(EIGEN_INCL_DIR "/usr/local/include/eigen3")
-set(ROBOTS_LINK_LIB Robot_Type_I Robot_Type_II Robot_Base)
 
-set(ALL_INCL_DIR ${ROBOTS_INCL_DIR} ${ARIS_INCL_DIR} ${OPENNI_INCL_DIR} ${XNNITE_INCL_DIR} ${XSENS_INCL_DIR} ${ETHERLAB_INCL_DIR} ${XENOMAI_INCL_DIR} ${EIGEN_INCL_DIR})
+set(ALL_INCL_DIR ${ROBOTS_INCL_DIR} ${ARIS_INCL_DIR} ${OPENNI_INCL_DIR} ${XNNITE_INCL_DIR} ${XSENS_INCL_DIR} ${ETHERLAB_INCL_DIR} ${XENOMAI_INCL_DIR} ${GENERAL_INCL_DIR} ${EIGEN_INCL_DIR})
 set(ALL_LINK_DIR ${ROBOTS_LINK_DIR} ${ARIS_LINK_DIR} ${OPENNI_LINK_DIR} ${XNNITE_LINK_DIR} ${XSENS_LINK_DIR} ${ETHERLAB_LINK_DIR} ${XENOMAI_LINK_DIR})
 set(ALL_LINK_LIB ${ROBOTS_LINK_LIB} ${ARIS_LINK_LIB} ${OPENNI_LINK_LIB} ${XNNITE_LINK_LIB} ${XSENS_LINK_LIB} ${ETHERLAB_LINK_LIB} ${XENOMAI_LINK_LIB} ${SYSTEM_LINK_LIB})
 endif(UNIX)
@@ -99,7 +99,7 @@ set(ARIS_LINK_DIR "C:/Aris/lib")
 set(ARIS_LINK_LIB aris_server aris_sensor aris_dynamic aris_control aris_core)
 set(ROBOTS_INCL_DIR "C:/Robots/include")
 set(ROBOTS_LINK_DIR "C:/Robots/lib")
-set(ROBOTS_LINK_LIB Robot_Type_I Robot_Type_II Robot_Base)
+set(ROBOTS_LINK_LIB Robot_Type_I Robot_Type_II Robot_Type_III Robot_Base)
 
 set(ALL_INCL_DIR ${ROBOTS_INCL_DIR} ${ARIS_INCL_DIR} ${XSENS_INCL_DIR} ${ETHERLAB_INCL_DIR} ${XENOMAI_INCL_DIR} ${GENERAL_INCL_DIR})
 set(ALL_LINK_DIR ${ROBOTS_LINK_DIR} ${ARIS_LINK_DIR} ${XSENS_LINK_DIR} )
@@ -108,6 +108,7 @@ endif(WIN32)
 
 include_directories(${ALL_INCL_DIR})
 link_directories(${ALL_LINK_DIR})
+
 
 ################################### build server ####################################
 set(SOURCE_FILES main.cpp Move_Gait.cpp)
@@ -119,8 +120,6 @@ target_link_libraries(Server ${ALL_LINK_LIB})
 add_executable(rbt Client/client.cpp)
 target_link_libraries(rbt ${ALL_LINK_LIB})
 
-add_executable(LogReader Server/LogReader.cpp)
-
 ################################### install ####################################
 if(UNIX)
 	set(CMAKE_INSTALL_PREFIX "/usr/Robots/CMakeDemo/")
@@ -130,3 +129,29 @@ if(WIN32)
 endif(WIN32)
 
 install(TARGETS Server rbt RUNTIME DESTINATION bin)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

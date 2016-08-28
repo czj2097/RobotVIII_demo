@@ -93,7 +93,7 @@ namespace NormalGait
 
 		return param.totalCount - param.count - 1;
 	}
-
+/*
 	void parseSpecialWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		SpecialWalkParam param;
@@ -165,7 +165,7 @@ namespace NormalGait
 
 		return 2*param.n*param.totalCount - param.count - 1;
 	}
-
+*/
 	void StartRecordData()
 	{
 		fastWalkThread = std::thread([&]()
