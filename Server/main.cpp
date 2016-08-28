@@ -3,14 +3,9 @@
 #include <iomanip> 
 #include <bitset>
 #include <cstring>
-#include <map>
 #include <string>
 
 using namespace std;
-
-#include <aris.h>
-#include <Robot_Type_III.h>
-#include <Basic_Gait.h>
 
 #ifdef WIN32
 #define rt_printf printf
@@ -93,10 +88,10 @@ int main(int argc, char *argv[])
 
     //FastWalk::wkByPYAnalyse();
 
-    FastWalk::JointSpaceWalk jointspacewalker;
-	FastWalk::FastWalkPY pyfastwalker;
+    //FastWalk::JointSpaceWalk jointspacewalker;
+    //FastWalk::FastWalkPY pyfastwalker;
     ForceTask::ForceWalk forcewalker;
-	NormalGait::StartRecordData();
+    //NormalGait::StartRecordData();
 	std::string xml_address;
 
     if (argc <= 1)
@@ -125,20 +120,20 @@ int main(int argc, char *argv[])
 
     rs.createModel<Robots::RobotTypeIII>();
 	rs.loadXml(xml_address.c_str());
-	rs.addCmd("en", Robots::basicParse, nullptr);
-	rs.addCmd("ds", Robots::basicParse, nullptr);
-	rs.addCmd("hm", Robots::basicParse, nullptr);
-	rs.addCmd("hmsw", Robots::basicParse, nullptr);
-	rs.addCmd("rc", Robots::recoverParse, Robots::recoverGait);
-	rs.addCmd("wk", Robots::walkParse, Robots::walkGait);
-	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
+    rs.addCmd("en", Robots::Gait::basicParse, nullptr);
+    rs.addCmd("ds", Robots::Gait::basicParse, nullptr);
+    rs.addCmd("hm", Robots::Gait::basicParse, nullptr);
+    rs.addCmd("hmsw", Robots::Gait::basicParse, nullptr);
+    rs.addCmd("rc", Robots::Gait::recoverParse, Robots::Gait::recoverGait);
+    rs.addCmd("wk", Robots::Gait::walkParse, Robots::Gait::walkGait);
+    rs.addCmd("ro", Robots::Gait::resetOriginParse, Robots::Gait::resetOriginGait);
     rs.addCmd("ec", Robots::Gait::extendChainParse, Robots::Gait::extendChainGait);
     //waist cmd
     rs.addCmd("rcw", Robots::Gait::recoverWaistParse, Robots::Gait::recoverWaistGait);
     rs.addCmd("aw", Robots::Gait::adjustWaistParse, Robots::Gait::adjustWaistGait);
 
 
-	rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
+    //rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
     //rs.addCmd("swk",NormalGait::parseSpecialWalk,NormalGait::specialWalk);
 
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
@@ -147,8 +142,8 @@ int main(int argc, char *argv[])
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
     rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
-    rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
-    rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
+    //rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
+    //rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
     rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);
 
 	rs.open();

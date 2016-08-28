@@ -8,13 +8,14 @@
 
 #include <aris.h>
 #include <aris_control_pipe.h>
-#include <Robot_Gait.h>
+#include <Robot_Type_III.h>
+#include <Basic_Gait.h>
 #include <Robot_Type_I.h>
+#include <Robot_Gait.h>
 #include <sys/time.h>
 
 using namespace aris::control;
 
-//static const double PI = 3.141592653589793;
 namespace NormalGait
 {
 	enum WalkState
@@ -39,14 +40,7 @@ namespace NormalGait
 	};
 	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-/*
-	struct SpecialWalkParam final:public Robots::WalkParam
-	{
-		double offset;
-	};
-	void parseSpecialWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-	int specialWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-*/
+
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
@@ -231,23 +225,21 @@ namespace ForceTask
     };
 }
 
+
 namespace FastWalk
 {
+    struct maxVelParam
+    {
+        double bodyVel_last_spatial[6]{0,0,0,0,0,0};
+        bool legState{false};
+    };
+
+    void fastTg();
+    void screwInterpolationTraj();
 	void fastTgByPeeScaling();
-	void fastTg();
-	void ellipseTrajAnalyse();
-	void screwInterpolationTraj();
-	void fastTgByPYAnalyse();
-	void wkByPYAnalyse();
+    void getMaxPin(double* maxPin, aris::dynamic::Model &model, maxVelParam &param_in);
 	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
 	void maxVel();
-
-	struct maxVelParam
-	{
-		double bodyVel_last_spatial[6]{0,0,0,0,0,0};
-		bool legState{false};
-	};
-	void getMaxPin(double* maxPin, aris::dynamic::Model &model, maxVelParam &param_in);
 
 	struct FastWalkByScrewParam final:public aris::server::GaitParamBase
 	{
@@ -259,26 +251,6 @@ namespace FastWalk
 	};
 	void parseFastWalkByPeeScaling(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 	int fastWalkByPeeScaling(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
-	struct FastWalkByPYParam final:public aris::server::GaitParamBase
-	{
-		std::int32_t n{2};
-		int totalCount{900};
-	};
-	class FastWalkPY
-	{
-	public:
-		FastWalkPY();
-		~FastWalkPY();
-		static void parseFastWalkByPY(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-		static int fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
-	private:
-		static double pIn_acc[900][18];
-		static double pIn_const[1800][18];
-		static double pIn_dec[900][18];
-	};
-
 
 	struct JointSpaceWalkParam final:public aris::server::GaitParamBase
 	{
