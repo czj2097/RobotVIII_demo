@@ -858,19 +858,19 @@
                 <Motion19 type="ElmoSoloWhistle" min_pos="0.125" max_pos="0.358" max_vel="0.9481" home_pos="0.246" input2count="86671360" kp="200" abs_id="18" hm_with_switch="1"/>
                 <SlaveStation1 type="EK1100" />
                 <Junction1 type="EK1122" />
-                <ForceSensor1 type="AtiForceSensor" abs_id="3"/>
-                <ForceSensor2 type="AtiForceSensor" abs_id="2"/>
+                <ForceSensor1 type="AtiForceSensor" abs_id="5"/>
+                <ForceSensor2 type="AtiForceSensor" abs_id="3"/>
                 <Junction2 type="EK1122" />
                 <ForceSensor3 type="AtiForceSensor" abs_id="4"/>
-                <ForceSensor4 type="AtiForceSensor" abs_id="0"/>
+                <ForceSensor4 type="AtiForceSensor" abs_id="1"/>
                 <Junction3 type="EK1122" />
-                <ForceSensor5 type="AtiForceSensor" abs_id="5"/>
-                <ForceSensor6 type="AtiForceSensor" abs_id="1"/>
+                <ForceSensor5 type="AtiForceSensor" abs_id="2"/>
+                <ForceSensor6 type="AtiForceSensor" abs_id="0"/>
             </Slave>
         </EtherCat>
     </Controller>
     <Sensors>
-        <IMU active="false" type="xsens_imu" portLinux="/dev/ttyUSB0" baudRate="921600" sampleRate="400" PeImuGround2BodyGound="{0,0,0,0,-PI/2,PI}" PeImu2Body="{0,0,0,0,PI/2,0}"/>
+        <IMU active="true" type="xsens_imu" portLinux="/dev/ttyUSB0" baudRate="921600" sampleRate="400" PeImuGround2BodyGound="{0,0,0,0,-PI/2,PI}" PeImu2Body="{0,0,0,0,PI/2,0}"/>
     </Sensors>
     <UDP remote_ip="192.168.1.101" remote_port="6661" local_port="6660"/>
 </RobotIX>
