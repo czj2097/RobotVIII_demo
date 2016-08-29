@@ -597,7 +597,17 @@
                 <physical_motor abbreviation="p" type="intArray" default="0"/>
                 <leg abbreviation="l" type="intArray" default="0"/>
             </hm>
+            <hmsw default="all">
+                <all abbreviation="a"/>
+                <first abbreviation="f"/>
+                <second abbreviation="s"/>
+                <waist abbreviation="w"/>
+                <motor abbreviation="m" type="intArray" default="0"/>
+                <physical_motor abbreviation="p" type="intArray" default="0"/>
+                <leg abbreviation="l" type="intArray" default="0"/>
+            </hmsw>
             <fake_home/>
+            <zo/>
             <rc default="rc_param">
                 <rc_param type="group">
                     <leg_param type="unique" default="all">
@@ -609,6 +619,7 @@
                     <t1 abbreviation="t" type="intArray" default="3000"/>
                     <t2 type="intArray" default="3000"/>
                     <margin_offset abbreviation="m" type="double" default="0.01"/>
+                    <require_zero abbreviation="z" type="int" default="0"/>
                 </rc_param>
             </rc>
             <wk default="wk_param">
@@ -844,7 +855,7 @@
                 <Motion16 type="ElmoSoloWhistle" min_pos="0.738" max_pos="1.128" max_vel="0.9481" home_pos="0.738" input2count="11556181" kp="200" abs_id="2"/>
                 <Motion17 type="ElmoSoloWhistle" min_pos="0.722" max_pos="1.112" max_vel="0.9481" home_pos="0.722" input2count="11556181" kp="200" abs_id="0"/>
                 <Motion18 type="ElmoSoloWhistle" min_pos="0.738" max_pos="1.128" max_vel="0.9481" home_pos="0.738" input2count="11556181" kp="200" abs_id="1"/>
-                <Motion19 type="ElmoSoloWhistle" min_pos="0.125" max_pos="0.358" max_vel="0.9481" home_pos="0.246" input2count="86671360" kp="200" abs_id="18"/>
+                <Motion19 type="ElmoSoloWhistle" min_pos="0.125" max_pos="0.358" max_vel="0.9481" home_pos="0.246" input2count="86671360" kp="200" abs_id="18" hm_with_switch="1"/>
                 <SlaveStation1 type="EK1100" />
                 <Junction1 type="EK1122" />
                 <ForceSensor1 type="AtiForceSensor" abs_id="3"/>
