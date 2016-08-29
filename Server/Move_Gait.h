@@ -164,28 +164,30 @@ namespace ForceTask
 	struct ForceWalkParam final:public aris::server::GaitParamBase
 	{
 	};
-	class ForceWalk
-	{
-	public:
-		ForceWalk();
-		~ForceWalk();
-		static void parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-		static int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+    class ForceWalk
+    {
+    public:
+        ForceWalk();
+        ~ForceWalk();
+        static void parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+        static int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
-	private:
+    private:
         static double forwardAcc;
         static double turnAcc;
-		static int totalCount;
+        static int totalCount;
         static int totalCount_tmp;
-		static double height;
+        static double height;
         static double height_tmp;
         static double alpha;
         static double alpha_tmp;
 
         static NormalGait::WalkState walkState;
         static bool constFlag;
-        static double beginVel;
-        static double endVel;
+        static double beginXVel;
+        static double endXVel;
+        static double beginZVel;
+        static double endZVel;
         static double beginOmega;
         static double endOmega;
 
@@ -198,7 +200,7 @@ namespace ForceTask
         static double stancePee[18];
         static double stanceBeginPee[18];
         static double stanceEndPee[18];
-        static double followBeginPee[18]; 
+        static double followBeginPee[18];
         static bool followFlag[6];
         static bool filterFlag[6];
         static int filterCount[6];

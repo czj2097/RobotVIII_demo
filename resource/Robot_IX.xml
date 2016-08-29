@@ -837,7 +837,7 @@
                 </EK1122>
             </SlaveType>
             <Slave>
-                <Motion1  type="ElmoSoloWhistle" min_pos="0.738" max_pos="1.128" max_vel="0.9481" home_pos="0.738" input2count="11556181" kp="200" abs_id="11"/>
+                <Motion1  type="ElmoSoloWhistle" min_pos="0.738" max_pos="1.128" max_vel="0.9481" home_pos="0.738" input2count="11556181" kp="120" abs_id="11"/>
                 <Motion2  type="ElmoSoloWhistle" min_pos="0.722" max_pos="1.112" max_vel="0.9481" home_pos="0.722" input2count="11556181" kp="200" abs_id="9"/>
                 <Motion3  type="ElmoSoloWhistle" min_pos="0.738" max_pos="1.128" max_vel="0.9481" home_pos="0.738" input2count="11556181" kp="200" abs_id="10"/>
                 <Motion4  type="ElmoSoloWhistle" min_pos="0.738" max_pos="1.128" max_vel="0.9481" home_pos="0.738" input2count="11556181" kp="200" abs_id="14"/>
