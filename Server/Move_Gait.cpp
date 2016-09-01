@@ -2588,12 +2588,12 @@ namespace ForceTask
             robot.GetPeb(beginPeb,beginMak,"213");
 
             //for test
-            double pEBinG[6];
-            double pEEinG[18];
-            robot.GetPeb(pEBinG,"213");
-            robot.GetPee(pEEinG);
-            rt_printf("count:%d,pEBinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEBinG[0],pEBinG[1],pEBinG[2],pEBinG[3],pEBinG[4],pEBinG[5]);
-            rt_printf("count:%d,pEEinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEEinG[0],pEEinG[1],pEEinG[2],pEEinG[3],pEEinG[4],pEEinG[5]);
+            //double pEBinG[6];
+            //double pEEinG[18];
+            //robot.GetPeb(pEBinG,"213");
+            //robot.GetPee(pEEinG);
+            //rt_printf("count:%d,pEBinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEBinG[0],pEBinG[1],pEBinG[2],pEBinG[3],pEBinG[4],pEBinG[5]);
+            //rt_printf("count:%d,pEEinG:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",param.count,pEEinG[0],pEEinG[1],pEEinG[2],pEEinG[3],pEEinG[4],pEEinG[5]);
 
             //totalCount=totalCount_tmp;
             height=height_tmp;
@@ -2696,13 +2696,13 @@ namespace ForceTask
             if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false)
             {
                 //detect 5 points to confirm touching ground
-                if(forceInF[6*i+2]<frcRange[i] && filterFlag[i]==false)//param.force_data->at(leg2frc[i]).Fz<frcRange[i]
+                if(param.force_data->at(i).Fz<frcRange[i] && filterFlag[i]==false)//forceInF[6*i+2] | param.force_data->at(i).Fz
                 {
                     filterFlag[i]=true;
                     filterCount[i]=param.count;
                     rt_printf("leg %d detects force:%.4f, going into Follow in 5 ms after count %d\n",i,forceInF[6*i+2],filterCount[i]);
                 }
-                if(forceInF[6*i+2]>frcRange[i] && filterFlag[i]==true &&
+                if(param.force_data->at(i).Fz>frcRange[i] && filterFlag[i]==true &&
                    (param.count==filterCount[i]+1 || param.count==filterCount[i]+2 || param.count==filterCount[i]+3 || param.count==filterCount[i]+4))
                 {
                     filterFlag[i]=false;
