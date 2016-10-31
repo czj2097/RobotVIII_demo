@@ -1,0 +1,13 @@
+build/CMakeFiles/2.8.12.2/CompilerIdC/CMakeCCompilerId.c
+build/CMakeFiles/2.8.12.2/CompilerIdCXX/CMakeCXXCompilerId.cpp
+build/CMakeFiles/Makefile.cmake
+build/CMakeFiles/Makefile2
+build/Makefile
+Client/client.cpp
+resource/Robot_VIII.xml
+Server/cross_chasm.cpp
+Server/cross_chasm.h
+Server/main.cpp
+Server/Move_Gait.cpp
+Server/Move_Gait.h
+RobotVIII_demo.includes

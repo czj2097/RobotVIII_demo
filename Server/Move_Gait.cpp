@@ -1026,7 +1026,7 @@ int ForceTask::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPa
     double yBodyInB[3]{0,1,0};
     double pushBodyPE313[6];//for pause
     double pushPee[18];//for pause
-    double d0=0.43;//distance from the handle to the middle of the door
+    double d0=0.44;//distance from the handle to the middle of the door
     double h0=0.05;//height from the start position to the walk through position
 
     //Force Control
@@ -1296,7 +1296,7 @@ int ForceTask::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPa
 			}
 			else//Push
 			{
-				if (param.count-ODP.countIter>3000)
+                if (param.count-ODP.countIter>2800)
 				{
 					ODP.countIter=param.count;
 					ODP.moveState=MoveState::Downward;
@@ -1395,13 +1395,13 @@ int ForceTask::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPa
             {
     			if(isPull==false)
     			{
-    				Fbody[1]=-cos((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
-    				Fbody[0]=sin((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
+                    Fbody[1]=-cos(PI/12+(param.count-ODP.countIter)*PI/ODP.downwardCount/2);
+                    Fbody[0]=sin(PI/12+(param.count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
     			else
     			{
-    				Fbody[1]=-cos((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
-    				Fbody[0]=-sin((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
+                    Fbody[1]=-cos(PI/12+(param.count-ODP.countIter)*PI/ODP.downwardCount/2);
+                    Fbody[0]=-sin(PI/12+(param.count-ODP.countIter)*PI/ODP.downwardCount/2);
     			}
             }
 

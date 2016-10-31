@@ -1,0 +1,12 @@
+#qt files
+*.config
+*.creator
+*.files
+*.includes
+*.creator.user
+
+#build files
+build
+
+#~ files
+*~
