@@ -535,17 +535,6 @@
                     <beta abbreviation="b" type="double" default="0"/>
                 </wk_param>
             </wk>
-            <swk default="swk_param">
-                <swk_param type="group">
-                    <totalCount abbreviation="t" type="int" default="3000"/>
-                    <n abbreviation="n" type="int" default="1"/>
-                    <distance abbreviation="d" type="double" default="0.5"/>
-                    <height abbreviation="h" type="double" default="0.05"/>
-                    <alpha abbreviation="a" type="double" default="0"/>
-                    <beta abbreviation="b" type="double" default="0"/>
-                    <offset abbreviation="o" type="double" default="0"/>
-                </swk_param>
-            </swk>
             <mwr>
                 <mwr_param type="group">
                     <u abbreviation="u" type="double" default="0"/>
