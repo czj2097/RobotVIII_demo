@@ -175,8 +175,7 @@ namespace NormalGait
 
 namespace FastWalk
 {
-
-	void fastTg()
+    void TestGetdJacOverPee()//work well in LegBase and Body Frame
 	{
 		timeval tpstart,tpend;
 		float tused;
@@ -186,43 +185,39 @@ namespace FastWalk
 		Robots::RobotTypeI rbt;
 		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
-		double f_s[18];
-		double df_s[18];
-		double ddf_s[18];
-		double s_t[2001];
-		double ds_t[2001];
-		double dds_t[2001];
+        double f_s[18]{0};
+        double df_s[18]{0};
+        double ddf_s[18]{0};
+        double s_t[2001]{0};
+        double ds_t[2001]{0};
+        double dds_t[2001]{0};
 
-		double Jvi[3][3];
-		double dJvi_t[3][3]{0,0,0,0,0,0,0,0,0};
-		double dJvi_t_tem[3][3]{0,0,0,0,0,0,0,0,0};
-		double dJvi_t_in[3][3]{0,0,0,0,0,0,0,0,0};
-		double outputJvi[2001][9];
-		double outputdJvi_t[2001][9];
-		double outputdJvi_t_in[2001][9];
+        double Jvi[3][3]{0};
+        double dJvi_t[3][3]{0};
+        double dJvi_t_in[3][3]{0};
+        double outputJvi[2001][9]{0};
+        double outputdJvi_t[2001][9]{0};
+        double outputdJvi_t_in[2001][9]{0};
 
-		double dJvi_x[3][3];
-		double dJvi_y[3][3];
-		double dJvi_z[3][3];
+        double dJvi_x[3][3]{0};
+        double dJvi_y[3][3]{0};
+        double dJvi_z[3][3]{0};
 		double stepH=0.05;
 		double stepD=0.15;
-		double initPeb[6]{0,0,0,0,0,0};
-		double initVeb[6]{0,0,0,0,0,0};
-		double initAeb[6]{0,0,0,0,0,0};
+        double initPeb[6]{0};
+        double initVeb[6]{0};
+        double initAeb[6]{0};
 		double initPee[18]{ -0.3, -0.85, -0.65,
 						   -0.45, -0.85, 0,
 							-0.3, -0.85, 0.65,
 							 0.3, -0.85, -0.65,
 							0.45, -0.85, 0,
 							 0.3, -0.85, 0.65 };
-		double vEE[18];
-		double aEE[18];
-		double vEE_B[3];
-		double vLmt[2]{-0.9,0.9};
-		double aLmt[2]{-3.2,3.2};
+        double vEE[18]{0};
+        double aEE[18]{0};
+        double vEE_B[3]{0};
 
-
-		for (int i=0;i<2001;i++)//i is the time(ms)
+        for (int i=0;i<2001;i++)//i is the time(ms)
 		{
 			s_t[i]=PI*sin(PI*i/4000)-PI;//[-PI,0]rad
 			ds_t[i]=PI*PI/4*cos(PI*i/4000);//rad/s
@@ -246,25 +241,28 @@ namespace FastWalk
 				ddf_s[3*j+1]=stepH*sin(s_t[i]);
 				ddf_s[3*j+2]=0;
 
-				aEE[3*j]=ddf_s[3*j]*ds_t[i]+df_s[3*j]*dds_t[i];
-				aEE[3*j+1]=ddf_s[3*j+1]*ds_t[i]+df_s[3*j+1]*dds_t[i];
-				aEE[3*j+2]=ddf_s[3*j+2]*ds_t[i]+df_s[3*j+2]*dds_t[i];
+                aEE[3*j]=ddf_s[3*j]*ds_t[i]*ds_t[i]+df_s[3*j]*dds_t[i];
+                aEE[3*j+1]=ddf_s[3*j+1]*ds_t[i]*ds_t[i]+df_s[3*j+1]*dds_t[i];
+                aEE[3*j+2]=ddf_s[3*j+2]*ds_t[i]*ds_t[i]+df_s[3*j+2]*dds_t[i];
 			}
 
 			rbt.SetPeb(initPeb);
 			rbt.SetPee(f_s);
-			rbt.SetVb(initVeb);
-			rbt.SetVee(vEE);
-			rbt.SetAb(initAeb);
-			rbt.SetAee(aEE);
+
+            //to GetDifJvi & GetVee, vel must be set, acc is not essential
+            rbt.SetVb(initVeb);
+            rbt.SetVee(vEE);
+            //rbt.SetAb(initAeb);
+            //rbt.SetAee(aEE);
 
 			//for(int j=0;j<6;j++)
 			//{
-				rbt.pLegs[0]->GetJvi(*Jvi,rbt.body());
-				rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"B");
-				rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.body());
+                //only related to position, not related to vel
+                rbt.pLegs[0]->GetJvi(*Jvi,rbt.body());
+                rbt.pLegs[0]->GetdJacOverPee(*dJvi_x,*dJvi_y,*dJvi_z,"B");
 
-				rbt.pLegs[0]->GetVee(vEE_B,rbt.body());
+                rbt.pLegs[0]->GetDifJvi(*dJvi_t,rbt.body());
+                rbt.pLegs[0]->GetVee(vEE_B,rbt.body());
 
 				std::fill_n(*dJvi_t_in,9,0);
 
@@ -275,15 +273,15 @@ namespace FastWalk
 				//if(j==0)//to check is dJvi right by diff Jvi in matlab
 				//{
 					memcpy(*outputJvi+9*i,*Jvi,9*sizeof(double));
-					memcpy(*outputdJvi_t+9*i,*dJvi_t,9*sizeof(double));
-					memcpy(*outputdJvi_t_in+9*i,*dJvi_t_in,9*sizeof(double));
+                    memcpy(*outputdJvi_t+9*i,*dJvi_t,9*sizeof(double));
+                    memcpy(*outputdJvi_t_in+9*i,*dJvi_t_in,9*sizeof(double));
 				//}
 			//}
 		}
 
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/Jvi.txt",*outputJvi,2001,9);
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t.txt",*outputdJvi_t,2001,9);
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Jvi.txt",*outputJvi,2001,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dJvi_t.txt",*outputdJvi_t,2001,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
 
 
 
@@ -291,6 +289,344 @@ namespace FastWalk
 		tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
 		printf("UsedTime:%f\n",tused);
 	}
+
+    void fastTg()
+    {
+        timeval tpstart,tpend;
+        float tused;
+        gettimeofday(&tpstart,NULL);
+
+
+
+        Robots::RobotTypeI rbt;
+        rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+
+        double initPeb[6] {0};
+        double initPee[18] { -0.3, -0.85, -0.65,
+                            -0.45, -0.85, 0,
+                             -0.3, -0.85, 0.65,
+                              0.3, -0.85, -0.65,
+                             0.45, -0.85, 0,
+                              0.3, -0.85, 0.65 };
+        double pEB[6] {0};
+        double pEE[18] {0};
+        double stepH {0.5};
+        double stepD {0.8};
+
+        double s {0};
+        double b_s {0};
+        double db_s {0};
+        double ddb_s {0};
+        double f_s[3] {0};
+        double df_s[3] {0};
+        double ddf_s[3] {0};
+        double f_s_B[3] {0};
+        double df_s_B[3] {0};
+        double ddf_s_B[3] {0};
+
+        double Jvi[9] {0};
+        double dJvi_x[9] {0};
+        double dJvi_y[9] {0};
+        double dJvi_z[9] {0};
+        double dJvi[9] {0};
+
+        double param_dsds[18] {0};
+        double param_dsds1[18] {0};
+        double param_dsds2[18] {0};
+        double param_dds[18] {0};
+        double param_fsB[18] {0};
+        double param_Lmt[18] {0};//param_dsds divided by param_dds
+        double param_ConstL[18] {0};
+        double param_ConstH[18] {0};
+
+        double output_dsds[1801][18] {0};
+        double output_dsds1[1801][18] {0};
+        double output_dsds2[1801][18] {0};
+        double output_dds[1801][18] {0};
+        double output_fsB[1801][18] {0};
+        double output_Lmt[1801][18] {0};
+        double output_ConstL[1801][18] {0};
+        double output_ConstH[1801][18] {0};
+
+        double max_ds[4] {0};
+        double output_ds[1801][4] {0};
+
+        double vLmt {0.9};
+        double aLmt {3.2};
+
+
+        for (int i=0;i<1801;i++)
+        {
+            s=0.1*i * PI/180;//degree to rad
+
+            f_s[0]=0;
+            f_s[1]=stepH*sin(PI/2*(1-cos(s)));
+            f_s[2]=stepD/2*cos(PI/2*(1-cos(s)));
+            b_s=stepD/4-stepD/2*(s/PI);
+
+            df_s[0]=0;
+            df_s[1]=stepH*cos(PI/2*(1-cos(s)))*PI/2*sin(s);
+            df_s[2]=-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*sin(s);
+            db_s=-stepD/2/PI;
+
+            ddf_s[0]=0;
+            ddf_s[1]=-stepH*sin(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)+stepH*cos(PI/2*(1-cos(s)))*PI/2*cos(s);
+            ddf_s[2]=-stepD/2*cos(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*cos(s);
+            ddb_s=0;
+
+            memcpy(df_s_B,df_s,3*sizeof(double));
+            df_s_B[2]=df_s[2]-db_s;
+            memcpy(ddf_s_B,ddf_s,3*sizeof(double));
+
+            pEB[2]=initPeb[2]+b_s;
+            for (int j=0;j<3;j++)
+            {
+                //swing leg
+                pEE[6*j]=initPee[6*j]+f_s[0];
+                pEE[6*j+1]=initPee[6*j+1]+f_s[1];
+                pEE[6*j+2]=initPee[6*j+2]+f_s[2];
+
+                //stance leg
+                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+4]=initPee[6*j+4];
+                pEE[6*j+5]=initPee[6*j+5];
+            }
+
+            rbt.SetPeb(pEB);
+            rbt.SetPee(pEE);
+
+            //param of all legs calculation starts here
+            for (int j=0;j<3;j++)
+            {
+                //swing leg
+                rbt.pLegs[2*j]->GetJvi(Jvi,rbt.body());
+                rbt.pLegs[2*j]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
+                rbt.pLegs[2*j]->GetPee(f_s_B,rbt.body());
+                memcpy(param_fsB+6*j,f_s_B,3*sizeof(double));
+
+                std::fill_n(dJvi,9,0);
+                aris::dynamic::s_daxpy(9,df_s[0],dJvi_x,1,dJvi,1);//for s
+                aris::dynamic::s_daxpy(9,df_s[1],dJvi_y,1,dJvi,1);
+                aris::dynamic::s_daxpy(9,df_s[2],dJvi_z,1,dJvi,1);
+
+                std::fill_n(param_dsds1+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_s_B,1,1,param_dsds1+6*j,1);
+                std::fill_n(param_dsds2+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi,3,df_s_B,1,1,param_dsds2+6*j,1);
+                std::fill_n(param_dds+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_s_B,1,1,param_dds+6*j,1);
+                std::fill_n(param_dsds+6*j,3,0);
+                for (int k=0;k<3;k++)
+                {
+                    param_dsds[6*j+k]=param_dsds1[6*j+k]+param_dsds2[6*j+k];
+
+                    if(param_dds[6*j+k]>0)
+                    {
+                        param_Lmt[6*j+k]=-param_dsds[6*j+k]/param_dds[6*j+k];
+                        param_ConstL[6*j+k]=-aLmt/param_dds[6*j+k];
+                        param_ConstH[6*j+k]=aLmt/param_dds[6*j+k];
+                    }
+                    else if(param_dds[6*j+k]<0)
+                    {
+                        param_Lmt[6*j+k]=-param_dsds[6*j+k]/param_dds[6*j+k];
+                        param_ConstL[6*j+k]=aLmt/param_dds[6*j+k];
+                        param_ConstH[6*j+k]=-aLmt/param_dds[6*j+k];
+                    }
+                    else
+                    {
+                        printf("WARNING!!! param_dds equals zero!!! Swing : i=%d \n",i);
+                    }
+                }
+
+
+                //stance leg, only vel in z direction
+                rbt.pLegs[2*j+1]->GetJvi(Jvi,rbt.body());
+                rbt.pLegs[2*j+1]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
+                rbt.pLegs[2*j+1]->GetPee(f_s_B,rbt.body());
+                memcpy(param_fsB+6*j+3,f_s_B,3*sizeof(double));
+
+                std::fill_n(dJvi,9,0);
+                aris::dynamic::s_daxpy(9,0    ,dJvi_x,1,dJvi,1);//for s
+                aris::dynamic::s_daxpy(9,0    ,dJvi_y,1,dJvi,1);
+                aris::dynamic::s_daxpy(9,-db_s,dJvi_z,1,dJvi,1);
+
+                std::fill_n(param_dsds1+6*j+3,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_s_B,1,1,param_dsds1+6*j+3,1);
+                std::fill_n(param_dsds2+6*j+3,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi,3,df_s_B,1,1,param_dsds2+6*j+3,1);
+                std::fill_n(param_dds+6*j+3,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_s_B,1,1,param_dds+6*j+3,1);
+                std::fill_n(param_dsds+6*j+3,3,0);
+                for (int k=0;k<3;k++)
+                {
+                    param_dsds[6*j+3+k]=param_dsds1[6*j+3+k]+param_dsds2[6*j+3+k];
+
+                    if(param_dds[6*j+3+k]>0)
+                    {
+                        param_Lmt[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
+                        param_ConstL[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
+                        param_ConstH[6*j+3+k]=aLmt/param_dds[6*j+3+k];
+                    }
+                    else if(param_dds[6*j+3+k]<0)
+                    {
+                        param_Lmt[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
+                        param_ConstL[6*j+3+k]=aLmt/param_dds[6*j+3+k];
+                        param_ConstH[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
+                    }
+                    else
+                    {
+                        printf("WARNING!!! param_dds equals zero!!! Stance : i=%d \n",i);
+                    }
+                }
+            }//param of all legs calculation ends here
+
+            //3 swing leg
+            int kw {0};
+            double max_ValueL {0};
+            double min_ValueH {1};
+            while (min_ValueH>max_ValueL && kw<5000)
+            {
+                double ds=0.001*kw;
+                double value_FuncL[9]{0};
+                double value_FuncH[9]{0};
+                for (int j=0;j<3;j++)
+                {
+                    for (int k=0;k<3;k++)
+                    {
+                        value_FuncL[3*j+k]=param_Lmt[6*j+k]*ds*ds+param_ConstL[6*j+k];
+                        value_FuncH[3*j+k]=param_Lmt[6*j+k]*ds*ds+param_ConstH[6*j+k];
+                    }
+                }
+                max_ValueL=*std::max_element(value_FuncL,value_FuncL+9);
+                min_ValueH=*std::min_element(value_FuncH,value_FuncH+9);
+
+                kw++;
+            }
+            if(kw==5000 || kw==4999)
+            {
+                printf("WARNING!!! Itration count is too little, increase it and try again!!!");
+            }
+            if(i%18==0)
+            {
+                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+            }
+            max_ds[0]=0.001*(kw-1);
+
+            //leg 0
+            kw=0;
+            max_ValueL=0;
+            min_ValueH=1;
+            while (min_ValueH>max_ValueL && kw<5000)
+            {
+                double ds=0.001*kw;
+                double value_FuncL[3]{0};
+                double value_FuncH[3]{0};
+                for (int k=0;k<3;k++)
+                {
+                    value_FuncL[3*0+k]=param_Lmt[3*0+k]*ds*ds+param_ConstL[3*0+k];
+                    value_FuncH[3*0+k]=param_Lmt[3*0+k]*ds*ds+param_ConstH[3*0+k];
+                }
+                max_ValueL=*std::max_element(value_FuncL,value_FuncL+3);
+                min_ValueH=*std::min_element(value_FuncH,value_FuncH+3);
+
+                kw++;
+            }
+            if(kw==5000 || kw==4999)
+            {
+                //printf("WARNING!!! Itration count is too little, increase it and try again!!!");
+            }
+            if(i%18==0)
+            {
+                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+            }
+            max_ds[1]=0.001*(kw-1);
+
+            //leg 2
+            kw=0;
+            max_ValueL=0;
+            min_ValueH=1;
+            while (min_ValueH>max_ValueL && kw<5000)
+            {
+                double ds=0.001*kw;
+                double value_FuncL[3]{0};
+                double value_FuncH[3]{0};
+                for (int k=0;k<3;k++)
+                {
+                    value_FuncL[3*2+k]=param_Lmt[3*2+k]*ds*ds+param_ConstL[3*2+k];
+                    value_FuncH[3*2+k]=param_Lmt[3*2+k]*ds*ds+param_ConstH[3*2+k];
+                }
+                max_ValueL=*std::max_element(value_FuncL,value_FuncL+3);
+                min_ValueH=*std::min_element(value_FuncH,value_FuncH+3);
+
+                kw++;
+            }
+            if(kw==5000 || kw==4999)
+            {
+                printf("WARNING!!! Itration count is too little, increase it and try again!!!");
+            }
+            if(i%18==0)
+            {
+                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+            }
+            max_ds[1]=0.001*(kw-1);
+
+            //leg 4
+            kw=0;
+            max_ValueL=0;
+            min_ValueH=1;
+            while (min_ValueH>max_ValueL && kw<5000)
+            {
+                double ds=0.002*kw;
+                double value_FuncL[3]{0};
+                double value_FuncH[3]{0};
+                for (int k=0;k<3;k++)
+                {
+                    value_FuncL[3*4+k]=param_Lmt[3*4+k]*ds*ds+param_ConstL[3*4+k];
+                    value_FuncH[3*4+k]=param_Lmt[3*4+k]*ds*ds+param_ConstH[3*4+k];
+                }
+                max_ValueL=*std::max_element(value_FuncL,value_FuncL+3);
+                min_ValueH=*std::min_element(value_FuncH,value_FuncH+3);
+
+                kw++;
+            }
+            if(kw==5000 || kw==4999)
+            {
+                //printf("WARNING!!! Itration count is too little, increase it and try again!!!");
+            }
+            if(i%18==0)
+            {
+                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+            }
+            max_ds[1]=0.001*(kw-1);
+
+
+            memcpy(*output_dsds1+18*i,param_dsds1,18*sizeof(double));
+            memcpy(*output_dsds2+18*i,param_dsds2,18*sizeof(double));
+            memcpy(*output_dsds+18*i,param_dsds,18*sizeof(double));
+            memcpy(*output_dds+18*i,param_dds,18*sizeof(double));
+            memcpy(*output_fsB+18*i,param_fsB,18*sizeof(double));
+            memcpy(*output_Lmt+18*i,param_Lmt,18*sizeof(double));
+            memcpy(*output_ConstL+18*i,param_ConstL,18*sizeof(double));
+            memcpy(*output_ConstH+18*i,param_ConstH,18*sizeof(double));
+            memcpy(*output_ds+4*i,max_ds,4*sizeof(double));
+        }
+
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt",*output_dsds,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_fsB,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1801,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ds.txt",*output_ds,1801,4);
+
+
+
+        gettimeofday(&tpend,NULL);
+        tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+        printf("UsedTime:%f\n",tused);
+    }
 
 	double FastWalkPY::pIn_acc[900][18];
 	double FastWalkPY::pIn_const[1800][18];
