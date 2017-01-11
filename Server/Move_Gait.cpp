@@ -348,15 +348,16 @@ namespace FastWalk
         double output_ConstL[1801][18] {0};
         double output_ConstH[1801][18] {0};
 
-        double max_ds[4] {0};
-        double output_ds[1801][4] {0};
+        double output_maxds[1801][4] {0};
+        double output_ValueL[1801][4] {0};
+        double output_ValueH[1801][4] {0};
 
         double vLmt {0.9};
         double aLmt {3.2};
 
-
         for (int i=0;i<1801;i++)
         {
+            /**********Trajectory design & generation**********/
             s=0.1*i * PI/180;//degree to rad
 
             f_s[0]=0;
@@ -395,7 +396,7 @@ namespace FastWalk
             rbt.SetPeb(pEB);
             rbt.SetPee(pEE);
 
-            //param of all legs calculation starts here
+            /**********param of all legs calculation**********/
             for (int j=0;j<3;j++)
             {
                 //swing leg
@@ -478,17 +479,19 @@ namespace FastWalk
                         printf("WARNING!!! param_dds equals zero!!! Stance : i=%d \n",i);
                     }
                 }
-            }//param of all legs calculation ends here
+            }
 
+            /**********maxds of 3 swing legs calculation**********/
             //3 swing leg
             int kw {0};
-            double max_ValueL {0};
-            double min_ValueH {1};
-            while (min_ValueH>max_ValueL && kw<5000)
+            bool stopFlag=false;
+            while (stopFlag==false && kw<5000)
             {
                 double ds=0.001*kw;
                 double value_FuncL[9]{0};
                 double value_FuncH[9]{0};
+                double max_ValueL {0};
+                double min_ValueH {0};
                 for (int j=0;j<3;j++)
                 {
                     for (int k=0;k<3;k++)
@@ -501,104 +504,73 @@ namespace FastWalk
                 min_ValueH=*std::min_element(value_FuncH,value_FuncH+9);
 
                 kw++;
-            }
-            if(kw==5000 || kw==4999)
-            {
-                printf("WARNING!!! Itration count is too little, increase it and try again!!!");
-            }
-            if(i%18==0)
-            {
-                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
-            }
-            max_ds[0]=0.001*(kw-1);
 
-            //leg 0
-            kw=0;
-            max_ValueL=0;
-            min_ValueH=1;
-            while (min_ValueH>max_ValueL && kw<5000)
-            {
-                double ds=0.001*kw;
-                double value_FuncL[3]{0};
-                double value_FuncH[3]{0};
-                for (int k=0;k<3;k++)
+                if(min_ValueH<max_ValueL)
                 {
-                    value_FuncL[3*0+k]=param_Lmt[3*0+k]*ds*ds+param_ConstL[3*0+k];
-                    value_FuncH[3*0+k]=param_Lmt[3*0+k]*ds*ds+param_ConstH[3*0+k];
+                    stopFlag=true;
+                    if(i%18==0)
+                    {
+                        //printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+                    }
+                    if(kw==5000 || kw==1)
+                    {
+                        printf("WARNING!!! Error with itration count!!!");
+                    }
                 }
-                max_ValueL=*std::max_element(value_FuncL,value_FuncL+3);
-                min_ValueH=*std::min_element(value_FuncH,value_FuncH+3);
-
-                kw++;
-            }
-            if(kw==5000 || kw==4999)
-            {
-                //printf("WARNING!!! Itration count is too little, increase it and try again!!!");
-            }
-            if(i%18==0)
-            {
-                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
-            }
-            max_ds[1]=0.001*(kw-1);
-
-            //leg 2
-            kw=0;
-            max_ValueL=0;
-            min_ValueH=1;
-            while (min_ValueH>max_ValueL && kw<5000)
-            {
-                double ds=0.001*kw;
-                double value_FuncL[3]{0};
-                double value_FuncH[3]{0};
-                for (int k=0;k<3;k++)
+                else
                 {
-                    value_FuncL[3*2+k]=param_Lmt[3*2+k]*ds*ds+param_ConstL[3*2+k];
-                    value_FuncH[3*2+k]=param_Lmt[3*2+k]*ds*ds+param_ConstH[3*2+k];
+                    output_ValueL[i][0]=max_ValueL;
+                    output_ValueH[i][0]=min_ValueH;
+                    output_maxds[i][0]=ds;
                 }
-                max_ValueL=*std::max_element(value_FuncL,value_FuncL+3);
-                min_ValueH=*std::min_element(value_FuncH,value_FuncH+3);
+            }
 
-                kw++;
-            }
-            if(kw==5000 || kw==4999)
+            //3 swing leg, one by one
+            for (int j=0;j<3;j++)
             {
-                printf("WARNING!!! Itration count is too little, increase it and try again!!!");
-            }
-            if(i%18==0)
-            {
-                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
-            }
-            max_ds[1]=0.001*(kw-1);
-
-            //leg 4
-            kw=0;
-            max_ValueL=0;
-            min_ValueH=1;
-            while (min_ValueH>max_ValueL && kw<5000)
-            {
-                double ds=0.002*kw;
-                double value_FuncL[3]{0};
-                double value_FuncH[3]{0};
-                for (int k=0;k<3;k++)
+                kw=0;
+                stopFlag=false;
+                while (stopFlag==false && kw<5000)
                 {
-                    value_FuncL[3*4+k]=param_Lmt[3*4+k]*ds*ds+param_ConstL[3*4+k];
-                    value_FuncH[3*4+k]=param_Lmt[3*4+k]*ds*ds+param_ConstH[3*4+k];
+                    double ds=0.002*kw;
+                    double value_FuncL[9]{0};
+                    double value_FuncH[9]{0};
+                    double max_ValueL {0};
+                    double min_ValueH {0};
+                    for (int k=0;k<3;k++)
+                    {
+                        value_FuncL[3*j+k]=param_Lmt[3*2*j+k]*ds*ds+param_ConstL[3*2*j+k];
+                        value_FuncH[3*j+k]=param_Lmt[3*2*j+k]*ds*ds+param_ConstH[3*2*j+k];
+                    }
+                    max_ValueL=*std::max_element(value_FuncL+3*j,value_FuncL+3*j+3);
+                    min_ValueH=*std::min_element(value_FuncH+3*j,value_FuncH+3*j+3);
+
+                    kw++;
+
+                    if(min_ValueH<max_ValueL)
+                    {
+                        stopFlag=true;
+                        if(kw==5000 || kw==1)
+                        {
+                            printf("\nWARNING!!! Error with itration count!!! Leg:%d\n",2*j);
+                            printf("paramLmt:%.4f,%.4f,%.4f\nparamConstL:%.4f,%.4f,%.4f\nparamConstH:%.4f,%.4f,%.4f\n\n",
+                                   param_Lmt[6*j],param_Lmt[6*j+1],param_Lmt[6*j+2],
+                                   param_ConstL[6*j],param_ConstL[6*j+1],param_ConstL[6*j+2],
+                                   param_ConstH[6*j],param_ConstH[6*j+1],param_ConstH[6*j+2]);
+                        }
+                        if(i%18==0)
+                        {
+                            //printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+                        }
+                    }
+                    else
+                    {
+                        output_ValueL[i][j+1]=max_ValueL;
+                        output_ValueH[i][j+1]=min_ValueH;
+                        output_maxds[i][j+1]=ds;
+                    }
                 }
-                max_ValueL=*std::max_element(value_FuncL,value_FuncL+3);
-                min_ValueH=*std::min_element(value_FuncH,value_FuncH+3);
-
-                kw++;
             }
-            if(kw==5000 || kw==4999)
-            {
-                //printf("WARNING!!! Itration count is too little, increase it and try again!!!");
-            }
-            if(i%18==0)
-            {
-                printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
-            }
-            max_ds[1]=0.001*(kw-1);
-
 
             memcpy(*output_dsds1+18*i,param_dsds1,18*sizeof(double));
             memcpy(*output_dsds2+18*i,param_dsds2,18*sizeof(double));
@@ -608,8 +580,187 @@ namespace FastWalk
             memcpy(*output_Lmt+18*i,param_Lmt,18*sizeof(double));
             memcpy(*output_ConstL+18*i,param_ConstL,18*sizeof(double));
             memcpy(*output_ConstH+18*i,param_ConstH,18*sizeof(double));
-            memcpy(*output_ds+4*i,max_ds,4*sizeof(double));
         }
+
+        /**********Iteration to calculate ds**********/
+        double ds_forward[1801] {output_maxds[0][0]};
+        double ds_backward[1801] {0};
+        ds_backward[1800]=output_maxds[1800][0];
+        double dds_forward[1801] {0};
+        double dds_backward[1801] {0};
+        double delta_s {PI/1800};
+        int ki_back {1800};
+        int stop_back {0};
+        int ki_for {0};
+        bool stop_Iter {false};
+        bool switch_Flag {true};//true acc, false dec
+        int dec_start {0};
+        int dec_end {0};
+        double real_ds[1801] {0};
+        double real_dds[1801] {0};
+
+        double min_dist[1801];
+        std::fill_n(min_dist,1801,1);
+
+        /*double min_maxds;
+        double output_maxds_tmp[1801] {0};
+        for (int i=0;i<1801;i++)
+        {
+            output_maxds_tmp[i]=output_maxds[i][0];
+        }
+        min_maxds=*std::min_element(output_maxds_tmp,output_maxds_tmp+1801);
+        printf("min_maxds=%.4f\n",min_maxds);*/
+
+        //backward
+        while (stop_Iter==false && ki_back>=0)
+        {
+            double dec[9] {0};
+            for (int j=0;j<3;j++)
+            {
+                for (int k=0;k<3;k++)
+                {
+                    dec[3*j+k]=output_Lmt[ki_back][3*2*j+k]*ds_backward[ki_back]*ds_backward[ki_back]+output_ConstL[ki_back][3*2*j+k];
+                }
+            }
+            dds_backward[ki_back]=*std::max_element(dec,dec+9);
+            ds_backward[ki_back-1]=ds_backward[ki_back]-dds_backward[ki_back]*delta_s/ds_backward[ki_back];
+
+            if (ds_backward[ki_back-1]>output_maxds[ki_back-1][0])
+            {
+                stop_Iter=true;
+                stop_back=ki_back;
+                printf("Backward Iteration ends at k=%d\ndds_backward:%.4f\n",ki_back,dds_backward[ki_back]);
+            }
+            else
+            {
+                ki_back--;
+            }
+        }
+
+        //forward
+        int ki{0};
+        stop_Iter=false;
+        while (stop_Iter==false && ki_for<1801 && ki<1e6)
+        {
+            ki++;
+            if (switch_Flag==true)
+            {
+                double acc[9] {0};
+                for (int j=0;j<3;j++)
+                {
+                    for (int k=0;k<3;k++)
+                    {
+                        acc[3*j+k]=output_Lmt[ki_for][3*2*j+k]*ds_forward[ki_for]*ds_forward[ki_for]+output_ConstH[ki_for][3*2*j+k];
+                    }
+                }
+                dds_forward[ki_for]=*std::min_element(acc,acc+9);
+                ds_forward[ki_for+1]=ds_forward[ki_for]+dds_forward[ki_for]*delta_s/ds_forward[ki_for];
+
+                if (ds_forward[ki_for+1]>output_maxds[ki_for+1][0])
+                {
+                    switch_Flag=false;
+                    dec_start=ki_for;
+                    printf("acc touching at k=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for]);
+                }
+                else
+                {
+                    ki_for++;
+                }
+            }
+            else
+            {
+                double dec[9] {0};
+                for (int j=0;j<3;j++)
+                {
+                    for (int k=0;k<3;k++)
+                    {
+                        dec[3*j+k]=output_Lmt[ki_for][3*2*j+k]*ds_forward[ki_for]*ds_forward[ki_for]+output_ConstL[ki_for][3*2*j+k];
+                    }
+                }
+                dds_forward[ki_for]=*std::max_element(dec,dec+9);
+                ds_forward[ki_for+1]=ds_forward[ki_for]+dds_forward[ki_for]*delta_s/ds_forward[ki_for];
+
+                if (ds_forward[ki_for+1]>output_maxds[ki_for+1][0])
+                {
+                    dec_start--;
+                    ki_for=dec_start;
+                }
+                else
+                {
+                    if (ds_forward[ki_for+1]<0)//min_maxds
+                    {
+                        switch_Flag=true;
+                        for(int k=dec_start;k<(ki_for+2);k++)
+                        {
+                            min_dist[k]=output_maxds[k][0]-ds_forward[k];
+                        }
+                        dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
+                        //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
+                        //printf("dec finished, at k=%d, ds_forward=%.4f\n",ki_for+1,ds_forward[ki_for+1]);
+                        ki_for=dec_end-1;
+                        printf("dec finished, start at k=%d, end at k=%d, ds_forward=%.4f\n",dec_start,dec_end,ds_forward[ki_for+1]);
+                    }
+                    ki_for++;
+                }
+            }
+
+            if(ki_for>=stop_back && ds_forward[ki_for]>=ds_backward[ki_for])
+            {
+                stop_Iter=true;
+                memcpy(real_ds,ds_forward,ki_for*sizeof(double));
+                memcpy(real_ds+ki_for,ds_backward+ki_for,(1801-ki_for)*sizeof(double));
+                memcpy(real_dds,dds_forward,ki_for*sizeof(double));
+                memcpy(real_dds+ki_for,dds_backward+ki_for,(1801-ki_for)*sizeof(double));
+                printf("forward & backward encounters at k=%d\n",ki_for);
+            }
+        }
+
+
+        /**********calculate final trajectory**********/
+        double totalTime {0};
+        int totalCount {0};
+
+        for (int i=0;i<1800;i++)
+        {
+            totalTime+=delta_s/(real_ds[i]+real_ds[i+1])*2;
+        }
+        totalCount=(int)(totalTime*1000)+1;
+        printf("totalCount is %d\n",totalCount);
+
+        double * real_s=new double [totalCount];
+        real_s[0]=0;
+        real_s[totalCount-1]=PI;
+        for (int i=1;i<totalCount-1;i++)
+        {
+            double ds=0.5*(real_ds[(int)(real_s[i-1]/(PI/1800))]+real_ds[(int)(real_s[i-1]/(PI/1800))+1]);
+            real_s[i]=real_s[i-1]+ds*0.001;
+        }
+
+        double * real_Pee=new double [9*totalCount];
+        double * real_Pin=new double [9*totalCount];
+        for (int i=0;i<totalCount;i++)
+        {
+            f_s[0]=0;
+            f_s[1]=stepH*sin(PI/2*(1-cos(real_s[i])));
+            f_s[2]=stepD/2*cos(PI/2*(1-cos(real_s[i])))-(stepD/4-stepD/2*(real_s[i]/PI));
+
+            rbt.SetPeb(initPeb);
+
+            for (int j=0;j<3;j++)
+            {
+                //swing leg
+                real_Pee[9*i+3*j]=initPee[6*j]+f_s[0];
+                real_Pee[9*i+3*j+1]=initPee[6*j+1]+f_s[1];
+                real_Pee[9*i+3*j+2]=initPee[6*j+2]+f_s[2];
+
+                rbt.pLegs[2*j]->SetPee(real_Pee+9*i+3*j,rbt.pLegs[2*j]->body());
+                rbt.pLegs[2*j]->GetPin(real_Pin+9*i+3*j);
+            }
+        }
+
+
+
+
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1801,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1801,18);
@@ -619,9 +770,21 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1801,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1801,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ds.txt",*output_ds,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ds.txt",*output_maxds,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1801,4);
 
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",ds_forward,1801,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",ds_backward,1801,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1801,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",dds_backward,1801,1);
 
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,totalCount,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,totalCount,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,totalCount,9);
+        delete [] real_s;
+        delete [] real_Pee;
+        delete [] real_Pin;
 
         gettimeofday(&tpend,NULL);
         tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
