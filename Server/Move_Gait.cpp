@@ -302,6 +302,8 @@ namespace FastWalk
         rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
         double initPeb[6] {0};
+        double initVeb[6] {0};
+        double initAeb[6] {0};
         double initPee[18] { -0.3, -0.85, -0.65,
                             -0.45, -0.85, 0,
                              -0.3, -0.85, 0.65,
@@ -310,7 +312,7 @@ namespace FastWalk
                               0.3, -0.85, 0.65 };
         double pEB[6] {0};
         double pEE[18] {0};
-        double stepH {0.5};
+        double stepH {0.1};
         double stepD {0.8};
 
         double s {0};
@@ -482,7 +484,7 @@ namespace FastWalk
             }
 
             /**********maxds of 3 swing legs calculation**********/
-            //3 swing leg
+            //3 swing leg, together
             int kw {0};
             bool stopFlag=false;
             while (stopFlag==false && kw<5000)
@@ -602,15 +604,6 @@ namespace FastWalk
         double min_dist[1801];
         std::fill_n(min_dist,1801,1);
 
-        /*double min_maxds;
-        double output_maxds_tmp[1801] {0};
-        for (int i=0;i<1801;i++)
-        {
-            output_maxds_tmp[i]=output_maxds[i][0];
-        }
-        min_maxds=*std::min_element(output_maxds_tmp,output_maxds_tmp+1801);
-        printf("min_maxds=%.4f\n",min_maxds);*/
-
         //backward
         while (stop_Iter==false && ki_back>=0)
         {
@@ -629,7 +622,7 @@ namespace FastWalk
             {
                 stop_Iter=true;
                 stop_back=ki_back;
-                printf("Backward Iteration ends at k=%d\ndds_backward:%.4f\n",ki_back,dds_backward[ki_back]);
+                printf("Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back]);
             }
             else
             {
@@ -638,11 +631,10 @@ namespace FastWalk
         }
 
         //forward
-        int ki{0};
+        unsigned int ki {0};
         stop_Iter=false;
-        while (stop_Iter==false && ki_for<1801 && ki<1e6)
+        while (stop_Iter==false)
         {
-            ki++;
             if (switch_Flag==true)
             {
                 double acc[9] {0};
@@ -682,12 +674,23 @@ namespace FastWalk
 
                 if (ds_forward[ki_for+1]>output_maxds[ki_for+1][0])
                 {
-                    dec_start--;
-                    ki_for=dec_start;
+                    //printf("dec trying\n");
+                    if(dec_start>0)
+                    {
+                        dec_start--;
+                        ki_for=dec_start;
+                    }
+                    else
+                    {
+                        printf("dec_start=%d\n",dec_start);
+                        ki_for=dec_start;
+                        ds_forward[0]-=output_maxds[0][0]/1000;
+                    }
                 }
                 else
                 {
-                    if (ds_forward[ki_for+1]<0)//min_maxds
+                    //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1]);
+                    if (ds_forward[ki_for+1]<1 || ki_for==1799)//min_maxds
                     {
                         switch_Flag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
@@ -696,7 +699,6 @@ namespace FastWalk
                         }
                         dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
                         //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
-                        //printf("dec finished, at k=%d, ds_forward=%.4f\n",ki_for+1,ds_forward[ki_for+1]);
                         ki_for=dec_end-1;
                         printf("dec finished, start at k=%d, end at k=%d, ds_forward=%.4f\n",dec_start,dec_end,ds_forward[ki_for+1]);
                     }
@@ -704,6 +706,13 @@ namespace FastWalk
                 }
             }
 
+            if(ki_for==1800)
+            {
+                stop_Iter=true;
+                memcpy(real_ds,ds_forward,(ki_for+1)*sizeof(double));
+                memcpy(real_dds,dds_forward,(ki_for+1)*sizeof(double));
+                printf("forward reach the end, and never encounter with the backward, ki=%u < %u\n",ki,0xFFFFFFFF);
+            }
             if(ki_for>=stop_back && ds_forward[ki_for]>=ds_backward[ki_for])
             {
                 stop_Iter=true;
@@ -713,10 +722,77 @@ namespace FastWalk
                 memcpy(real_dds+ki_for,dds_backward+ki_for,(1801-ki_for)*sizeof(double));
                 printf("forward & backward encounters at k=%d\n",ki_for);
             }
+            ki++;
+            if(ki==0xFFFFFFFF)
+            {
+                stop_Iter=true;
+                printf("WARNING!!! Iteration takes too long, force stop!!! ki=%d\n",ki);
+            }
+
         }
 
 
         /**********calculate final trajectory**********/
+        //for s
+        double vEE[18] {0};
+        double aEE[18] {0};
+        double output_Pee[1801][9] {0};
+        double output_Pin[1801][9] {0};
+        double output_Vin[1801][9] {0};
+        double output_Ain[1801][9] {0};
+        for (int i=0;i<1801;i++)
+        {
+            s=0.1*i * PI/180;//degree to rad
+
+            f_s[0]=0;
+            f_s[1]=stepH*sin(PI/2*(1-cos(s)));
+            f_s[2]=stepD/2*cos(PI/2*(1-cos(s)));
+            b_s=stepD/4-stepD/2*(s/PI);
+
+            df_s[0]=0;
+            df_s[1]=stepH*cos(PI/2*(1-cos(s)))*PI/2*sin(s);
+            df_s[2]=-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*sin(s);
+            db_s=-stepD/2/PI;
+
+            ddf_s[0]=0;
+            ddf_s[1]=-stepH*sin(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)+stepH*cos(PI/2*(1-cos(s)))*PI/2*cos(s);
+            ddf_s[2]=-stepD/2*cos(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*cos(s);
+            ddb_s=0;
+
+            memcpy(df_s_B,df_s,3*sizeof(double));
+            df_s_B[2]=df_s[2]-db_s;
+            memcpy(ddf_s_B,ddf_s,3*sizeof(double));
+
+            rbt.SetPeb(initPeb);
+            rbt.SetVb(initVeb);
+            rbt.SetAb(initAeb);
+            for (int j=0;j<3;j++)
+            {
+                //swing leg
+                pEE[6*j]=initPee[6*j]+f_s[0];
+                pEE[6*j+1]=initPee[6*j+1]+f_s[1];
+                pEE[6*j+2]=initPee[6*j+2]+f_s[2]-b_s;
+
+                vEE[6*j]=df_s[0]*real_ds[i];
+                vEE[6*j+1]=df_s[1]*real_ds[i];
+                vEE[6*j+2]=(df_s[2]-db_s)*real_ds[i];
+
+                aEE[6*j]=ddf_s[0]*real_ds[i]*real_ds[i]+df_s[0]*real_dds[i];
+                aEE[6*j+1]=ddf_s[1]*real_ds[i]*real_ds[i]+df_s[1]*real_dds[i];
+                aEE[6*j+2]=(ddf_s[2]-ddb_s)*real_ds[i]*real_ds[i]+(df_s[2]-db_s)*real_dds[i];
+
+                rbt.pLegs[2*j]->SetPee(pEE+6*j,rbt.body());
+                rbt.pLegs[2*j]->SetVee(vEE+6*j,rbt.body());
+                rbt.pLegs[2*j]->SetAee(aEE+6*j,rbt.body());
+
+                rbt.pLegs[2*j]->GetPee(*output_Pee+9*i+3*j,rbt.body());
+                rbt.pLegs[2*j]->GetPin(*output_Pin+9*i+3*j);
+                rbt.pLegs[2*j]->GetVin(*output_Vin+9*i+3*j);
+                rbt.pLegs[2*j]->GetAin(*output_Ain+9*i+3*j);
+            }
+        }
+
+        //fot t
         double totalTime {0};
         int totalCount {0};
 
@@ -725,12 +801,11 @@ namespace FastWalk
             totalTime+=delta_s/(real_ds[i]+real_ds[i+1])*2;
         }
         totalCount=(int)(totalTime*1000)+1;
-        printf("totalCount is %d\n",totalCount);
+        printf("totalTime is %.4f, totalCount is %d\n",totalTime,totalCount);
 
         double * real_s=new double [totalCount];
         real_s[0]=0;
-        real_s[totalCount-1]=PI;
-        for (int i=1;i<totalCount-1;i++)
+        for (int i=1;i<totalCount;i++)
         {
             double ds=0.5*(real_ds[(int)(real_s[i-1]/(PI/1800))]+real_ds[(int)(real_s[i-1]/(PI/1800))+1]);
             real_s[i]=real_s[i-1]+ds*0.001;
@@ -758,9 +833,12 @@ namespace FastWalk
             }
         }
 
-
-
-
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,totalCount,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,totalCount,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,totalCount,9);
+        delete [] real_s;
+        delete [] real_Pee;
+        delete [] real_Pin;
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1801,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1801,18);
@@ -779,12 +857,11 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1801,1);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",dds_backward,1801,1);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,totalCount,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,totalCount,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,totalCount,9);
-        delete [] real_s;
-        delete [] real_Pee;
-        delete [] real_Pin;
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,1801,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,1801,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,1801,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,1801,9);
+
 
         gettimeofday(&tpend,NULL);
         tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
