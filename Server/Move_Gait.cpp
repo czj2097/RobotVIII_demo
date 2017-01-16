@@ -336,6 +336,7 @@ namespace FastWalk
         double param_dsds1[18] {0};
         double param_dsds2[18] {0};
         double param_dds[18] {0};
+        double abs_param_dds[9] {0};
         double param_fsB[18] {0};
         double param_Lmt[18] {0};//param_dsds divided by param_dds
         double param_ConstL[18] {0};
@@ -350,7 +351,9 @@ namespace FastWalk
         double output_ConstL[1801][18] {0};
         double output_ConstH[1801][18] {0};
 
-        double output_maxds[1801][4] {0};
+        double ds_max_aLmt[1801][4] {0};
+        double ds_max_vLmt[1801][4] {0};
+        double ds_max[1801][4] {0};
         double output_ValueL[1801][4] {0};
         double output_ValueH[1801][4] {0};
 
@@ -422,6 +425,7 @@ namespace FastWalk
                 for (int k=0;k<3;k++)
                 {
                     param_dsds[6*j+k]=param_dsds1[6*j+k]+param_dsds2[6*j+k];
+                    abs_param_dds[3*j+k]=fabs(param_dds[6*j+k]);
 
                     if(param_dds[6*j+k]>0)
                     {
@@ -523,9 +527,12 @@ namespace FastWalk
                 {
                     output_ValueL[i][0]=max_ValueL;
                     output_ValueH[i][0]=min_ValueH;
-                    output_maxds[i][0]=ds;
+                    ds_max_aLmt[i][0]=ds;
                 }
             }
+
+            ds_max_vLmt[i][0]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+9));
+            ds_max[i][0]=std::min(ds_max_aLmt[i][0],ds_max_vLmt[i][0]);
 
             //3 swing leg, one by one
             for (int j=0;j<3;j++)
@@ -554,11 +561,7 @@ namespace FastWalk
                         stopFlag=true;
                         if(kw==5000 || kw==1)
                         {
-                            printf("\nWARNING!!! Error with itration count!!! Leg:%d\n",2*j);
-                            printf("paramLmt:%.4f,%.4f,%.4f\nparamConstL:%.4f,%.4f,%.4f\nparamConstH:%.4f,%.4f,%.4f\n\n",
-                                   param_Lmt[6*j],param_Lmt[6*j+1],param_Lmt[6*j+2],
-                                   param_ConstL[6*j],param_ConstL[6*j+1],param_ConstL[6*j+2],
-                                   param_ConstH[6*j],param_ConstH[6*j+1],param_ConstH[6*j+2]);
+                            printf("WARNING!!! Error with itration count!!! Leg:%d\n",2*j);
                         }
                         if(i%18==0)
                         {
@@ -569,9 +572,12 @@ namespace FastWalk
                     {
                         output_ValueL[i][j+1]=max_ValueL;
                         output_ValueH[i][j+1]=min_ValueH;
-                        output_maxds[i][j+1]=ds;
+                        ds_max_aLmt[i][j+1]=ds;
                     }
                 }
+
+                ds_max_vLmt[i][j+1]=vLmt/(*std::max_element(abs_param_dds+3*j,abs_param_dds+3*j+3));
+                ds_max[i][j+1]=std::min(ds_max_aLmt[i][j+1],ds_max_vLmt[i][j+1]);
             }
 
             memcpy(*output_dsds1+18*i,param_dsds1,18*sizeof(double));
@@ -585,9 +591,9 @@ namespace FastWalk
         }
 
         /**********Iteration to calculate ds**********/
-        double ds_forward[1801] {output_maxds[0][0]};
+        double ds_forward[1801] {ds_max_aLmt[0][0]};
         double ds_backward[1801] {0};
-        ds_backward[1800]=output_maxds[1800][0];
+        ds_backward[1800]=ds_max_aLmt[1800][0];
         double dds_forward[1801] {0};
         double dds_backward[1801] {0};
         double delta_s {PI/1800};
@@ -600,6 +606,8 @@ namespace FastWalk
         int dec_end {0};
         double real_ds[1801] {0};
         double real_dds[1801] {0};
+        double real_ddsMax[1801] {0};
+        double real_ddsMin[1801] {0};
 
         double min_dist[1801];
         std::fill_n(min_dist,1801,1);
@@ -618,7 +626,7 @@ namespace FastWalk
             dds_backward[ki_back]=*std::max_element(dec,dec+9);
             ds_backward[ki_back-1]=ds_backward[ki_back]-dds_backward[ki_back]*delta_s/ds_backward[ki_back];
 
-            if (ds_backward[ki_back-1]>output_maxds[ki_back-1][0])
+            if (ds_backward[ki_back-1]>ds_max_aLmt[ki_back-1][0])
             {
                 stop_Iter=true;
                 stop_back=ki_back;
@@ -648,11 +656,11 @@ namespace FastWalk
                 dds_forward[ki_for]=*std::min_element(acc,acc+9);
                 ds_forward[ki_for+1]=ds_forward[ki_for]+dds_forward[ki_for]*delta_s/ds_forward[ki_for];
 
-                if (ds_forward[ki_for+1]>output_maxds[ki_for+1][0])
+                if (ds_forward[ki_for+1]>ds_max_aLmt[ki_for+1][0])
                 {
                     switch_Flag=false;
                     dec_start=ki_for;
-                    printf("acc touching at k=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for]);
+                    printf("acc touching at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for]);
                 }
                 else
                 {
@@ -672,7 +680,7 @@ namespace FastWalk
                 dds_forward[ki_for]=*std::max_element(dec,dec+9);
                 ds_forward[ki_for+1]=ds_forward[ki_for]+dds_forward[ki_for]*delta_s/ds_forward[ki_for];
 
-                if (ds_forward[ki_for+1]>output_maxds[ki_for+1][0])
+                if (ds_forward[ki_for+1]>ds_max_aLmt[ki_for+1][0])
                 {
                     //printf("dec trying\n");
                     if(dec_start>0)
@@ -684,7 +692,7 @@ namespace FastWalk
                     {
                         printf("dec_start=%d\n",dec_start);
                         ki_for=dec_start;
-                        ds_forward[0]-=output_maxds[0][0]/1000;
+                        ds_forward[0]-=ds_max_aLmt[0][0]/1000;
                     }
                 }
                 else
@@ -695,7 +703,7 @@ namespace FastWalk
                         switch_Flag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
                         {
-                            min_dist[k]=output_maxds[k][0]-ds_forward[k];
+                            min_dist[k]=ds_max_aLmt[k][0]-ds_forward[k];
                         }
                         dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
                         //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
@@ -729,6 +737,22 @@ namespace FastWalk
                 printf("WARNING!!! Iteration takes too long, force stop!!! ki=%d\n",ki);
             }
 
+        }
+
+        for (int i=0;i<1801;i++)
+        {
+            double acc[9] {0};
+            double dec[9] {0};
+            for (int j=0;j<3;j++)
+            {
+                for (int k=0;k<3;k++)
+                {
+                    acc[3*j+k]=output_Lmt[i][3*2*j+k]*real_ds[i]*real_ds[i]+output_ConstH[i][3*2*j+k];
+                    dec[3*j+k]=output_Lmt[i][3*2*j+k]*real_ds[i]*real_ds[i]+output_ConstL[i][3*2*j+k];
+                }
+            }
+            real_ddsMax[i]=*std::min_element(acc,acc+9);
+            real_ddsMin[i]=*std::max_element(dec,dec+9);
         }
 
 
@@ -848,10 +872,14 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1801,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1801,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ds.txt",*output_maxds,1801,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1801,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_max,1801,4);
 
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",real_ddsMax,1801,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",real_ddsMin,1801,1);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",ds_forward,1801,1);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",ds_backward,1801,1);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1801,1);
@@ -968,10 +996,10 @@ namespace FastWalk
         printf("wk analyse begin\n");
 		Robots::WalkParam param;
         param.alpha=0;
-        param.beta=0.5236;
+        param.beta=0;
         param.d=0.8;
-        param.h=0.05;
-        param.totalCount=1000;
+        param.h=0.1;
+        param.totalCount=1335;//Ain reach the limit when t=1335, d=0.8, h=0.1
         param.n=3;
 
         double pEE[2*param.n*param.totalCount][18];
@@ -984,8 +1012,8 @@ namespace FastWalk
 			rbt.GetPin(*pIn+18*param.count);
 		}
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/log/pEE_WK.txt",*pEE,2*param.n*param.totalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/log/pIn_WK.txt",*pIn,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEE.txt",*pEE,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pIn.txt",*pIn,2*param.n*param.totalCount,18);
 	}
 
 

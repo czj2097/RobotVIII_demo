@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
     }*/
 
     FastWalk::fastTg();
+    FastWalk::wkByPYAnalyse();
 
     FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
