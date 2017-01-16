@@ -342,25 +342,25 @@ namespace FastWalk
         double param_ConstL[18] {0};
         double param_ConstH[18] {0};
 
-        double output_dsds[1801][18] {0};
-        double output_dsds1[1801][18] {0};
-        double output_dsds2[1801][18] {0};
-        double output_dds[1801][18] {0};
-        double output_fsB[1801][18] {0};
-        double output_Lmt[1801][18] {0};
-        double output_ConstL[1801][18] {0};
-        double output_ConstH[1801][18] {0};
+        double output_dsds[1800][18] {0};
+        double output_dsds1[1800][18] {0};
+        double output_dsds2[1800][18] {0};
+        double output_dds[1800][18] {0};
+        double output_fsB[1800][18] {0};
+        double output_Lmt[1800][18] {0};
+        double output_ConstL[1800][18] {0};
+        double output_ConstH[1800][18] {0};
 
-        double ds_max_aLmt[1801][4] {0};
-        double ds_max_vLmt[1801][4] {0};
-        double ds_max[1801][4] {0};
-        double output_ValueL[1801][4] {0};
-        double output_ValueH[1801][4] {0};
+        double ds_max_aLmt[1800][4] {0};
+        double ds_max_vLmt[1800][4] {0};
+        double ds_max[1800][4] {0};
+        double output_ValueL[1800][4] {0};
+        double output_ValueH[1800][4] {0};
 
         double vLmt {0.9};
         double aLmt {3.2};
 
-        for (int i=0;i<1801;i++)
+        for (int i=0;i<1800;i++)
         {
             /**********Trajectory design & generation**********/
             s=0.1*i * PI/180;//degree to rad
@@ -591,26 +591,26 @@ namespace FastWalk
         }
 
         /**********Iteration to calculate ds**********/
-        double ds_forward[1801] {ds_max_aLmt[0][0]};
-        double ds_backward[1801] {0};
-        ds_backward[1800]=ds_max_aLmt[1800][0];
-        double dds_forward[1801] {0};
-        double dds_backward[1801] {0};
+        double ds_forward[1800] {ds_max_aLmt[0][0]};
+        double ds_backward[1800] {0};
+        ds_backward[1799]=ds_max_aLmt[1799][0];
+        double dds_forward[1800] {0};
+        double dds_backward[1800] {0};
         double delta_s {PI/1800};
-        int ki_back {1800};
+        int ki_back {1799};
         int stop_back {0};
         int ki_for {0};
         bool stop_Iter {false};
         bool switch_Flag {true};//true acc, false dec
         int dec_start {0};
         int dec_end {0};
-        double real_ds[1801] {0};
-        double real_dds[1801] {0};
-        double real_ddsMax[1801] {0};
-        double real_ddsMin[1801] {0};
+        double real_ds[1800] {0};
+        double real_dds[1800] {0};
+        double real_ddsMax[1800] {0};
+        double real_ddsMin[1800] {0};
 
-        double min_dist[1801];
-        std::fill_n(min_dist,1801,1);
+        double min_dist[1800];
+        std::fill_n(min_dist,1800,1);
 
         //backward
         while (stop_Iter==false && ki_back>=0)
@@ -698,7 +698,7 @@ namespace FastWalk
                 else
                 {
                     //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1]);
-                    if (ds_forward[ki_for+1]<1 || ki_for==1799)//min_maxds
+                    if (ds_forward[ki_for+1]<1)//min_maxds
                     {
                         switch_Flag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
@@ -714,7 +714,7 @@ namespace FastWalk
                 }
             }
 
-            if(ki_for==1800)
+            if(ki_for==1799)
             {
                 stop_Iter=true;
                 memcpy(real_ds,ds_forward,(ki_for+1)*sizeof(double));
@@ -725,9 +725,9 @@ namespace FastWalk
             {
                 stop_Iter=true;
                 memcpy(real_ds,ds_forward,ki_for*sizeof(double));
-                memcpy(real_ds+ki_for,ds_backward+ki_for,(1801-ki_for)*sizeof(double));
+                memcpy(real_ds+ki_for,ds_backward+ki_for,(1800-ki_for)*sizeof(double));
                 memcpy(real_dds,dds_forward,ki_for*sizeof(double));
-                memcpy(real_dds+ki_for,dds_backward+ki_for,(1801-ki_for)*sizeof(double));
+                memcpy(real_dds+ki_for,dds_backward+ki_for,(1800-ki_for)*sizeof(double));
                 printf("forward & backward encounters at k=%d\n",ki_for);
             }
             ki++;
@@ -739,7 +739,7 @@ namespace FastWalk
 
         }
 
-        for (int i=0;i<1801;i++)
+        for (int i=0;i<1800;i++)
         {
             double acc[9] {0};
             double dec[9] {0};
@@ -760,11 +760,11 @@ namespace FastWalk
         //for s
         double vEE[18] {0};
         double aEE[18] {0};
-        double output_Pee[1801][9] {0};
-        double output_Pin[1801][9] {0};
-        double output_Vin[1801][9] {0};
-        double output_Ain[1801][9] {0};
-        for (int i=0;i<1801;i++)
+        double output_Pee[1800][9] {0};
+        double output_Pin[1800][9] {0};
+        double output_Vin[1800][9] {0};
+        double output_Ain[1800][9] {0};
+        for (int i=0;i<1800;i++)
         {
             s=0.1*i * PI/180;//degree to rad
 
@@ -819,29 +819,62 @@ namespace FastWalk
         //fot t
         double totalTime {0};
         int totalCount {0};
+        double v0 {0};
+        double vm {0};
+        double vt {stepD/2/PI*real_ds[0]};
+        double stance_begin_s;
 
         for (int i=0;i<1800;i++)
         {
-            totalTime+=delta_s/(real_ds[i]+real_ds[i+1])*2;
+            totalTime+=delta_s/real_ds[i];
         }
         totalCount=(int)(totalTime*1000)+1;
         printf("totalTime is %.4f, totalCount is %d\n",totalTime,totalCount);
 
         double * real_s=new double [totalCount];
+        double * real_Pee=new double [9*2*totalCount];
+        double * real_Pin=new double [9*2*totalCount];
         real_s[0]=0;
         for (int i=1;i<totalCount;i++)
         {
             double ds=0.5*(real_ds[(int)(real_s[i-1]/(PI/1800))]+real_ds[(int)(real_s[i-1]/(PI/1800))+1]);
             real_s[i]=real_s[i-1]+ds*0.001;
+            if (i==totalCount-1)
+            {
+                double dds=0.5*(real_dds[(int)(real_s[i-1]/(PI/1800))]+real_dds[(int)(real_s[i-1]/(PI/1800))+1]);
+                v0=stepD/2/PI*(ds+dds*0.001);
+                stance_begin_s=real_s[totalCount-1]+ds*0.001;
+            }
         }
+        vm=stepD/(0.001*totalCount)-(v0+vt)/2;
 
-        double * real_Pee=new double [9*totalCount];
-        double * real_Pin=new double [9*totalCount];
-        for (int i=0;i<totalCount;i++)
+        for (int i=0;i<2*totalCount;i++)
         {
-            f_s[0]=0;
-            f_s[1]=stepH*sin(PI/2*(1-cos(real_s[i])));
-            f_s[2]=stepD/2*cos(PI/2*(1-cos(real_s[i])))-(stepD/4-stepD/2*(real_s[i]/PI));
+            //swing phase
+            if(i<totalCount)
+            {
+                f_s[0]=0;
+                f_s[1]=stepH*sin(PI/2*(1-cos(real_s[i])));
+                f_s[2]=stepD/2*cos(PI/2*(1-cos(real_s[i])))-(stepD/4-stepD/2*(real_s[i]/PI));
+            }
+            //stance phase
+            else
+            {
+                f_s[0]=0;
+                f_s[1]=0;
+                if((i-totalCount)<(double)totalCount/2)
+                {
+                    f_s[2]=stepD/2*cos(PI/2*(1-cos(stance_begin_s)))-(stepD/4-stepD/2*(stance_begin_s/PI))
+                            +v0*(0.001*(i-totalCount))+0.5*(vm-v0)/(0.001*totalCount/2)*0.001*(i-totalCount)*0.001*(i-totalCount);
+                }
+                else
+                {
+                    f_s[2]=stepD/2*cos(PI/2*(1-cos(stance_begin_s)))-(stepD/4-stepD/2*(stance_begin_s/PI))
+                            +v0*(0.001*totalCount/2)+0.5*(vm-v0)/(0.001*totalCount/2)*0.001*totalCount/2*0.001*totalCount/2
+                            +vm*(0.001*(i-1.5*totalCount))+0.5*(vt-vm)/(0.001*totalCount/2)*0.001*(i-1.5*totalCount)*0.001*(i-1.5*totalCount);
+                }
+            }
+
 
             rbt.SetPeb(initPeb);
 
@@ -858,37 +891,37 @@ namespace FastWalk
         }
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,totalCount,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,totalCount,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,totalCount,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,2*totalCount,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,2*totalCount,9);
         delete [] real_s;
         delete [] real_Pee;
         delete [] real_Pin;
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt",*output_dsds,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_fsB,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1801,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1801,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1801,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1801,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1801,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_max,1801,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt",*output_dsds,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_fsB,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_max,1800,4);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",real_ddsMax,1801,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",real_ddsMin,1801,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",ds_forward,1801,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",ds_backward,1801,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1801,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",dds_backward,1801,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",real_ddsMax,1800,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",real_ddsMin,1800,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",ds_forward,1800,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",ds_backward,1800,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1800,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",dds_backward,1800,1);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,1801,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,1801,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,1801,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,1801,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,1800,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,1800,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,1800,9);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,1800,9);
 
 
         gettimeofday(&tpend,NULL);
@@ -1004,15 +1037,21 @@ namespace FastWalk
 
         double pEE[2*param.n*param.totalCount][18];
         double pIn[2*param.n*param.totalCount][18];
+        double pEE_B[2*param.n*param.totalCount][18];
+        double pEB[2*param.n*param.totalCount][6];
 
         for(param.count=0;param.count<2*param.n*param.totalCount;param.count++)
 		{
 			Robots::walkGait(rbt,param);
-			rbt.GetPee(*pEE+18*param.count,rbt.body());
+            rbt.GetPeb(*pEB+6*param.count);
+            rbt.GetPee(*pEE+18*param.count);
+            rbt.GetPee(*pEE_B+18*param.count,rbt.body());
 			rbt.GetPin(*pIn+18*param.count);
 		}
 
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEB.txt",*pEB,2*param.n*param.totalCount,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEE.txt",*pEE,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEE_B.txt",*pEE_B,2*param.n*param.totalCount,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pIn.txt",*pIn,2*param.n*param.totalCount,18);
 	}
 
