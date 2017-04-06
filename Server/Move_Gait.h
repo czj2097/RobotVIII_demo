@@ -42,8 +42,6 @@ namespace NormalGait
 
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
-	void crossMultiply(double * vector_in1, double *vector_in2, double * vector_out);
-	double dotMultiply(double *vector_in1, double *vector_in2);
 	double norm(double * vector_in);
 }
 
@@ -230,7 +228,8 @@ namespace FastWalk
 {
 
     void TestGetdJacOverPee();
-    void fastTg();
+    void TimeOptimalGait3();//3 swing legs calculated together
+    void TimeOptimalGait1by1();//3 swing legs calculated one by one
 
     //calculate max vel & cal at any position in workspace, vel finished, cal unfinished
 	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
@@ -243,8 +242,8 @@ namespace FastWalk
     void getMaxPin(double* maxPin, aris::dynamic::Model &model, maxVelParam &param_in);//unfinished, useless
 
 
-    void fastTgByPYAnalyse();
-    void wkByPYAnalyse();
+    void FastWalkPYAnalyse();
+    void WalkPYAnalyse();
 	struct FastWalkByPYParam final:public aris::server::GaitParamBase
 	{
 		std::int32_t n{2};

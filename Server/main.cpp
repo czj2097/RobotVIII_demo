@@ -90,8 +90,8 @@ int main(int argc, char *argv[])
         printf("\n");
     }*/
 
-    FastWalk::fastTg();
-    FastWalk::wkByPYAnalyse();
+    FastWalk::TimeOptimalGait3();
+    FastWalk::WalkPYAnalyse();
 
     FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
