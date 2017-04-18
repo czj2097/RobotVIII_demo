@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         printf("\n");
     }*/
 
-    FastWalk::TimeOptimalGait3();
+    FastWalk::TimeOptimalGait1by1();
     FastWalk::WalkPYAnalyse();
 
     FastWalk::JointSpaceWalk jointspacewalker;

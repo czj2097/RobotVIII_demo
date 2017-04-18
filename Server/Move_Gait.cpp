@@ -1,4 +1,4 @@
-#include "Move_Gait.h"
+﻿#include "Move_Gait.h"
 #include "rtdk.h"
 
 #ifdef UNIX
@@ -65,7 +65,6 @@ namespace NormalGait
 
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
     {
-		rt_printf("Line 1");
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const MoveRotateParam &>(param_in);
 
@@ -84,12 +83,8 @@ namespace NormalGait
 			realBodyPE213[i]=beginBodyPE213[i]+s; //target of current ms
 		}
 
-		double pBody[6];
-		rt_printf("Line 2");
-
 		robot.SetPeb(realBodyPE213,"213");
 		robot.SetPee(pEE);
-		rt_printf("Line 3");
 
 		return param.totalCount - param.count - 1;
 	}
@@ -920,340 +915,259 @@ namespace FastWalk
         gettimeofday(&tpstart,NULL);
 
 
-
         Robots::RobotTypeI rbt;
         rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
-        double initPeb[6] {0};
-        double initVeb[6] {0};
-        double initAeb[6] {0};
-        double initPee[18] { -0.3, -0.85, -0.65,
-                            -0.45, -0.85, 0,
-                             -0.3, -0.85, 0.65,
-                              0.3, -0.85, -0.65,
-                             0.45, -0.85, 0,
-                              0.3, -0.85, 0.65 };
-        double pEB[6] {0};
-        double pEE[18] {0};
         double stepH {0.1};
         double stepD {0.8};
+        double vLmt {0.9};
+        double aLmt {3.2};
 
-        double s {0};
-        double b_s {0};
-        double db_s {0};
-        double ddb_s {0};
-        double f_s[3] {0};
-        double df_s[3] {0};
-        double ddf_s[3] {0};
-        double f_s_B[3] {0};
-        double df_s_B[3] {0};
-        double ddf_s_B[3] {0};
+        double initPeb[6] {0};
+        double initVeb[6] {0};
+        double initPee[18] {  -0.3, -0.85, -0.65,
+                             -0.45, -0.85,     0,
+                              -0.3, -0.85,  0.65,
+                               0.3, -0.85, -0.65,
+                              0.45, -0.85,     0,
+                               0.3, -0.85,  0.65 };//024 swing, 135 stance
+        double pEB[6] {0};
+        double pEE[18] {0};
+
+        double s_t {0};
+        double b_st[1800] {0};
+        double db_st[1800] {0};
+        double ddb_st[1800] {0};
+        double pb_sw[1800] {0};
+        double vb_sw[1800] {0};
+        double ab_sw[1800] {0};
+
+        double s_w {0};
+        double f_sw[3] {0};
+        double df_sw[3] {0};
+        double ddf_sw[3] {0};
 
         double Jvi[9] {0};
         double dJvi_x[9] {0};
         double dJvi_y[9] {0};
         double dJvi_z[9] {0};
-        double dJvi[9] {0};
+        double dJvi[9] {0};//used in stanceLeg
+        double dJvi_dot_f[9] {0};//used in swingLeg
+        double dJvi_dot_vb[9] {0};//used in swingLeg
 
         double param_dsds[18] {0};
         double param_dsds1[18] {0};
         double param_dsds2[18] {0};
         double param_dds[18] {0};
-        double abs_param_dds[9] {0};
-        double param_fsB[18] {0};
-        double param_Lmt[18] {0};//param_dsds divided by param_dds
-        double param_ConstL[18] {0};
-        double param_ConstH[18] {0};
+        double abs_param_dds[9] {0};//for vLmt of stanceLeg
+        double param_ds[18] {0};//for aLmt of swingLeg
+        double param_ds1[18] {0};
+        double param_ds2[18] {0};
+        double param_const[18] {0};//for aLmt of swingLeg
+        double param_const1[18] {0};
+        double param_const2[18] {0};
 
+        double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
+        double param_a1[18] {0};//coefficient of ds, param_ds divided by param_dds
+        double param_a0L[18] {0};
+        double param_a0H[18] {0};
+
+        double output_PeeB[1800][18] {0};
         double output_dsds[1800][18] {0};
         double output_dsds1[1800][18] {0};
         double output_dsds2[1800][18] {0};
+        double output_ds[1800][18] {0};
+        double output_ds1[1800][18] {0};
+        double output_ds2[1800][18] {0};
+        double output_const[1800][18] {0};
+        double output_const1[1800][18] {0};
+        double output_const2[1800][18] {0};
         double output_dds[1800][18] {0};
-        double output_fsB[1800][18] {0};
-        double output_Lmt[1800][18] {0};
-        double output_ConstL[1800][18] {0};
-        double output_ConstH[1800][18] {0};
+        double output_a2[1800][18] {0};
+        double output_a1[1800][18] {0};
+        double output_a0L[1800][18] {0};
+        double output_a0H[1800][18] {0};
 
-        double ds_max_aLmt[1800][4] {0};
-        double ds_max_vLmt[1800][4] {0};
-        double ds_max[1800][4] {0};
+        double ds_bound_aLmt[1800][4] {0};
+        double ds_bound_vLmt[1800][4] {0};
+        double ds_bound[1800][4] {0};
         double output_ValueL[1800][4] {0};
         double output_ValueH[1800][4] {0};
 
-        double vLmt {0.9};
-        double aLmt {3.2};
+        const double delta_s {PI/1800};
+        bool stopFlag {false};
+        bool accFlag {true};//true acc, false dec
+        int dec_start {0};
+        int dec_end {0};
+        double min_dist[1800];
+        unsigned int cycleCount {0};//used to limit the cycleCount of forward integration
+        int stop_back {0};
+        int ki_back {0};
+        int ki_for {0};
 
+        double ds_forward[1800][4] {0};
+        double ds_backward[1800][4] {0};
+        double dds_forward[1800][4] {0};
+        double dds_backward[1800][4] {0};
+        double totalTime[4] {0};
+        double maxTime {0};
+        int maxTimeLeg {0};
+
+        double real_ds[1800][4] {0};
+        double real_dds[1800][4] {0};
+        double real_ddsMax[1800][4] {0};
+        double real_ddsMin[1800][4] {0};
+
+        /*******************************************************************************/
+        /********** StanceLeg : generate the traj & calculate the bound of ds **********/
         for (int i=0;i<1800;i++)
         {
-            /**********Trajectory design & generation**********/
-            s=0.1*i * PI/180;//degree to rad
+            s_t=0.1*i*PI/180;//degree to rad
+            b_st[i]=stepD/4-stepD/2*(s_t/PI);
+            db_st[i]=-stepD/2/PI;
+            ddb_st[i]=0;
 
-            f_s[0]=0;
-            f_s[1]=stepH*sin(PI/2*(1-cos(s)));
-            f_s[2]=stepD/2*cos(PI/2*(1-cos(s)));
-            b_s=stepD/4-stepD/2*(s/PI);
-
-            df_s[0]=0;
-            df_s[1]=stepH*cos(PI/2*(1-cos(s)))*PI/2*sin(s);
-            df_s[2]=-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*sin(s);
-            db_s=-stepD/2/PI;
-
-            ddf_s[0]=0;
-            ddf_s[1]=-stepH*sin(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)+stepH*cos(PI/2*(1-cos(s)))*PI/2*cos(s);
-            ddf_s[2]=-stepD/2*cos(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*cos(s);
-            ddb_s=0;
-
-            memcpy(df_s_B,df_s,3*sizeof(double));
-            df_s_B[2]=df_s[2]-db_s;
-            memcpy(ddf_s_B,ddf_s,3*sizeof(double));
-
-            pEB[2]=initPeb[2]+b_s;
-            for (int j=0;j<3;j++)
+            pEB[2]=initPeb[2]+b_st[i];
+            rbt.SetPeb(pEB);
+            for(int j=0;j<3;j++)//pEE of stance leg
             {
-                //swing leg
-                pEE[6*j]=initPee[6*j]+f_s[0];
-                pEE[6*j+1]=initPee[6*j+1]+f_s[1];
-                pEE[6*j+2]=initPee[6*j+2]+f_s[2];
-
-                //stance leg
                 pEE[6*j+3]=initPee[6*j+3];
                 pEE[6*j+4]=initPee[6*j+4];
                 pEE[6*j+5]=initPee[6*j+5];
+                rbt.pLegs[2*j+1]->SetPee(pEE+6*j+3);
             }
 
-            rbt.SetPeb(pEB);
-            rbt.SetPee(pEE);
-
-            /**********param of all legs calculation**********/
-            for (int j=0;j<3;j++)
+            //calculate param of stance leg, only vel in z direction
+            for(int j=0;j<3;j++)
             {
-                //swing leg
-                rbt.pLegs[2*j]->GetJvi(Jvi,rbt.body());
-                rbt.pLegs[2*j]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
-                rbt.pLegs[2*j]->GetPee(f_s_B,rbt.body());
-                memcpy(param_fsB+6*j,f_s_B,3*sizeof(double));
-
-                std::fill_n(dJvi,9,0);
-                aris::dynamic::s_daxpy(9,df_s[0],dJvi_x,1,dJvi,1);//for s
-                aris::dynamic::s_daxpy(9,df_s[1],dJvi_y,1,dJvi,1);
-                aris::dynamic::s_daxpy(9,df_s[2],dJvi_z,1,dJvi,1);
-
-                std::fill_n(param_dsds1+6*j,3,0);
-                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_s_B,1,1,param_dsds1+6*j,1);
-                std::fill_n(param_dsds2+6*j,3,0);
-                aris::dynamic::s_dgemm(3,1,3,1,dJvi,3,df_s_B,1,1,param_dsds2+6*j,1);
-                std::fill_n(param_dds+6*j,3,0);
-                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_s_B,1,1,param_dds+6*j,1);
-                std::fill_n(param_dsds+6*j,3,0);
-                for (int k=0;k<3;k++)
-                {
-                    param_dsds[6*j+k]=param_dsds1[6*j+k]+param_dsds2[6*j+k];
-                    abs_param_dds[3*j+k]=fabs(param_dds[6*j+k]);
-
-                    if(param_dds[6*j+k]>0)
-                    {
-                        param_Lmt[6*j+k]=-param_dsds[6*j+k]/param_dds[6*j+k];
-                        param_ConstL[6*j+k]=-aLmt/param_dds[6*j+k];
-                        param_ConstH[6*j+k]=aLmt/param_dds[6*j+k];
-                    }
-                    else if(param_dds[6*j+k]<0)
-                    {
-                        param_Lmt[6*j+k]=-param_dsds[6*j+k]/param_dds[6*j+k];
-                        param_ConstL[6*j+k]=aLmt/param_dds[6*j+k];
-                        param_ConstH[6*j+k]=-aLmt/param_dds[6*j+k];
-                    }
-                    else
-                    {
-                        printf("WARNING!!! param_dds equals zero!!! Swing : i=%d \n",i);
-                    }
-                }
-
-
-                //stance leg, only vel in z direction
                 rbt.pLegs[2*j+1]->GetJvi(Jvi,rbt.body());
                 rbt.pLegs[2*j+1]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
-                rbt.pLegs[2*j+1]->GetPee(f_s_B,rbt.body());
-                memcpy(param_fsB+6*j+3,f_s_B,3*sizeof(double));
+                rbt.pLegs[2*j+1]->GetPee(*output_PeeB+18*i+6*j+3,rbt.body());
 
                 std::fill_n(dJvi,9,0);
-                aris::dynamic::s_daxpy(9,0    ,dJvi_x,1,dJvi,1);//for s
+                aris::dynamic::s_daxpy(9,0    ,dJvi_x,1,dJvi,1);//for s_t
                 aris::dynamic::s_daxpy(9,0    ,dJvi_y,1,dJvi,1);
-                aris::dynamic::s_daxpy(9,-db_s,dJvi_z,1,dJvi,1);
+                aris::dynamic::s_daxpy(9,-db_st[i],dJvi_z,1,dJvi,1);
+
+                double db_st_tmp[3] {0};
+                db_st_tmp[2]=-db_st[i];
+                double ddb_st_tmp[3] {0};
+                ddb_st_tmp[2]=-ddb_st[i];
+
+                std::fill_n(param_dds+6*j+3,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,db_st_tmp,1,1,param_dds+6*j+3,1);
 
                 std::fill_n(param_dsds1+6*j+3,3,0);
-                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_s_B,1,1,param_dsds1+6*j+3,1);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddb_st_tmp,1,1,param_dsds1+6*j+3,1);
                 std::fill_n(param_dsds2+6*j+3,3,0);
-                aris::dynamic::s_dgemm(3,1,3,1,dJvi,3,df_s_B,1,1,param_dsds2+6*j+3,1);
-                std::fill_n(param_dds+6*j+3,3,0);
-                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_s_B,1,1,param_dds+6*j+3,1);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi,3,db_st_tmp,1,1,param_dsds2+6*j+3,1);
                 std::fill_n(param_dsds+6*j+3,3,0);
                 for (int k=0;k<3;k++)
                 {
                     param_dsds[6*j+3+k]=param_dsds1[6*j+3+k]+param_dsds2[6*j+3+k];
+                    abs_param_dds[3*j+k]=fabs(param_dds[6*j+3+k]);
 
                     if(param_dds[6*j+3+k]>0)
                     {
-                        param_Lmt[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
-                        param_ConstL[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
-                        param_ConstH[6*j+3+k]=aLmt/param_dds[6*j+3+k];
+                        param_a2[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
+                        param_a0L[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
+                        param_a0H[6*j+3+k]=aLmt/param_dds[6*j+3+k];
                     }
                     else if(param_dds[6*j+3+k]<0)
                     {
-                        param_Lmt[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
-                        param_ConstL[6*j+3+k]=aLmt/param_dds[6*j+3+k];
-                        param_ConstH[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
+                        param_a2[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
+                        param_a0L[6*j+3+k]=aLmt/param_dds[6*j+3+k];
+                        param_a0H[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
                     }
                     else
                     {
-                        printf("WARNING!!! param_dds equals zero!!! Stance : i=%d \n",i);
+                        printf("WARNING!!! param_dds equals zero!!! StanceLeg : i=%d \n",i);
                     }
                 }
             }
 
-            /**********maxds of 3 swing legs calculation**********/
-            //3 swing leg, together
-            int kw {0};
-            bool stopFlag=false;
-            while (stopFlag==false && kw<5000)
+            //calculate bound of ds of 3 stance legs
+            int k_st {0};
+            bool dsBoundFlag_st {false};
+            while (dsBoundFlag_st==false && k_st<5000)
             {
-                double ds=0.001*kw;
-                double value_FuncL[9]{0};
-                double value_FuncH[9]{0};
-                double max_ValueL {0};
-                double min_ValueH {0};
+                double ds=0.001*k_st;
+                double aLmt_valueL[9]{0};
+                double aLmt_valueH[9]{0};
+                double max_aLmt_ValueL {0};
+                double min_aLmt_ValueH {0};
                 for (int j=0;j<3;j++)
                 {
                     for (int k=0;k<3;k++)
                     {
-                        value_FuncL[3*j+k]=param_Lmt[6*j+k]*ds*ds+param_ConstL[6*j+k];
-                        value_FuncH[3*j+k]=param_Lmt[6*j+k]*ds*ds+param_ConstH[6*j+k];
+                        aLmt_valueL[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0L[6*j+3+k];
+                        aLmt_valueH[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0H[6*j+3+k];
                     }
                 }
-                max_ValueL=*std::max_element(value_FuncL,value_FuncL+9);
-                min_ValueH=*std::min_element(value_FuncH,value_FuncH+9);
+                max_aLmt_ValueL=*std::max_element(aLmt_valueL,aLmt_valueL+9);
+                min_aLmt_ValueH=*std::min_element(aLmt_valueH,aLmt_valueH+9);
 
-                kw++;
+                k_st++;
 
-                if(min_ValueH<max_ValueL)
+                if(min_aLmt_ValueH<max_aLmt_ValueL)
                 {
-                    stopFlag=true;
+                    dsBoundFlag_st=true;
                     if(i%18==0)
                     {
-                        //printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+                        //printf("minValueH=%.4f,maxValueL=%.4f,k_t=%d\n",min_ValueH,max_ValueL,k_t);
                     }
-                    if(kw==5000 || kw==1)
+                    if(k_st==5000 || k_st==1)
                     {
                         printf("WARNING!!! Error with itration count!!!");
                     }
                 }
                 else
                 {
-                    output_ValueL[i][0]=max_ValueL;
-                    output_ValueH[i][0]=min_ValueH;
-                    ds_max_aLmt[i][0]=ds;
+                    output_ValueL[i][0]=max_aLmt_ValueL;
+                    output_ValueH[i][0]=min_aLmt_ValueH;
+                    ds_bound_aLmt[i][0]=ds;
                 }
             }
 
-            ds_max_vLmt[i][0]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+9));
-            ds_max[i][0]=std::min(ds_max_aLmt[i][0],ds_max_vLmt[i][0]);
+            ds_bound_vLmt[i][0]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+9));
+            ds_bound[i][0]=std::min(ds_bound_aLmt[i][0],ds_bound_vLmt[i][0]);
 
-            //3 swing leg, one by one
             for (int j=0;j<3;j++)
             {
-                kw=0;
-                stopFlag=false;
-                while (stopFlag==false && kw<5000)
-                {
-                    double ds=0.002*kw;
-                    double value_FuncL[9]{0};
-                    double value_FuncH[9]{0};
-                    double max_ValueL {0};
-                    double min_ValueH {0};
-                    for (int k=0;k<3;k++)
-                    {
-                        value_FuncL[3*j+k]=param_Lmt[3*2*j+k]*ds*ds+param_ConstL[3*2*j+k];
-                        value_FuncH[3*j+k]=param_Lmt[3*2*j+k]*ds*ds+param_ConstH[3*2*j+k];
-                    }
-                    max_ValueL=*std::max_element(value_FuncL+3*j,value_FuncL+3*j+3);
-                    min_ValueH=*std::min_element(value_FuncH+3*j,value_FuncH+3*j+3);
-
-                    kw++;
-
-                    if(min_ValueH<max_ValueL)
-                    {
-                        stopFlag=true;
-                        if(kw==5000 || kw==1)
-                        {
-                            printf("WARNING!!! Error with itration count!!! Leg:%d\n",2*j);
-                        }
-                        if(i%18==0)
-                        {
-                            //printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
-                        }
-                    }
-                    else
-                    {
-                        output_ValueL[i][j+1]=max_ValueL;
-                        output_ValueH[i][j+1]=min_ValueH;
-                        ds_max_aLmt[i][j+1]=ds;
-                    }
-                }
-
-                ds_max_vLmt[i][j+1]=vLmt/(*std::max_element(abs_param_dds+3*j,abs_param_dds+3*j+3));
-                ds_max[i][j+1]=std::min(ds_max_aLmt[i][j+1],ds_max_vLmt[i][j+1]);
+                memcpy(*output_dsds1+18*i+6*j+3, param_dsds1+6*j+3, 3*sizeof(double));
+                memcpy(*output_dsds2+18*i+6*j+3, param_dsds2+6*j+3, 3*sizeof(double));
+                memcpy( *output_dsds+18*i+6*j+3,  param_dsds+6*j+3, 3*sizeof(double));
+                memcpy(  *output_dds+18*i+6*j+3,   param_dds+6*j+3, 3*sizeof(double));
+                memcpy(   *output_a2+18*i+6*j+3,    param_a2+6*j+3, 3*sizeof(double));
+                memcpy(  *output_a0L+18*i+6*j+3,   param_a0L+6*j+3, 3*sizeof(double));
+                memcpy(  *output_a0H+18*i+6*j+3,   param_a0H+6*j+3, 3*sizeof(double));
             }
-
-            memcpy(*output_dsds1+18*i,param_dsds1,18*sizeof(double));
-            memcpy(*output_dsds2+18*i,param_dsds2,18*sizeof(double));
-            memcpy(*output_dsds+18*i,param_dsds,18*sizeof(double));
-            memcpy(*output_dds+18*i,param_dds,18*sizeof(double));
-            memcpy(*output_fsB+18*i,param_fsB,18*sizeof(double));
-            memcpy(*output_Lmt+18*i,param_Lmt,18*sizeof(double));
-            memcpy(*output_ConstL+18*i,param_ConstL,18*sizeof(double));
-            memcpy(*output_ConstH+18*i,param_ConstH,18*sizeof(double));
         }
 
-        /**********Iteration to calculate ds**********/
-        double ds_forward[1800] {ds_max_aLmt[0][0]};
-        double ds_backward[1800] {0};
-        ds_backward[1799]=ds_max_aLmt[1799][0];
-        double dds_forward[1800] {0};
-        double dds_backward[1800] {0};
-        double delta_s {PI/1800};
-        int ki_back {1799};
-        int stop_back {0};
-        int ki_for {0};
-        bool stop_Iter {false};
-        bool switch_Flag {true};//true acc, false dec
-        int dec_start {0};
-        int dec_end {0};
-        double real_ds[1800] {0};
-        double real_dds[1800] {0};
-        double real_ddsMax[1800] {0};
-        double real_ddsMin[1800] {0};
-
-        double min_dist[1800];
-        std::fill_n(min_dist,1800,1);
-
-        //backward
-        while (stop_Iter==false && ki_back>=0)
+        /********** StanceLeg : numerical integration to calculate ds **********/
+        //backward integration
+        stopFlag=false;
+        ki_back=1799;
+        ds_backward[ki_back][0]=ds_bound[ki_back][0];
+        while (stopFlag==false && ki_back>=0)
         {
             double dec[9] {0};
             for (int j=0;j<3;j++)
             {
                 for (int k=0;k<3;k++)
                 {
-                    dec[3*j+k]=output_Lmt[ki_back][3*2*j+k]*ds_backward[ki_back]*ds_backward[ki_back]+output_ConstL[ki_back][3*2*j+k];
+                    dec[3*j+k]=output_a2[ki_back][6*j+3+k]*ds_backward[ki_back][0]*ds_backward[ki_back][0]
+                              +output_a0L[ki_back][6*j+3+k];
                 }
             }
-            dds_backward[ki_back]=*std::max_element(dec,dec+9);
-            ds_backward[ki_back-1]=ds_backward[ki_back]-dds_backward[ki_back]*delta_s/ds_backward[ki_back];
+            dds_backward[ki_back][0]=*std::max_element(dec,dec+9);
+            ds_backward[ki_back-1][0]=ds_backward[ki_back][0]-dds_backward[ki_back][0]*delta_s/ds_backward[ki_back][0];
 
-            if (ds_backward[ki_back-1]>ds_max_aLmt[ki_back-1][0])
+            if (ds_backward[ki_back-1][0]>ds_bound[ki_back-1][0])
             {
-                stop_Iter=true;
+                stopFlag=true;
                 stop_back=ki_back;
-                printf("Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back]);
+                printf("Backward Integration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][0]);
             }
             else
             {
@@ -1261,29 +1175,33 @@ namespace FastWalk
             }
         }
 
-        //forward
-        unsigned int ki {0};
-        stop_Iter=false;
-        while (stop_Iter==false)
+        //forward integration
+        stopFlag=false;
+        ki_for=0;
+        cycleCount=0;
+        ds_forward[ki_for][0]=ds_bound[ki_for][0];
+        std::fill_n(min_dist,1800,1);
+        while (stopFlag==false)
         {
-            if (switch_Flag==true)
+            if (accFlag==true)
             {
                 double acc[9] {0};
                 for (int j=0;j<3;j++)
                 {
                     for (int k=0;k<3;k++)
                     {
-                        acc[3*j+k]=output_Lmt[ki_for][3*2*j+k]*ds_forward[ki_for]*ds_forward[ki_for]+output_ConstH[ki_for][3*2*j+k];
+                        acc[3*j+k]=output_a2[ki_for][6*j+3+k]*ds_forward[ki_for][0]*ds_forward[ki_for][0]
+                                  +output_a0H[ki_for][6*j+3+k];
                     }
                 }
-                dds_forward[ki_for]=*std::min_element(acc,acc+9);
-                ds_forward[ki_for+1]=ds_forward[ki_for]+dds_forward[ki_for]*delta_s/ds_forward[ki_for];
+                dds_forward[ki_for][0]=*std::min_element(acc,acc+9);
+                ds_forward[ki_for+1][0]=ds_forward[ki_for][0]+dds_forward[ki_for][0]*delta_s/ds_forward[ki_for][0];
 
-                if (ds_forward[ki_for+1]>ds_max_aLmt[ki_for+1][0])
+                if (ds_forward[ki_for+1][0]>ds_bound[ki_for+1][0])
                 {
-                    switch_Flag=false;
+                    accFlag=false;
                     dec_start=ki_for;
-                    printf("acc touching at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for]);
+                    printf("acc reach bound at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for][0]);
                 }
                 else
                 {
@@ -1297,13 +1215,14 @@ namespace FastWalk
                 {
                     for (int k=0;k<3;k++)
                     {
-                        dec[3*j+k]=output_Lmt[ki_for][3*2*j+k]*ds_forward[ki_for]*ds_forward[ki_for]+output_ConstL[ki_for][3*2*j+k];
+                        dec[3*j+k]=output_a2[ki_for][6*j+3+k]*ds_forward[ki_for][0]*ds_forward[ki_for][0]
+                                  +output_a0L[ki_for][6*j+3+k];
                     }
                 }
-                dds_forward[ki_for]=*std::max_element(dec,dec+9);
-                ds_forward[ki_for+1]=ds_forward[ki_for]+dds_forward[ki_for]*delta_s/ds_forward[ki_for];
+                dds_forward[ki_for][0]=*std::max_element(dec,dec+9);
+                ds_forward[ki_for+1][0]=ds_forward[ki_for][0]+dds_forward[ki_for][0]*delta_s/ds_forward[ki_for][0];
 
-                if (ds_forward[ki_for+1]>ds_max_aLmt[ki_for+1][0])
+                if (ds_forward[ki_for+1][0]>ds_bound[ki_for+1][0])
                 {
                     //printf("dec trying\n");
                     if(dec_start>0)
@@ -1315,236 +1234,434 @@ namespace FastWalk
                     {
                         printf("dec_start=%d\n",dec_start);
                         ki_for=dec_start;
-                        ds_forward[0]-=ds_max_aLmt[0][0]/1000;
+                        ds_forward[0][0]-=ds_bound[0][0]/1000;
                     }
                 }
                 else
                 {
-                    //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1]);
-                    if (ds_forward[ki_for+1]<1)//min_maxds
+                    //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][0]);
+                    if (ds_forward[ki_for+1][0]<1)//min_maxds
                     {
-                        switch_Flag=true;
+                        accFlag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
                         {
-                            min_dist[k]=ds_max_aLmt[k][0]-ds_forward[k];
+                            min_dist[k]=ds_bound[k][0]-ds_forward[k][0];
                         }
                         dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
                         //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
                         ki_for=dec_end-1;
-                        printf("dec finished, start at k=%d, end at k=%d, ds_forward=%.4f\n",dec_start,dec_end,ds_forward[ki_for+1]);
+                        printf("dec finished, start at k=%d, end at k=%d, ds_forward=%.4f\n",dec_start,dec_end,ds_forward[ki_for+1][0]);
                     }
                     ki_for++;
                 }
             }
 
+            //loop end condition
             if(ki_for==1799)
             {
-                stop_Iter=true;
-                memcpy(real_ds,ds_forward,(ki_for+1)*sizeof(double));
-                memcpy(real_dds,dds_forward,(ki_for+1)*sizeof(double));
-                printf("forward reach the end, and never encounter with the backward, ki=%u < %u\n",ki,0xFFFFFFFF);
+                stopFlag=true;
+                for(int i=0;i<1800;i++)
+                {
+                    real_ds[i][0]=ds_forward[i][0];
+                    real_dds[i][0]=dds_forward[i][0];
+                }
+                printf("forward reach the end, and never encounter with the backward, cycleCount=%u < %u\n",cycleCount,0xFFFFFFFF);
             }
-            if(ki_for>=stop_back && ds_forward[ki_for]>=ds_backward[ki_for])
+            if(ki_for>=stop_back && ds_forward[ki_for][0]>=ds_backward[ki_for][0])
             {
-                stop_Iter=true;
-                memcpy(real_ds,ds_forward,ki_for*sizeof(double));
-                memcpy(real_ds+ki_for,ds_backward+ki_for,(1800-ki_for)*sizeof(double));
-                memcpy(real_dds,dds_forward,ki_for*sizeof(double));
-                memcpy(real_dds+ki_for,dds_backward+ki_for,(1800-ki_for)*sizeof(double));
+                stopFlag=true;
+                for(int i=0;i<ki_for;i++)
+                {
+                    real_ds[i][0]=ds_forward[i][0];
+                    real_dds[i][0]=dds_forward[i][0];
+                }
+                for(int i=ki_for;i<1800;i++)
+                {
+                    real_ds[i][0]=ds_backward[i][0];
+                    real_dds[i][0]=dds_backward[i][0];
+                }
                 printf("forward & backward encounters at k=%d\n",ki_for);
             }
-            ki++;
-            if(ki==0xFFFFFFFF)
+            cycleCount++;
+            if(cycleCount==0x0FFFFFFF)
             {
-                stop_Iter=true;
-                printf("WARNING!!! Iteration takes too long, force stop!!! ki=%d\n",ki);
+                stopFlag=true;
+                printf("WARNING!!! Integration takes too long, force stop!!! ki=%d\n",cycleCount);
             }
-
         }
 
+        //b_sw, vb_sw, ab_sw initialized here, and need to be updated during iteration
+        totalTime[0]=0;
         for (int i=0;i<1800;i++)
         {
-            double acc[9] {0};
-            double dec[9] {0};
+            totalTime[0]+=delta_s/real_ds[i][0];
+            pb_sw[i]=b_st[i];
+            vb_sw[i]=db_st[i]*real_ds[i][0];
+            ab_sw[i]=ddb_st[i]*real_ds[i][0]*real_ds[i][0]+db_st[i]*real_dds[i][0];
+        }
+
+
+        /******************************************************************************/
+        /********** SwingLeg : generate the traj & calculate the bound of ds **********/
+        for (int i=0;i<1800;i++)
+        {
+            s_w=0.1*i*PI/180;
+            f_sw[0]=0;
+            f_sw[1]=stepH*sin(s_w);
+            f_sw[2]=stepD/2*cos(s_w);
+            df_sw[0]=0;
+            df_sw[1]=stepH*cos(s_w);
+            df_sw[2]=-stepD/2*sin(s_w);
+            ddf_sw[0]=0;
+            ddf_sw[1]=-stepH*sin(s_w);
+            ddf_sw[2]=-stepD/2*cos(s_w);
+
+            pEB[2]=initPeb[2]+pb_sw[i];
+            rbt.SetPeb(pEB);
+            for (int j=0;j<3;j++)//pEE of swing leg
+            {
+                pEE[6*j]=initPee[6*j]+f_sw[0];
+                pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
+                pEE[6*j+2]=initPee[6*j+2]+f_sw[2];
+                rbt.pLegs[j]->SetPee(pEE+6*j);
+            }
+
+            //calculate param of swing leg
             for (int j=0;j<3;j++)
             {
+                rbt.pLegs[2*j]->GetJvi(Jvi,rbt.body());
+                rbt.pLegs[2*j]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
+                rbt.pLegs[2*j]->GetPee(*output_PeeB+18*i+6*j,rbt.body());
+
+                std::fill_n(dJvi_dot_f,9,0);
+                aris::dynamic::s_daxpy(9,df_sw[0],dJvi_x,1,dJvi_dot_f,1);
+                aris::dynamic::s_daxpy(9,df_sw[1],dJvi_y,1,dJvi_dot_f,1);
+                aris::dynamic::s_daxpy(9,df_sw[2],dJvi_z,1,dJvi_dot_f,1);
+
+                std::fill_n(dJvi_dot_vb,9,0);
+                aris::dynamic::s_daxpy(9,vb_sw[0],dJvi_x,1,dJvi_dot_vb,1);
+                aris::dynamic::s_daxpy(9,vb_sw[1],dJvi_y,1,dJvi_dot_vb,1);
+                aris::dynamic::s_daxpy(9,vb_sw[2],dJvi_z,1,dJvi_dot_vb,1);
+
+                std::fill_n(param_dds+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_sw,1,1,param_dds+6*j,1);
+
+                std::fill_n(param_dsds1+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_sw,1,1,param_dsds1+6*j,1);
+                std::fill_n(param_dsds2+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_f,3,df_sw,1,1,param_dsds2+6*j,1);
+
+                std::fill_n(param_ds1+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_vb,3,df_sw,1,1,param_ds1+6*j,1);
+                double vb_sw_tmp[3] {0};
+                vb_sw_tmp[2]=vb_sw[i];
+                std::fill_n(param_ds2+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_f,3,vb_sw_tmp,1,1,param_ds2+6*j,1);
+
+                std::fill_n(param_const1+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_vb,3,vb_sw_tmp,1,1,param_const1+6*j,1);
+                double ab_sw_tmp[3] {0};
+                ab_sw_tmp[2]=ab_sw[i];
+                std::fill_n(param_const2+6*j,3,0);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ab_sw_tmp,1,1,param_const2+6*j,1);
+
+                std::fill_n(param_dsds+6*j,3,0);
+                std::fill_n(param_ds+6*j,3,0);
                 for (int k=0;k<3;k++)
                 {
-                    acc[3*j+k]=output_Lmt[i][3*2*j+k]*real_ds[i]*real_ds[i]+output_ConstH[i][3*2*j+k];
-                    dec[3*j+k]=output_Lmt[i][3*2*j+k]*real_ds[i]*real_ds[i]+output_ConstL[i][3*2*j+k];
+                    param_dsds[6*j+k]=param_dsds1[6*j+k]+param_dsds2[6*j+k];
+                    param_ds[6*j+k]=-param_ds1[6*j+k]-param_ds2[6*j+k];
+                    param_const[6*j+k]=param_const1[6*j+k]-param_const2[6*j+k];
+
+                    if(param_dds[6*j+k]>0)
+                    {
+                        param_a2[6*j+k]=-param_dsds[6*j+k]/param_dds[6*j+k];
+                        param_a1[6*j+k]=-param_ds[6*j+k]/param_dds[6*j+k];
+                        param_a0L[6*j+k]=(-aLmt-param_const[6*j+k])/param_dds[6*j+k];
+                        param_a0H[6*j+k]=(aLmt-param_const[6*j+k])/param_dds[6*j+k];
+                    }
+                    else if(param_dds[6*j+k]<0)
+                    {
+                        param_a2[6*j+k]=-param_dsds[6*j+k]/param_dds[6*j+k];
+                        param_a1[6*j+k]=-param_ds[6*j+k]/param_dds[6*j+k];
+                        param_a0L[6*j+k]=(aLmt-param_const[6*j+k])/param_dds[6*j+k];
+                        param_a0H[6*j+k]=(-aLmt-param_const[6*j+k])/param_dds[6*j+k];
+                    }
+                    else
+                    {
+                        printf("WARNING!!! param_dds equals zero!!! Swing : i=%d \n",i);
+                    }
                 }
             }
-            real_ddsMax[i]=*std::min_element(acc,acc+9);
-            real_ddsMin[i]=*std::max_element(dec,dec+9);
-        }
 
-
-        /**********calculate final trajectory**********/
-        //for s
-        double vEE[18] {0};
-        double aEE[18] {0};
-        double output_Pee[1800][9] {0};
-        double output_Pin[1800][9] {0};
-        double output_Vin[1800][9] {0};
-        double output_Ain[1800][9] {0};
-        for (int i=0;i<1800;i++)
-        {
-            s=0.1*i * PI/180;//degree to rad
-
-            f_s[0]=0;
-            f_s[1]=stepH*sin(PI/2*(1-cos(s)));
-            f_s[2]=stepD/2*cos(PI/2*(1-cos(s)));
-            b_s=stepD/4-stepD/2*(s/PI);
-
-            df_s[0]=0;
-            df_s[1]=stepH*cos(PI/2*(1-cos(s)))*PI/2*sin(s);
-            df_s[2]=-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*sin(s);
-            db_s=-stepD/2/PI;
-
-            ddf_s[0]=0;
-            ddf_s[1]=-stepH*sin(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)+stepH*cos(PI/2*(1-cos(s)))*PI/2*cos(s);
-            ddf_s[2]=-stepD/2*cos(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*cos(s);
-            ddb_s=0;
-
-            memcpy(df_s_B,df_s,3*sizeof(double));
-            df_s_B[2]=df_s[2]-db_s;
-            memcpy(ddf_s_B,ddf_s,3*sizeof(double));
-
-            rbt.SetPeb(initPeb);
-            rbt.SetVb(initVeb);
-            rbt.SetAb(initAeb);
+            /********** calculate ds bound of swingLegs 1 by 1 **********/
             for (int j=0;j<3;j++)
             {
-                //swing leg
-                pEE[6*j]=initPee[6*j]+f_s[0];
-                pEE[6*j+1]=initPee[6*j+1]+f_s[1];
-                pEE[6*j+2]=initPee[6*j+2]+f_s[2]-b_s;
-
-                vEE[6*j]=df_s[0]*real_ds[i];
-                vEE[6*j+1]=df_s[1]*real_ds[i];
-                vEE[6*j+2]=(df_s[2]-db_s)*real_ds[i];
-
-                aEE[6*j]=ddf_s[0]*real_ds[i]*real_ds[i]+df_s[0]*real_dds[i];
-                aEE[6*j+1]=ddf_s[1]*real_ds[i]*real_ds[i]+df_s[1]*real_dds[i];
-                aEE[6*j+2]=(ddf_s[2]-ddb_s)*real_ds[i]*real_ds[i]+(df_s[2]-db_s)*real_dds[i];
-
-                rbt.pLegs[2*j]->SetPee(pEE+6*j,rbt.body());
-                rbt.pLegs[2*j]->SetVee(vEE+6*j,rbt.body());
-                rbt.pLegs[2*j]->SetAee(aEE+6*j,rbt.body());
-
-                rbt.pLegs[2*j]->GetPee(*output_Pee+9*i+3*j,rbt.body());
-                rbt.pLegs[2*j]->GetPin(*output_Pin+9*i+3*j);
-                rbt.pLegs[2*j]->GetVin(*output_Vin+9*i+3*j);
-                rbt.pLegs[2*j]->GetAin(*output_Ain+9*i+3*j);
-            }
-        }
-
-        //fot t
-        double totalTime {0};
-        int totalCount {0};
-        double v0 {0};
-        double vm {0};
-        double vt {stepD/2/PI*real_ds[0]};
-        double stance_begin_s;
-
-        for (int i=0;i<1800;i++)
-        {
-            totalTime+=delta_s/real_ds[i];
-        }
-        totalCount=(int)(totalTime*1000)+1;
-        printf("totalTime is %.4f, totalCount is %d\n",totalTime,totalCount);
-
-        double * real_s=new double [totalCount];
-        double * real_Pee=new double [9*2*totalCount];
-        double * real_Pin=new double [9*2*totalCount];
-        real_s[0]=0;
-        for (int i=1;i<totalCount;i++)
-        {
-            double ds=0.5*(real_ds[(int)(real_s[i-1]/(PI/1800))]+real_ds[(int)(real_s[i-1]/(PI/1800))+1]);
-            real_s[i]=real_s[i-1]+ds*0.001;
-            if (i==totalCount-1)
-            {
-                double dds=0.5*(real_dds[(int)(real_s[i-1]/(PI/1800))]+real_dds[(int)(real_s[i-1]/(PI/1800))+1]);
-                v0=stepD/2/PI*(ds+dds*0.001);
-                stance_begin_s=real_s[totalCount-1]+ds*0.001;
-            }
-        }
-        vm=stepD/(0.001*totalCount)-(v0+vt)/2;
-
-        for (int i=0;i<2*totalCount;i++)
-        {
-            //swing phase
-            if(i<totalCount)
-            {
-                f_s[0]=0;
-                f_s[1]=stepH*sin(PI/2*(1-cos(real_s[i])));
-                f_s[2]=stepD/2*cos(PI/2*(1-cos(real_s[i])))-(stepD/4-stepD/2*(real_s[i]/PI));
-            }
-            //stance phase
-            else
-            {
-                f_s[0]=0;
-                f_s[1]=0;
-                if((i-totalCount)<(double)totalCount/2)
+                bool dsBoundFlag_sw {false};
+                int k_sw {0};
+                while (dsBoundFlag_sw==false && k_sw<5000)
                 {
-                    f_s[2]=stepD/2*cos(PI/2*(1-cos(stance_begin_s)))-(stepD/4-stepD/2*(stance_begin_s/PI))
-                            +v0*(0.001*(i-totalCount))+0.5*(vm-v0)/(0.001*totalCount/2)*0.001*(i-totalCount)*0.001*(i-totalCount);
+                    double ds=0.002*k_sw;
+                    double aLmt_valueL[9] {0};
+                    double aLmt_valueH[9] {0};
+                    double max_aLmt_ValueL {0};
+                    double min_aLmt_ValueH {0};
+                    for (int k=0;k<3;k++)
+                    {
+                        aLmt_valueL[3*j+k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                        aLmt_valueH[3*j+k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                    }
+                    max_aLmt_ValueL=*std::max_element(aLmt_valueL+3*j,aLmt_valueL+3*j+3);
+                    min_aLmt_ValueH=*std::min_element(aLmt_valueH+3*j,aLmt_valueH+3*j+3);
+
+                    k_sw++;
+
+                    if(min_aLmt_ValueH<max_aLmt_ValueL)
+                    {
+                        dsBoundFlag_sw=true;
+                        if(k_sw==5000 || k_sw==1)
+                        {
+                            printf("WARNING!!! Error with itration count!!! Leg:%d\n",2*j);
+                        }
+                        if(i%18==0)
+                        {
+                            //printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
+                        }
+                    }
+                    else
+                    {
+                        output_ValueL[i][j+1]=max_aLmt_ValueL;
+                        output_ValueH[i][j+1]=min_aLmt_ValueH;
+                        ds_bound_aLmt[i][j+1]=ds;
+                    }
+                }
+
+                double vLmt_value[3] {0};
+                double Jvi_dot_vb[3] {0};
+                double vb_sw_tmp[3] {0};
+                vb_sw_tmp[2]=vb_sw[i];
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw_tmp,1,1,Jvi_dot_vb+6*j,1);
+                for (int k=0;k<3;k++)
+                {
+                    if(param_dds[6*j+k]>0)
+                    {
+                        vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/param_dds[6*j+k];
+                    }
+                    else if(param_dds[6*j+k]<0)
+                    {
+                        vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/param_dds[6*j+k];
+                    }
+                    else
+                    {
+                        printf("WARNING!!! param_dds equals zero!!! Swing : i=%d \n",i);
+                    }
+
+                }
+                ds_bound_vLmt[i][j+1]=*std::max_element(vLmt_value,vLmt_value+3);
+                ds_bound[i][j+1]=std::min(ds_bound_aLmt[i][j+1],ds_bound_vLmt[i][j+1]);
+
+                memcpy(*output_dsds1+18*i+6*j, param_dsds1+6*j, 3*sizeof(double));
+                memcpy(*output_dsds2+18*i+6*j, param_dsds2+6*j, 3*sizeof(double));
+                memcpy( *output_dsds+18*i+6*j,  param_dsds+6*j, 3*sizeof(double));
+                memcpy(*output_ds1+18*i+6*j, param_ds1+6*j, 3*sizeof(double));
+                memcpy(*output_ds2+18*i+6*j, param_ds2+6*j, 3*sizeof(double));
+                memcpy( *output_ds+18*i+6*j,  param_ds+6*j, 3*sizeof(double));
+                memcpy(*output_const1+18*i+6*j, param_const1+6*j, 3*sizeof(double));
+                memcpy(*output_const2+18*i+6*j, param_const2+6*j, 3*sizeof(double));
+                memcpy( *output_const+18*i+6*j,  param_const+6*j, 3*sizeof(double));
+                memcpy(*output_dds+18*i+6*j, param_dds+6*j, 3*sizeof(double));
+                memcpy( *output_a2+18*i+6*j,  param_a2+6*j, 3*sizeof(double));
+                memcpy( *output_a1+18*i+6*j,  param_a1+6*j, 3*sizeof(double));
+                memcpy(*output_a0L+18*i+6*j, param_a0L+6*j, 3*sizeof(double));
+                memcpy(*output_a0H+18*i+6*j, param_a0H+6*j, 3*sizeof(double));
+            }
+        }
+
+        /********** SwingLeg : numerical integration to calculate ds**********/
+        for(int j=0;j<3;j++)
+        {
+            //backward integration
+            stopFlag=false;
+            ki_back=1799;
+            ds_backward[ki_back][j+1]=0;
+            while (stopFlag==false && ki_back>=0)
+            {
+                double dec[3] {0};
+                for (int k=0;k<3;k++)
+                {
+                    dec[k]=output_a2[ki_back][6*j+k]*ds_backward[ki_back][j+1]*ds_backward[ki_back][j+1]
+                          +output_a1[ki_back][6*j+k]*ds_backward[ki_back][j+1]
+                          +output_a0L[ki_back][6*j+k];
+                }
+                dds_backward[ki_back][j+1]=*std::max_element(dec,dec+3);
+                ds_backward[ki_back-1][j+1]=ds_backward[ki_back][j+1]-dds_backward[ki_back][j+1]*delta_s/ds_backward[ki_back][j+1];
+
+                if (ds_backward[ki_back-1][j+1]>ds_bound[ki_back-1][j+1])
+                {
+                    stopFlag=true;
+                    stop_back=ki_back;
+                    printf("Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][j+1]);
                 }
                 else
                 {
-                    f_s[2]=stepD/2*cos(PI/2*(1-cos(stance_begin_s)))-(stepD/4-stepD/2*(stance_begin_s/PI))
-                            +v0*(0.001*totalCount/2)+0.5*(vm-v0)/(0.001*totalCount/2)*0.001*totalCount/2*0.001*totalCount/2
-                            +vm*(0.001*(i-1.5*totalCount))+0.5*(vt-vm)/(0.001*totalCount/2)*0.001*(i-1.5*totalCount)*0.001*(i-1.5*totalCount);
+                    ki_back--;
                 }
             }
 
-
-            rbt.SetPeb(initPeb);
-
-            for (int j=0;j<3;j++)
+            //forward integration
+            stopFlag=false;
+            ki_for=0;
+            cycleCount=0;
+            ds_forward[ki_for][j+1]=0;
+            std::fill_n(min_dist,1800,1);
+            while (stopFlag==false)
             {
-                //swing leg
-                real_Pee[9*i+3*j]=initPee[6*j]+f_s[0];
-                real_Pee[9*i+3*j+1]=initPee[6*j+1]+f_s[1];
-                real_Pee[9*i+3*j+2]=initPee[6*j+2]+f_s[2];
+                if (accFlag==true)
+                {
+                    double acc[3] {0};
+                    for (int k=0;k<3;k++)
+                    {
+                        acc[k]=output_a2[ki_for][6*j+k]*ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]
+                              +output_a1[ki_for][6*j+k]*ds_forward[ki_for][j+1]
+                              +output_a0H[ki_for][6*j+k];
+                    }
+                    dds_forward[ki_for][j+1]=*std::min_element(acc,acc+3);
+                    ds_forward[ki_for+1][j+1]=ds_forward[ki_for][j+1]+dds_forward[ki_for][j+1]*delta_s/ds_forward[ki_for][j+1];
 
-                rbt.pLegs[2*j]->SetPee(real_Pee+9*i+3*j,rbt.pLegs[2*j]->body());
-                rbt.pLegs[2*j]->GetPin(real_Pin+9*i+3*j);
+                    if (ds_forward[ki_for+1][j+1]>ds_bound[ki_for+1][j+1])
+                    {
+                        accFlag=false;
+                        dec_start=ki_for;
+                        printf("acc touching at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for][j+1]);
+                    }
+                    else
+                    {
+                        ki_for++;
+                    }
+                }
+                else
+                {
+                    double dec[3] {0};
+                    for (int k=0;k<3;k++)
+                    {
+                        dec[k]=output_a2[ki_for][6*j+k]*ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]
+                              +output_a1[ki_for][6*j+k]*ds_forward[ki_for][j+1]
+                              +output_a0L[ki_for][6*j+k];
+                    }
+                    dds_forward[ki_for][j+1]=*std::max_element(dec,dec+3);
+                    ds_forward[ki_for+1][j+1]=ds_forward[ki_for][j+1]+dds_forward[ki_for][j+1]*delta_s/ds_forward[ki_for][j+1];
+
+                    if (ds_forward[ki_for+1][j+1]>ds_bound[ki_for+1][j+1])
+                    {
+                        //printf("dec trying\n");
+                        if(dec_start>0)
+                        {
+                            dec_start--;
+                            ki_for=dec_start;
+                        }
+                        else
+                        {
+                            printf("dec_start=%d\n",dec_start);
+                            ki_for=dec_start;
+                            ds_forward[0][j+1]-=ds_bound[0][j+1]/1000;
+                        }
+                    }
+                    else
+                    {
+                        //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][j+1]);
+                        if (ds_forward[ki_for+1][j+1]<1)//min_dsBound
+                        {
+                            accFlag=true;
+                            for(int k=dec_start;k<(ki_for+2);k++)
+                            {
+                                min_dist[k]=ds_bound[k][j+1]-ds_forward[k][j+1];
+                            }
+                            dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
+                            //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
+                            ki_for=dec_end-1;
+                            printf("dec finished, start at k=%d, end at k=%d, ds_forward=%.4f\n",dec_start,dec_end,ds_forward[ki_for+1][j+1]);
+                        }
+                        ki_for++;
+                    }
+                }
+
+                if(ki_for==1799)
+                {
+                    stopFlag=true;
+                    for(int i=0;i<1800;i++)
+                    {
+                        real_ds[i][j+1]=ds_forward[i][j+1];
+                        real_dds[i][j+1]=dds_forward[i][j+1];
+                    }
+                    printf("forward reach the end, and never encounter with the backward, ki=%u < %u\n",cycleCount,0xFFFFFFFF);
+                }
+                if(ki_for>=stop_back && ds_forward[ki_for][j+1]>=ds_backward[ki_for][j+1])
+                {
+                    stopFlag=true;
+                    for(int i=0;i<ki_for;i++)
+                    {
+                        real_ds[i][j+1]=ds_forward[i][j+1];
+                        real_dds[i][j+1]=dds_forward[i][j+1];
+                    }
+                    for(int i=ki_for;i<1800;i++)
+                    {
+                        real_ds[i][j+1]=ds_backward[i][j+1];
+                        real_dds[i][j+1]=dds_backward[i][j+1];
+                    }
+                    printf("forward & backward encounters at k=%d\n",ki_for);
+                }
+                cycleCount++;
+                if(cycleCount==0x0FFFFFFF)
+                {
+                    stopFlag=true;
+                    printf("WARNING!!! Iteration takes too long, force stop!!! ki=%d\n",cycleCount);
+                }
+            }
+
+            totalTime[j+1]=0;
+            for (int i=0;i<1800;i++)
+            {
+                totalTime[j+1]+=delta_s/real_ds[i][j+1];
             }
         }
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,totalCount,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,2*totalCount,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,2*totalCount,9);
-        delete [] real_s;
-        delete [] real_Pee;
-        delete [] real_Pin;
+        maxTime=*std::max_element(totalTime,totalTime+4);
+        maxTimeLeg=std::max_element(totalTime,totalTime+4)-totalTime;
+        printf("totalTime: %.4f, %.4f, %.4f, %.4f\n",totalTime[0],totalTime[1],totalTime[2],totalTime[3]);
 
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_PeeB,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt",*output_dsds,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, 1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds1.txt",*output_ds1,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds2.txt",*output_ds2,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, 1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds1.txt",*output_const1,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds2.txt",*output_const2,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_const, 1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_fsB,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1800,18);
+
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_a2,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_a1,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_a0L,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_a0H,1800,18);
+
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_max,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_bound_aLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_bound_vLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_bound,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",*real_ddsMax,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",*real_ddsMin,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",*ds_forward,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",*ds_backward,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",*dds_forward,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",*dds_backward,1800,4);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",real_ddsMax,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",real_ddsMin,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",ds_forward,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",ds_backward,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",dds_backward,1800,1);
-
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,1800,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,1800,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,1800,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,1800,9);
+        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,1800,9);
+        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,1800,9);
+        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,1800,9);
+        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,1800,9);
 
 
         gettimeofday(&tpend,NULL);
