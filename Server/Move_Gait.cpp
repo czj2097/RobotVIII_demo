@@ -1028,11 +1028,11 @@ namespace FastWalk
         double output_a0L[1800][18] {0};
         double output_a0H[1800][18] {0};
 
-        double ds_bound_aLmt[1800][4] {0};
-        double ds_bound_vLmt[1800][4] {0};
-        double ds_bound[1800][4] {0};
-        double ds_bound_tmp[1800] {0};
-        double min_dsBound {0};
+        double ds_upBound_aLmt[1800][4] {0};
+        double ds_lowBound_aLmt[1800][4] {0};
+        double ds_upBound_vLmt[1800][4] {0};
+        double ds_upBound[1800][4] {0};
+        double ds_lowBound[1800][4] {0};
         double output_ValueL[1800][4] {0};
         double output_ValueH[1800][4] {0};
 
@@ -1170,13 +1170,14 @@ namespace FastWalk
                     {
                         output_ValueL[i][0]=max_aLmt_ValueL;
                         output_ValueH[i][0]=min_aLmt_ValueH;
-                        ds_bound_aLmt[i][0]=ds;
+                        ds_upBound_aLmt[i][0]=ds;
                     }
                 }
             }
 
-            ds_bound_vLmt[i][0]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+9));
-            ds_bound[i][0]=std::min(ds_bound_aLmt[i][0],ds_bound_vLmt[i][0]);
+            ds_upBound_vLmt[i][0]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+9));
+            ds_upBound[i][0]=std::min(ds_upBound_aLmt[i][0],ds_upBound_vLmt[i][0]);
+            ds_lowBound[i][0]=ds_lowBound_aLmt[i][0];
 
             for (int j=0;j<3;j++)
             {
@@ -1194,7 +1195,7 @@ namespace FastWalk
         //backward integration
         stopFlag=false;
         ki_back=1799;
-        ds_backward[ki_back][0]=ds_bound[ki_back][0];
+        ds_backward[ki_back][0]=ds_upBound[ki_back][0];
         while (stopFlag==false && ki_back>=0)
         {
             double dec[9] {0};
@@ -1209,7 +1210,7 @@ namespace FastWalk
             dds_backward[ki_back][0]=*std::max_element(dec,dec+9);
             ds_backward[ki_back-1][0]=sqrt(ds_backward[ki_back][0]*ds_backward[ki_back][0]-2*dds_backward[ki_back][0]*delta_s);
 
-            if (ds_backward[ki_back-1][0]>ds_bound[ki_back-1][0])
+            if (ds_backward[ki_back-1][0]>ds_upBound[ki_back-1][0])
             {
                 stopFlag=true;
                 stop_back=ki_back;
@@ -1226,7 +1227,7 @@ namespace FastWalk
         accFlag=true;
         ki_for=0;
         cycleCount=0;
-        ds_forward[ki_for][0]=ds_bound[ki_for][0];
+        ds_forward[ki_for][0]=ds_upBound[ki_for][0];
         std::fill_n(min_dist,1800,1);
         while (stopFlag==false)
         {
@@ -1244,7 +1245,7 @@ namespace FastWalk
                 dds_forward[ki_for][0]=*std::min_element(acc,acc+9);
                 ds_forward[ki_for+1][0]=sqrt(ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s);
 
-                if (ds_forward[ki_for+1][0]>ds_bound[ki_for+1][0])
+                if (ds_forward[ki_for+1][0]>ds_upBound[ki_for+1][0])
                 {
                     accFlag=false;
                     dec_start=ki_for;
@@ -1269,7 +1270,7 @@ namespace FastWalk
                 dds_forward[ki_for][0]=*std::max_element(dec,dec+9);
                 ds_forward[ki_for+1][0]=sqrt(ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s);
 
-                if (ds_forward[ki_for+1][0]>ds_bound[ki_for+1][0])
+                if (ds_forward[ki_for+1][0]>ds_upBound[ki_for+1][0])
                 {
                     //printf("dec trying\n");
                     if(dec_start>0)
@@ -1281,25 +1282,18 @@ namespace FastWalk
                     {
                         printf("dec_start=%d\n",dec_start);
                         ki_for=dec_start;
-                        ds_forward[0][0]-=ds_bound[0][0]/1000;
+                        ds_forward[0][0]-=ds_upBound[0][0]/1000;
                     }
                 }
                 else
                 {
                     //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][0]);
-                    for(int i=0;i<1800;i++)
-                    {
-                        ds_bound_tmp[i]=ds_bound[i][0];
-                    }
-                    min_dsBound=*std::min_element(ds_bound_tmp,ds_bound_tmp+1800);
-                    //printf("min_dsBound=%.4f\n",min_dsBound);
-
-                    if (ds_forward[ki_for+1][0]<0.5*min_dsBound)
+                    if (ds_forward[ki_for+1][0]<ds_lowBound[ki_for+1][0])
                     {
                         accFlag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
                         {
-                            min_dist[k]=ds_bound[k][0]-ds_forward[k][0];
+                            min_dist[k]=ds_upBound[k][0]-ds_forward[k][0];
                         }
                         dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
                         //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
@@ -1454,10 +1448,11 @@ namespace FastWalk
             /********** calculate ds bound of swingLegs 1 by 1 **********/
             for (int j=0;j<3;j++)
             {
-                bool dsBoundFlag_sw {false};
+                bool ds_lowBoundFlag_sw {false};
+                bool ds_upBoundFlag_sw {false};
                 int k_sw {0};
                 const int kswCount {15000};
-                while (dsBoundFlag_sw==false)
+                while (ds_upBoundFlag_sw==false)
                 {
                     double ds=0.001*k_sw;
                     double aLmt_valueL[3] {0};
@@ -1475,29 +1470,26 @@ namespace FastWalk
                     k_sw++;
                     if(k_sw==kswCount)
                     {
-                        dsBoundFlag_sw=true;
+                        ds_upBoundFlag_sw=true;
                         printf("WARNING!!! kswCount=%d is too small!!! Leg:%d\n",kswCount,2*j);
                     }
                     else
                     {
-                        if(min_aLmt_ValueH<max_aLmt_ValueL)
+                        if(ds_lowBoundFlag_sw==false && ds_upBoundFlag_sw==false && min_aLmt_ValueH>=max_aLmt_ValueL)
+                        {
+                            ds_lowBoundFlag_sw=true;
+                            ds_lowBound_aLmt[i][j+1]=ds;
+                        }
+                        else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_aLmt_ValueH>=max_aLmt_ValueL)
                         {
                             output_ValueL[i][j+1]=max_aLmt_ValueL;
                             output_ValueH[i][j+1]=min_aLmt_ValueH;
-                            ds_bound_aLmt[i][j+1]=ds;
-
-                            dsBoundFlag_sw=true;
-                            if(ds_bound_aLmt[i][j+1]==0)
-                            {
-                                printf("minValueH=%.4f,maxValueL=%.4f,i=%d, j=%d\n",min_aLmt_ValueH,max_aLmt_ValueL,i,j);
-                            }
+                            ds_upBound_aLmt[i][j+1]=ds;
                         }
-//                        else
-//                        {
-//                            output_ValueL[i][j+1]=max_aLmt_ValueL;
-//                            output_ValueH[i][j+1]=min_aLmt_ValueH;
-//                            ds_bound_aLmt[i][j+1]=ds;
-//                        }
+                        else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_aLmt_ValueH<max_aLmt_ValueL)
+                        {
+                            ds_upBoundFlag_sw=true;
+                        }
                     }
                 }
 
@@ -1522,8 +1514,9 @@ namespace FastWalk
                     }
 
                 }
-                ds_bound_vLmt[i][j+1]=*std::max_element(vLmt_value,vLmt_value+3);
-                ds_bound[i][j+1]=std::min(ds_bound_aLmt[i][j+1],ds_bound_vLmt[i][j+1]);
+                ds_upBound_vLmt[i][j+1]=*std::max_element(vLmt_value,vLmt_value+3);
+                ds_upBound[i][j+1]=std::min(ds_upBound_aLmt[i][j+1],ds_upBound_vLmt[i][j+1]);
+                ds_lowBound[i][j+1]=ds_lowBound_aLmt[i][j+1];
 
                 memcpy(*output_dsds1+18*i+6*j, param_dsds1+6*j, 3*sizeof(double));
                 memcpy(*output_dsds2+18*i+6*j, param_dsds2+6*j, 3*sizeof(double));
@@ -1542,7 +1535,7 @@ namespace FastWalk
             }
         }
 
-        /********** SwingLeg : numerical integration to calculate ds**********
+        /********** SwingLeg : numerical integration to calculate ds**********/
         for(int j=0;j<3;j++)
         {
             //backward integration
@@ -1561,12 +1554,12 @@ namespace FastWalk
                 dds_backward[ki_back][j+1]=*std::max_element(dec,dec+3);
                 ds_backward[ki_back-1][j+1]=sqrt(ds_backward[ki_back][j+1]*ds_backward[ki_back][j+1]-2*dds_backward[ki_back][j+1]*delta_s);
 
-                if (ds_backward[ki_back-1][j+1]>ds_bound[ki_back-1][j+1])
+                if (ds_backward[ki_back-1][j+1]>ds_upBound[ki_back-1][j+1])
                 {
                     stopFlag=true;
                     stop_back=ki_back;
                     printf("SwingLeg Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][j+1]);
-                    printf("ds_backward[ki_back-1]:%.4f; ds_bound[ki_back-1]:%.4f\n",ds_backward[ki_back-1][j+1],ds_bound[ki_back-1][j+1]);
+                    printf("ds_backward[ki_back-1]:%.4f; ds_bound[ki_back-1]:%.4f\n",ds_backward[ki_back-1][j+1],ds_upBound[ki_back-1][j+1]);
                 }
                 else
                 {
@@ -1595,7 +1588,7 @@ namespace FastWalk
                     dds_forward[ki_for][j+1]=*std::min_element(acc,acc+3);
                     ds_forward[ki_for+1][j+1]=sqrt(ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]+2*dds_forward[ki_for][j+1]*delta_s);
 
-                    if (ds_forward[ki_for+1][j+1]>ds_bound[ki_for+1][j+1])
+                    if (ds_forward[ki_for+1][j+1]>ds_upBound[ki_for+1][j+1])
                     {
                         accFlag=false;
                         dec_start=ki_for;
@@ -1618,7 +1611,7 @@ namespace FastWalk
                     dds_forward[ki_for][j+1]=*std::max_element(dec,dec+3);
                     ds_forward[ki_for+1][j+1]=sqrt(ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]+2*dds_forward[ki_for][j+1]*delta_s);
 
-                    if (ds_forward[ki_for+1][j+1]>ds_bound[ki_for+1][j+1])
+                    if (ds_forward[ki_for+1][j+1]>ds_upBound[ki_for+1][j+1])
                     {
                         //printf("dec trying\n");
                         if(dec_start>0)
@@ -1628,26 +1621,20 @@ namespace FastWalk
                         }
                         else
                         {
-                            printf("dec_start=%d, ki_for=%d, ds_forward=%.4f, ds_bound=%.4f\n",dec_start,ki_for+1,ds_forward[ki_for+1][j+1],ds_bound[ki_for+1][j+1]);
+                            printf("dec_start=%d, ki_for=%d, ds_forward=%.4f, ds_bound=%.4f\n",dec_start,ki_for+1,ds_forward[ki_for+1][j+1],ds_upBound[ki_for+1][j+1]);
                             ki_for=dec_start;
-                            ds_forward[0][j+1]-=ds_bound[0][j+1]/1000;
+                            ds_forward[0][j+1]-=ds_upBound[0][j+1]/1000;
                         }
                     }
                     else
                     {
                         //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][j+1]);
-                        for(int i=0;i<1800;i++)
-                        {
-                            ds_bound_tmp[i]=ds_bound[i][j+1];
-                        }
-                        min_dsBound=*std::min_element(ds_bound_tmp,ds_bound_tmp+1800);
-
-                        if (ds_forward[ki_for+1][j+1]<0.5*min_dsBound)
+                        if (ds_forward[ki_for+1][j+1]<ds_lowBound[ki_for+1][j+1])
                         {
                             accFlag=true;
                             for(int k=dec_start;k<(ki_for+2);k++)
                             {
-                                min_dist[k]=ds_bound[k][j+1]-ds_forward[k][j+1];
+                                min_dist[k]=ds_upBound[k][j+1]-ds_forward[k][j+1];
                             }
                             dec_end=std::min_element(min_dist+dec_start+1,min_dist+ki_for+2)-min_dist;
                             //dec_start must be ignored, if dec_start is the min_dist, the calculation will cycle between dec_start & dec_start+1
@@ -1700,7 +1687,7 @@ namespace FastWalk
 
         maxTime=*std::max_element(totalTime,totalTime+4);
         maxTimeLeg=std::max_element(totalTime,totalTime+4)-totalTime;
-        printf("totalTime: %.4f, %.4f, %.4f, %.4f\n",totalTime[0],totalTime[1],totalTime[2],totalTime[3]);*/
+        printf("totalTime: %.4f, %.4f, %.4f, %.4f\n",totalTime[0],totalTime[1],totalTime[2],totalTime[3]);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_PeeB.txt",*output_PeeB,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1800,18);
@@ -1721,9 +1708,11 @@ namespace FastWalk
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_aLmt.txt",*ds_bound_aLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_vLmt.txt",*ds_bound_vLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound.txt",*ds_bound,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_vLmt.txt",*ds_upBound_vLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound.txt",*ds_lowBound,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound.txt",*ds_upBound,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",*real_ddsMax,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",*real_ddsMin,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",*ds_forward,1800,4);
