@@ -733,6 +733,46 @@ namespace FastWalk
             real_ddsMin[i]=*std::max_element(dec,dec+9);
         }
 
+        /**********test forward curve, output some more info**********/
+        //dec from k=215,k=218,k=230
+        double output_ds_k[1800] {0};
+        double dds_forward_test[1800] {0};
+        double ds_forward_test[1800] {0};
+
+        int ki_test {1203};
+        ds_forward_test[ki_test]=real_ds[ki_test];
+        output_ds_k[ki_test]=ds_forward_test[ki_test];
+        double acc_test[9] {0};
+        for (int j=0;j<3;j++)
+        {
+            for (int k=0;k<3;k++)
+            {
+                acc_test[3*j+k]=output_Lmt[ki_test][3*2*j+k]*ds_forward_test[ki_test]*ds_forward_test[ki_test]+output_ConstH[ki_test][3*2*j+k];
+            }
+        }
+        dds_forward_test[ki_test]=*std::min_element(acc_test,acc_test+9);
+        ds_forward_test[ki_test+1]=ds_forward_test[ki_test]+dds_forward_test[ki_test]*delta_s/ds_forward_test[ki_test];
+        ki_test++;
+        output_ds_k[ki_test]=ds_forward_test[ki_test];
+        while(output_ds_k[ki_test]<ds_max[ki_test][0])
+        {
+            double dec_test[9] {0};
+            for (int j=0;j<3;j++)
+            {
+                for (int k=0;k<3;k++)
+                {
+                    dec_test[3*j+k]=output_Lmt[ki_test][3*2*j+k]*ds_forward_test[ki_test]*ds_forward_test[ki_test]+output_ConstL[ki_test][3*2*j+k];
+                }
+            }
+            dds_forward_test[ki_test]=*std::max_element(dec_test,dec_test+9);
+            ds_forward_test[ki_test+1]=ds_forward_test[ki_test]+dds_forward_test[ki_test]*delta_s/ds_forward_test[ki_test];
+
+            output_ds_k[ki_test+1]=ds_forward_test[ki_test+1];
+            ki_test++;
+        }
+
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/test_ds_k.txt",output_ds_k,1800,1);
+
 
         /**********calculate final trajectory**********/
         //for s
@@ -991,6 +1031,8 @@ namespace FastWalk
         double ds_bound_aLmt[1800][4] {0};
         double ds_bound_vLmt[1800][4] {0};
         double ds_bound[1800][4] {0};
+        double ds_bound_tmp[1800] {0};
+        double min_dsBound {0};
         double output_ValueL[1800][4] {0};
         double output_ValueH[1800][4] {0};
 
@@ -1089,7 +1131,8 @@ namespace FastWalk
             //calculate bound of ds of 3 stance legs
             int k_st {0};
             bool dsBoundFlag_st {false};
-            while (dsBoundFlag_st==false && k_st<5000)
+            const int kstCount {15000};
+            while (dsBoundFlag_st==false)
             {
                 double ds=0.001*k_st;
                 double aLmt_valueL[9]{0};
@@ -1108,24 +1151,27 @@ namespace FastWalk
                 min_aLmt_ValueH=*std::min_element(aLmt_valueH,aLmt_valueH+9);
 
                 k_st++;
-
-                if(min_aLmt_ValueH<max_aLmt_ValueL)
+                if(k_st==kstCount)
                 {
                     dsBoundFlag_st=true;
-                    if(i%18==0)
-                    {
-                        //printf("minValueH=%.4f,maxValueL=%.4f,k_t=%d\n",min_ValueH,max_ValueL,k_t);
-                    }
-                    if(k_st==5000 || k_st==1)
-                    {
-                        printf("WARNING!!! Error with itration count!!!");
-                    }
+                    printf("WARNING!!! kstCount=%d is too small!!!\n",kstCount);
                 }
                 else
                 {
-                    output_ValueL[i][0]=max_aLmt_ValueL;
-                    output_ValueH[i][0]=min_aLmt_ValueH;
-                    ds_bound_aLmt[i][0]=ds;
+                    if(min_aLmt_ValueH<max_aLmt_ValueL)
+                    {
+                        dsBoundFlag_st=true;
+                        if(i%18==0)
+                        {
+                            //printf("minValueH=%.4f,maxValueL=%.4f,k_t=%d\n",min_ValueH,max_ValueL,k_t);
+                        }
+                    }
+                    else
+                    {
+                        output_ValueL[i][0]=max_aLmt_ValueL;
+                        output_ValueH[i][0]=min_aLmt_ValueH;
+                        ds_bound_aLmt[i][0]=ds;
+                    }
                 }
             }
 
@@ -1161,13 +1207,13 @@ namespace FastWalk
                 }
             }
             dds_backward[ki_back][0]=*std::max_element(dec,dec+9);
-            ds_backward[ki_back-1][0]=ds_backward[ki_back][0]-dds_backward[ki_back][0]*delta_s/ds_backward[ki_back][0];
+            ds_backward[ki_back-1][0]=sqrt(ds_backward[ki_back][0]*ds_backward[ki_back][0]-2*dds_backward[ki_back][0]*delta_s);
 
             if (ds_backward[ki_back-1][0]>ds_bound[ki_back-1][0])
             {
                 stopFlag=true;
                 stop_back=ki_back;
-                printf("Backward Integration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][0]);
+                //printf("StanceLeg Backward Integration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][0]);
             }
             else
             {
@@ -1177,6 +1223,7 @@ namespace FastWalk
 
         //forward integration
         stopFlag=false;
+        accFlag=true;
         ki_for=0;
         cycleCount=0;
         ds_forward[ki_for][0]=ds_bound[ki_for][0];
@@ -1195,13 +1242,13 @@ namespace FastWalk
                     }
                 }
                 dds_forward[ki_for][0]=*std::min_element(acc,acc+9);
-                ds_forward[ki_for+1][0]=ds_forward[ki_for][0]+dds_forward[ki_for][0]*delta_s/ds_forward[ki_for][0];
+                ds_forward[ki_for+1][0]=sqrt(ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s);
 
                 if (ds_forward[ki_for+1][0]>ds_bound[ki_for+1][0])
                 {
                     accFlag=false;
                     dec_start=ki_for;
-                    printf("acc reach bound at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for][0]);
+                    printf("StanceLeg acc reach bound at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for][0]);
                 }
                 else
                 {
@@ -1220,7 +1267,7 @@ namespace FastWalk
                     }
                 }
                 dds_forward[ki_for][0]=*std::max_element(dec,dec+9);
-                ds_forward[ki_for+1][0]=ds_forward[ki_for][0]+dds_forward[ki_for][0]*delta_s/ds_forward[ki_for][0];
+                ds_forward[ki_for+1][0]=sqrt(ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s);
 
                 if (ds_forward[ki_for+1][0]>ds_bound[ki_for+1][0])
                 {
@@ -1240,7 +1287,14 @@ namespace FastWalk
                 else
                 {
                     //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][0]);
-                    if (ds_forward[ki_for+1][0]<1)//min_maxds
+                    for(int i=0;i<1800;i++)
+                    {
+                        ds_bound_tmp[i]=ds_bound[i][0];
+                    }
+                    min_dsBound=*std::min_element(ds_bound_tmp,ds_bound_tmp+1800);
+                    //printf("min_dsBound=%.4f\n",min_dsBound);
+
+                    if (ds_forward[ki_for+1][0]<0.5*min_dsBound)
                     {
                         accFlag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
@@ -1265,7 +1319,7 @@ namespace FastWalk
                     real_ds[i][0]=ds_forward[i][0];
                     real_dds[i][0]=dds_forward[i][0];
                 }
-                printf("forward reach the end, and never encounter with the backward, cycleCount=%u < %u\n",cycleCount,0xFFFFFFFF);
+                printf("StanceLeg forward reach the end, and never encounter with the backward, cycleCount=%u < %u\n",cycleCount,0x0FFFFFFF);
             }
             if(ki_for>=stop_back && ds_forward[ki_for][0]>=ds_backward[ki_for][0])
             {
@@ -1280,13 +1334,13 @@ namespace FastWalk
                     real_ds[i][0]=ds_backward[i][0];
                     real_dds[i][0]=dds_backward[i][0];
                 }
-                printf("forward & backward encounters at k=%d\n",ki_for);
+                printf("StanceLeg forward & backward encounters at k=%d\n",ki_for);
             }
             cycleCount++;
             if(cycleCount==0x0FFFFFFF)
             {
                 stopFlag=true;
-                printf("WARNING!!! Integration takes too long, force stop!!! ki=%d\n",cycleCount);
+                printf("WARNING!!! StanceLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
             }
         }
 
@@ -1294,7 +1348,10 @@ namespace FastWalk
         totalTime[0]=0;
         for (int i=0;i<1800;i++)
         {
-            totalTime[0]+=delta_s/real_ds[i][0];
+            if(i!=1799)
+            {
+                totalTime[0]+=2*delta_s/(real_ds[i][0]+real_ds[i+1][0]);
+            }
             pb_sw[i]=b_st[i];
             vb_sw[i]=db_st[i]*real_ds[i][0];
             ab_sw[i]=ddb_st[i]*real_ds[i][0]*real_ds[i][0]+db_st[i]*real_dds[i][0];
@@ -1389,7 +1446,7 @@ namespace FastWalk
                     }
                     else
                     {
-                        printf("WARNING!!! param_dds equals zero!!! Swing : i=%d \n",i);
+                        printf("WARNING!!! param_dds equals zero!!! SwingLeg : i=%d \n",i);
                     }
                 }
             }
@@ -1399,40 +1456,48 @@ namespace FastWalk
             {
                 bool dsBoundFlag_sw {false};
                 int k_sw {0};
-                while (dsBoundFlag_sw==false && k_sw<5000)
+                const int kswCount {15000};
+                while (dsBoundFlag_sw==false)
                 {
-                    double ds=0.002*k_sw;
-                    double aLmt_valueL[9] {0};
-                    double aLmt_valueH[9] {0};
+                    double ds=0.001*k_sw;
+                    double aLmt_valueL[3] {0};
+                    double aLmt_valueH[3] {0};
                     double max_aLmt_ValueL {0};
                     double min_aLmt_ValueH {0};
                     for (int k=0;k<3;k++)
                     {
-                        aLmt_valueL[3*j+k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
-                        aLmt_valueH[3*j+k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                        aLmt_valueL[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                        aLmt_valueH[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
                     }
-                    max_aLmt_ValueL=*std::max_element(aLmt_valueL+3*j,aLmt_valueL+3*j+3);
-                    min_aLmt_ValueH=*std::min_element(aLmt_valueH+3*j,aLmt_valueH+3*j+3);
+                    max_aLmt_ValueL=*std::max_element(aLmt_valueL,aLmt_valueL+3);
+                    min_aLmt_ValueH=*std::min_element(aLmt_valueH,aLmt_valueH+3);
 
                     k_sw++;
-
-                    if(min_aLmt_ValueH<max_aLmt_ValueL)
+                    if(k_sw==kswCount)
                     {
                         dsBoundFlag_sw=true;
-                        if(k_sw==5000 || k_sw==1)
-                        {
-                            printf("WARNING!!! Error with itration count!!! Leg:%d\n",2*j);
-                        }
-                        if(i%18==0)
-                        {
-                            //printf("minValueH=%.4f,maxValueL=%.4f,kw=%d\n",min_ValueH,max_ValueL,kw);
-                        }
+                        printf("WARNING!!! kswCount=%d is too small!!! Leg:%d\n",kswCount,2*j);
                     }
                     else
                     {
-                        output_ValueL[i][j+1]=max_aLmt_ValueL;
-                        output_ValueH[i][j+1]=min_aLmt_ValueH;
-                        ds_bound_aLmt[i][j+1]=ds;
+                        if(min_aLmt_ValueH<max_aLmt_ValueL)
+                        {
+                            output_ValueL[i][j+1]=max_aLmt_ValueL;
+                            output_ValueH[i][j+1]=min_aLmt_ValueH;
+                            ds_bound_aLmt[i][j+1]=ds;
+
+                            dsBoundFlag_sw=true;
+                            if(ds_bound_aLmt[i][j+1]==0)
+                            {
+                                printf("minValueH=%.4f,maxValueL=%.4f,i=%d, j=%d\n",min_aLmt_ValueH,max_aLmt_ValueL,i,j);
+                            }
+                        }
+//                        else
+//                        {
+//                            output_ValueL[i][j+1]=max_aLmt_ValueL;
+//                            output_ValueH[i][j+1]=min_aLmt_ValueH;
+//                            ds_bound_aLmt[i][j+1]=ds;
+//                        }
                     }
                 }
 
@@ -1440,7 +1505,7 @@ namespace FastWalk
                 double Jvi_dot_vb[3] {0};
                 double vb_sw_tmp[3] {0};
                 vb_sw_tmp[2]=vb_sw[i];
-                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw_tmp,1,1,Jvi_dot_vb+6*j,1);
+                aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw_tmp,1,1,Jvi_dot_vb,1);
                 for (int k=0;k<3;k++)
                 {
                     if(param_dds[6*j+k]>0)
@@ -1453,7 +1518,7 @@ namespace FastWalk
                     }
                     else
                     {
-                        printf("WARNING!!! param_dds equals zero!!! Swing : i=%d \n",i);
+                        printf("WARNING!!! param_dds equals zero!!! SwingLeg : i=%d \n",i);
                     }
 
                 }
@@ -1477,7 +1542,7 @@ namespace FastWalk
             }
         }
 
-        /********** SwingLeg : numerical integration to calculate ds**********/
+        /********** SwingLeg : numerical integration to calculate ds**********
         for(int j=0;j<3;j++)
         {
             //backward integration
@@ -1494,13 +1559,14 @@ namespace FastWalk
                           +output_a0L[ki_back][6*j+k];
                 }
                 dds_backward[ki_back][j+1]=*std::max_element(dec,dec+3);
-                ds_backward[ki_back-1][j+1]=ds_backward[ki_back][j+1]-dds_backward[ki_back][j+1]*delta_s/ds_backward[ki_back][j+1];
+                ds_backward[ki_back-1][j+1]=sqrt(ds_backward[ki_back][j+1]*ds_backward[ki_back][j+1]-2*dds_backward[ki_back][j+1]*delta_s);
 
                 if (ds_backward[ki_back-1][j+1]>ds_bound[ki_back-1][j+1])
                 {
                     stopFlag=true;
                     stop_back=ki_back;
-                    printf("Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][j+1]);
+                    printf("SwingLeg Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][j+1]);
+                    printf("ds_backward[ki_back-1]:%.4f; ds_bound[ki_back-1]:%.4f\n",ds_backward[ki_back-1][j+1],ds_bound[ki_back-1][j+1]);
                 }
                 else
                 {
@@ -1510,6 +1576,7 @@ namespace FastWalk
 
             //forward integration
             stopFlag=false;
+            accFlag=true;
             ki_for=0;
             cycleCount=0;
             ds_forward[ki_for][j+1]=0;
@@ -1526,13 +1593,13 @@ namespace FastWalk
                               +output_a0H[ki_for][6*j+k];
                     }
                     dds_forward[ki_for][j+1]=*std::min_element(acc,acc+3);
-                    ds_forward[ki_for+1][j+1]=ds_forward[ki_for][j+1]+dds_forward[ki_for][j+1]*delta_s/ds_forward[ki_for][j+1];
+                    ds_forward[ki_for+1][j+1]=sqrt(ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]+2*dds_forward[ki_for][j+1]*delta_s);
 
                     if (ds_forward[ki_for+1][j+1]>ds_bound[ki_for+1][j+1])
                     {
                         accFlag=false;
                         dec_start=ki_for;
-                        printf("acc touching at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for][j+1]);
+                        printf("SwingLeg acc touching at k=%d, ds_forward=%.4f; ",ki_for,ds_forward[ki_for][j+1]);
                     }
                     else
                     {
@@ -1549,7 +1616,7 @@ namespace FastWalk
                               +output_a0L[ki_for][6*j+k];
                     }
                     dds_forward[ki_for][j+1]=*std::max_element(dec,dec+3);
-                    ds_forward[ki_for+1][j+1]=ds_forward[ki_for][j+1]+dds_forward[ki_for][j+1]*delta_s/ds_forward[ki_for][j+1];
+                    ds_forward[ki_for+1][j+1]=sqrt(ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]+2*dds_forward[ki_for][j+1]*delta_s);
 
                     if (ds_forward[ki_for+1][j+1]>ds_bound[ki_for+1][j+1])
                     {
@@ -1561,7 +1628,7 @@ namespace FastWalk
                         }
                         else
                         {
-                            printf("dec_start=%d\n",dec_start);
+                            printf("dec_start=%d, ki_for=%d, ds_forward=%.4f, ds_bound=%.4f\n",dec_start,ki_for+1,ds_forward[ki_for+1][j+1],ds_bound[ki_for+1][j+1]);
                             ki_for=dec_start;
                             ds_forward[0][j+1]-=ds_bound[0][j+1]/1000;
                         }
@@ -1569,7 +1636,13 @@ namespace FastWalk
                     else
                     {
                         //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][j+1]);
-                        if (ds_forward[ki_for+1][j+1]<1)//min_dsBound
+                        for(int i=0;i<1800;i++)
+                        {
+                            ds_bound_tmp[i]=ds_bound[i][j+1];
+                        }
+                        min_dsBound=*std::min_element(ds_bound_tmp,ds_bound_tmp+1800);
+
+                        if (ds_forward[ki_for+1][j+1]<0.5*min_dsBound)
                         {
                             accFlag=true;
                             for(int k=dec_start;k<(ki_for+2);k++)
@@ -1593,7 +1666,7 @@ namespace FastWalk
                         real_ds[i][j+1]=ds_forward[i][j+1];
                         real_dds[i][j+1]=dds_forward[i][j+1];
                     }
-                    printf("forward reach the end, and never encounter with the backward, ki=%u < %u\n",cycleCount,0xFFFFFFFF);
+                    printf("SwingLeg forward reach the end, and never encounter with the backward, ki=%u < %u\n",cycleCount,0xFFFFFFFF);
                 }
                 if(ki_for>=stop_back && ds_forward[ki_for][j+1]>=ds_backward[ki_for][j+1])
                 {
@@ -1608,28 +1681,28 @@ namespace FastWalk
                         real_ds[i][j+1]=ds_backward[i][j+1];
                         real_dds[i][j+1]=dds_backward[i][j+1];
                     }
-                    printf("forward & backward encounters at k=%d\n",ki_for);
+                    printf("SwingLeg forward & backward encounters at k=%d\n",ki_for);
                 }
                 cycleCount++;
                 if(cycleCount==0x0FFFFFFF)
                 {
                     stopFlag=true;
-                    printf("WARNING!!! Iteration takes too long, force stop!!! ki=%d\n",cycleCount);
+                    printf("WARNING!!! SwingLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
                 }
             }
 
             totalTime[j+1]=0;
-            for (int i=0;i<1800;i++)
+            for (int i=0;i<1799;i++)
             {
-                totalTime[j+1]+=delta_s/real_ds[i][j+1];
+                totalTime[j+1]+=2*delta_s/(real_ds[i][j+1]+real_ds[i+1][j+1]);
             }
         }
 
         maxTime=*std::max_element(totalTime,totalTime+4);
         maxTimeLeg=std::max_element(totalTime,totalTime+4)-totalTime;
-        printf("totalTime: %.4f, %.4f, %.4f, %.4f\n",totalTime[0],totalTime[1],totalTime[2],totalTime[3]);
+        printf("totalTime: %.4f, %.4f, %.4f, %.4f\n",totalTime[0],totalTime[1],totalTime[2],totalTime[3]);*/
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_PeeB,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_PeeB.txt",*output_PeeB,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, 1800,18);
@@ -1641,16 +1714,16 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_const, 1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1800,18);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_a2,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_a1,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_a0L,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_a0H,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a1.txt",*output_a1,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0L.txt",*output_a0L,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0H.txt",*output_a0H,1800,18);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_bound_aLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_bound_vLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_bound,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_aLmt.txt",*ds_bound_aLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_vLmt.txt",*ds_bound_vLmt,1800,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound.txt",*ds_bound,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",*real_ddsMax,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",*real_ddsMin,1800,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",*ds_forward,1800,4);
