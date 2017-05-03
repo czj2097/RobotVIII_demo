@@ -1086,15 +1086,15 @@ namespace FastWalk
                 rbt.pLegs[2*j+1]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
                 rbt.pLegs[2*j+1]->GetPee(*output_PeeB+18*i+6*j+3,rbt.body());
 
-                std::fill_n(dJvi,9,0);
-                aris::dynamic::s_daxpy(9,0    ,dJvi_x,1,dJvi,1);//for s_t
-                aris::dynamic::s_daxpy(9,0    ,dJvi_y,1,dJvi,1);
-                aris::dynamic::s_daxpy(9,-db_st[i],dJvi_z,1,dJvi,1);
-
                 double db_st_tmp[3] {0};
                 db_st_tmp[2]=-db_st[i];
                 double ddb_st_tmp[3] {0};
                 ddb_st_tmp[2]=-ddb_st[i];
+
+                std::fill_n(dJvi,9,0);
+                aris::dynamic::s_daxpy(9,db_st_tmp[0],dJvi_x,1,dJvi,1);//for s_t
+                aris::dynamic::s_daxpy(9,db_st_tmp[1],dJvi_y,1,dJvi,1);
+                aris::dynamic::s_daxpy(9,db_st_tmp[2],dJvi_z,1,dJvi,1);
 
                 std::fill_n(param_dds+6*j+3,3,0);
                 aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,db_st_tmp,1,1,param_dds+6*j+3,1);
@@ -1214,7 +1214,8 @@ namespace FastWalk
             {
                 stopFlag=true;
                 stop_back=ki_back;
-                //printf("StanceLeg Backward Integration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][0]);
+                printf("StanceLeg Backward Integration ends at k=%d, ds_backward:%.4f; ds_backward[ki_back-1][0]=%.4f > ds_upBound[ki_back-1][0]=%.4f\n",
+                       ki_back,ds_backward[ki_back][0],ds_backward[ki_back-1][0],ds_upBound[ki_back-1][0]);
             }
             else
             {
@@ -1244,6 +1245,8 @@ namespace FastWalk
                 }
                 dds_forward[ki_for][0]=*std::min_element(acc,acc+9);
                 ds_forward[ki_for+1][0]=sqrt(ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s);
+                printf("acc,sqrt:%.4f\n",ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s);
+
 
                 if (ds_forward[ki_for+1][0]>ds_upBound[ki_for+1][0])
                 {
@@ -1287,9 +1290,9 @@ namespace FastWalk
                 }
                 else
                 {
-                    //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][0]);
-                    if (ds_forward[ki_for+1][0]<ds_lowBound[ki_for+1][0])
+                    if ((ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*delta_s)<=(ds_lowBound[ki_for+1][0]*ds_lowBound[ki_for+1][0]) || ki_for==1798)
                     {
+
                         accFlag=true;
                         for(int k=dec_start;k<(ki_for+2);k++)
                         {
@@ -1312,6 +1315,7 @@ namespace FastWalk
                 {
                     real_ds[i][0]=ds_forward[i][0];
                     real_dds[i][0]=dds_forward[i][0];
+                    printf("i=%d, ds_forward:%.4f, dds_forward:%.4f\n",i,ds_forward[i][0],dds_forward[i][0]);
                 }
                 printf("StanceLeg forward reach the end, and never encounter with the backward, cycleCount=%u < %u\n",cycleCount,0x0FFFFFFF);
             }
@@ -1337,6 +1341,7 @@ namespace FastWalk
                 printf("WARNING!!! StanceLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
             }
         }
+
 
         //b_sw, vb_sw, ab_sw initialized here, and need to be updated during iteration
         totalTime[0]=0;
@@ -1384,15 +1389,20 @@ namespace FastWalk
                 rbt.pLegs[2*j]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
                 rbt.pLegs[2*j]->GetPee(*output_PeeB+18*i+6*j,rbt.body());
 
+                double vb_sw_tmp[3] {0};
+                vb_sw_tmp[2]=vb_sw[i];
+                double ab_sw_tmp[3] {0};
+                ab_sw_tmp[2]=ab_sw[i];
+
                 std::fill_n(dJvi_dot_f,9,0);
                 aris::dynamic::s_daxpy(9,df_sw[0],dJvi_x,1,dJvi_dot_f,1);
                 aris::dynamic::s_daxpy(9,df_sw[1],dJvi_y,1,dJvi_dot_f,1);
                 aris::dynamic::s_daxpy(9,df_sw[2],dJvi_z,1,dJvi_dot_f,1);
 
                 std::fill_n(dJvi_dot_vb,9,0);
-                aris::dynamic::s_daxpy(9,vb_sw[0],dJvi_x,1,dJvi_dot_vb,1);
-                aris::dynamic::s_daxpy(9,vb_sw[1],dJvi_y,1,dJvi_dot_vb,1);
-                aris::dynamic::s_daxpy(9,vb_sw[2],dJvi_z,1,dJvi_dot_vb,1);
+                aris::dynamic::s_daxpy(9,vb_sw_tmp[0],dJvi_x,1,dJvi_dot_vb,1);
+                aris::dynamic::s_daxpy(9,vb_sw_tmp[1],dJvi_y,1,dJvi_dot_vb,1);
+                aris::dynamic::s_daxpy(9,vb_sw_tmp[2],dJvi_z,1,dJvi_dot_vb,1);
 
                 std::fill_n(param_dds+6*j,3,0);
                 aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_sw,1,1,param_dds+6*j,1);
@@ -1404,15 +1414,11 @@ namespace FastWalk
 
                 std::fill_n(param_ds1+6*j,3,0);
                 aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_vb,3,df_sw,1,1,param_ds1+6*j,1);
-                double vb_sw_tmp[3] {0};
-                vb_sw_tmp[2]=vb_sw[i];
                 std::fill_n(param_ds2+6*j,3,0);
                 aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_f,3,vb_sw_tmp,1,1,param_ds2+6*j,1);
 
                 std::fill_n(param_const1+6*j,3,0);
                 aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_vb,3,vb_sw_tmp,1,1,param_const1+6*j,1);
-                double ab_sw_tmp[3] {0};
-                ab_sw_tmp[2]=ab_sw[i];
                 std::fill_n(param_const2+6*j,3,0);
                 aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ab_sw_tmp,1,1,param_const2+6*j,1);
 
@@ -1471,12 +1477,13 @@ namespace FastWalk
                     if(k_sw==kswCount)
                     {
                         ds_upBoundFlag_sw=true;
-                        printf("WARNING!!! kswCount=%d is too small!!! Leg:%d\n",kswCount,2*j);
+                        printf("WARNING!!! kswCount=%d is too small!!! Leg:%d, i=%d\n",kswCount,2*j,i);
                     }
                     else
                     {
                         if(ds_lowBoundFlag_sw==false && ds_upBoundFlag_sw==false && min_aLmt_ValueH>=max_aLmt_ValueL)
                         {
+                            //printf("ds_lowBound=%.4f found at k_sw=%d, i=%d\n",ds,k_sw-1,i);
                             ds_lowBoundFlag_sw=true;
                             ds_lowBound_aLmt[i][j+1]=ds;
                         }
@@ -1488,6 +1495,7 @@ namespace FastWalk
                         }
                         else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_aLmt_ValueH<max_aLmt_ValueL)
                         {
+                            //printf("ds_upBound=%.4f found at k_sw=%d, i=%d\n",ds,k_sw-1,i);
                             ds_upBoundFlag_sw=true;
                         }
                     }
@@ -1520,18 +1528,33 @@ namespace FastWalk
 
                 memcpy(*output_dsds1+18*i+6*j, param_dsds1+6*j, 3*sizeof(double));
                 memcpy(*output_dsds2+18*i+6*j, param_dsds2+6*j, 3*sizeof(double));
-                memcpy( *output_dsds+18*i+6*j,  param_dsds+6*j, 3*sizeof(double));
+                memcpy(*output_dsds+18*i+6*j,  param_dsds+6*j,  3*sizeof(double));
                 memcpy(*output_ds1+18*i+6*j, param_ds1+6*j, 3*sizeof(double));
                 memcpy(*output_ds2+18*i+6*j, param_ds2+6*j, 3*sizeof(double));
-                memcpy( *output_ds+18*i+6*j,  param_ds+6*j, 3*sizeof(double));
+                memcpy(*output_ds+18*i+6*j,  param_ds+6*j,  3*sizeof(double));
                 memcpy(*output_const1+18*i+6*j, param_const1+6*j, 3*sizeof(double));
                 memcpy(*output_const2+18*i+6*j, param_const2+6*j, 3*sizeof(double));
-                memcpy( *output_const+18*i+6*j,  param_const+6*j, 3*sizeof(double));
+                memcpy(*output_const+18*i+6*j,  param_const+6*j,  3*sizeof(double));
                 memcpy(*output_dds+18*i+6*j, param_dds+6*j, 3*sizeof(double));
-                memcpy( *output_a2+18*i+6*j,  param_a2+6*j, 3*sizeof(double));
-                memcpy( *output_a1+18*i+6*j,  param_a1+6*j, 3*sizeof(double));
+                memcpy(*output_a2+18*i+6*j,  param_a2+6*j,  3*sizeof(double));
+                memcpy(*output_a1+18*i+6*j,  param_a1+6*j,  3*sizeof(double));
                 memcpy(*output_a0L+18*i+6*j, param_a0L+6*j, 3*sizeof(double));
                 memcpy(*output_a0H+18*i+6*j, param_a0H+6*j, 3*sizeof(double));
+
+//                if(i>=1752)
+//                {
+//                    printf("leg:%d, param_ds:%.4f,%.4f, param_const:%.4f,%.4f\n",2*j,param_ds1[6*j],param_ds2[6*j],param_const1[6*j],param_const2[6*j]);
+//                    printf("dJvi_dot_vb:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,df_sw:%.4f,%.4f,%.4f\n",
+//                           dJvi_dot_vb[0],dJvi_dot_vb[1],dJvi_dot_vb[2],
+//                           dJvi_dot_vb[3],dJvi_dot_vb[4],dJvi_dot_vb[5],
+//                           dJvi_dot_vb[6],dJvi_dot_vb[7],dJvi_dot_vb[8],
+//                           df_sw[0],df_sw[1],df_sw[2]);
+//                    printf("dJvi_dot_f:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,vb_sw_tmp:%.4f,%.4f,%.4f\n",
+//                           dJvi_dot_f[0],dJvi_dot_f[1],dJvi_dot_f[2],
+//                           dJvi_dot_f[3],dJvi_dot_f[4],dJvi_dot_f[5],
+//                           dJvi_dot_f[6],dJvi_dot_f[7],dJvi_dot_f[8],
+//                           vb_sw_tmp[0],vb_sw_tmp[1],vb_sw_tmp[2]);
+//                }
             }
         }
 
@@ -1629,7 +1652,7 @@ namespace FastWalk
                     else
                     {
                         //printf("dec ending,ki_for=%d, ds_forward=%.4f\n",ki_for,ds_forward[ki_for+1][j+1]);
-                        if (ds_forward[ki_for+1][j+1]<ds_lowBound[ki_for+1][j+1])
+                        if ((ds_forward[ki_for][j+1]*ds_forward[ki_for][j+1]+2*dds_forward[ki_for][j+1]*delta_s)<=(ds_lowBound[ki_for+1][j+1]*ds_lowBound[ki_for+1][j+1]) || ki_for==1798)
                         {
                             accFlag=true;
                             for(int k=dec_start;k<(ki_for+2);k++)
@@ -1696,9 +1719,9 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds1.txt",*output_ds1,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds2.txt",*output_ds2,1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, 1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds1.txt",*output_const1,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds2.txt",*output_const2,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_const, 1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt",*output_const1,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt",*output_const2,1800,18);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const.txt", *output_const, 1800,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1800,18);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,1800,18);

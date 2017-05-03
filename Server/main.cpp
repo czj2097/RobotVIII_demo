@@ -24,7 +24,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-
+    /*
     //test IMU//
     double peIMU2Body[6] {0};//{0,0,0,0,-PI/2,PI};
     double pmIMU2Body[4][4] {0};
@@ -95,8 +95,9 @@ int main(int argc, char *argv[])
         printf("\n");
     }
     printf("\n");
+    */
 
-    //FastWalk::TimeOptimalGait1by1();
+    FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
 
     FastWalk::JointSpaceWalk jointspacewalker;
