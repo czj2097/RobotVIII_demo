@@ -290,8 +290,8 @@ namespace FastWalk
                               0.3, -0.85, 0.65 };
         double pEB[6] {0};
         double pEE[18] {0};
-        double stepH {0.1};
-        double stepD {0.8};
+        double stepH {0.05};
+        double stepD {1.1};
 
         double s {0};
         double b_s {0};
@@ -963,6 +963,7 @@ namespace FastWalk
         double vLmt {0.9};
         double aLmt {3.2};
         const int sTotalCount {1801};
+        const double delta_s {PI/(sTotalCount-1)};
 
         double initPeb[6] {0};
         double initPee[18] {  -0.3, -0.85, -0.65,
@@ -1033,10 +1034,18 @@ namespace FastWalk
         double ds_upBound_vLmt[sTotalCount][4] {0};
         double ds_upBound[sTotalCount][4] {0};
         double ds_lowBound[sTotalCount][4] {0};
-        double output_ValueL[sTotalCount][4] {0};
-        double output_ValueH[sTotalCount][4] {0};
+        double dds_lowBound[sTotalCount][4] {0};
+        double dds_upBound[sTotalCount][4] {0};
 
-        const double delta_s {PI/(sTotalCount-1)};
+        double slopedsBound[sTotalCount][4] {0};
+        double slopeDelta[sTotalCount][4] {0};
+        int paramdds0Point[sTotalCount][18] {0};
+        int tangentPoint[sTotalCount][4] {0};
+        int switchPoint[sTotalCount][4] {0};
+        int paramdds0Count[18] {0};
+        int tangentCount[4] {0};
+        int switchCount[4] {0};
+
         bool stopFlag {false};
         bool accFlag {true};//true acc, false dec
         int dec_start {0};
@@ -1139,20 +1148,20 @@ namespace FastWalk
             while (dsBoundFlag_st==false)
             {
                 double ds=0.001*k_st;
-                double aLmt_valueL[9]{0};
-                double aLmt_valueH[9]{0};
-                double max_aLmt_ValueL {0};
-                double min_aLmt_ValueH {0};
+                double dec[9]{0};
+                double acc[9]{0};
+                double max_dec {0};
+                double min_acc {0};
                 for (int j=0;j<3;j++)
                 {
                     for (int k=0;k<3;k++)
                     {
-                        aLmt_valueL[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0L[6*j+3+k];
-                        aLmt_valueH[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0H[6*j+3+k];
+                        dec[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0L[6*j+3+k];
+                        acc[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0H[6*j+3+k];
                     }
                 }
-                max_aLmt_ValueL=*std::max_element(aLmt_valueL,aLmt_valueL+9);
-                min_aLmt_ValueH=*std::min_element(aLmt_valueH,aLmt_valueH+9);
+                max_dec=*std::max_element(dec,dec+9);
+                min_acc=*std::min_element(acc,acc+9);
 
                 k_st++;
                 if(k_st==kstCount)
@@ -1162,18 +1171,38 @@ namespace FastWalk
                 }
                 else
                 {
-                    if(min_aLmt_ValueH<max_aLmt_ValueL)
+                    if(min_acc<max_dec)
                     {
-                        dsBoundFlag_st=true;
-                        if(i%18==0)
+                        for(int k_st2=0;k_st2<10000;k_st2++)
                         {
-                            //printf("minValueH=%.4f,maxValueL=%.4f,k_t=%d\n",min_ValueH,max_ValueL,k_t);
+                            ds=ds_upBound_aLmt[i][0]+0.001*0.0001*k_st2;
+                            for (int j=0;j<3;j++)
+                            {
+                                for (int k=0;k<3;k++)
+                                {
+                                    dec[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0L[6*j+3+k];
+                                    acc[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0H[6*j+3+k];
+                                }
+                            }
+                            max_dec=*std::max_element(dec,dec+9);
+                            min_acc=*std::min_element(acc,acc+9);
+
+                            if(min_acc<max_dec)
+                            {
+                                //printf("stance ds_upBound_aLmt=%.6f\t",ds_upBound_aLmt[i][0]);
+                                dsBoundFlag_st=true;
+                                break;
+                            }
+                            else
+                            {
+                                dds_lowBound[i][0]=max_dec;
+                                dds_upBound[i][0]=min_acc;
+                                ds_upBound_aLmt[i][0]=ds;
+                            }
                         }
                     }
                     else
                     {
-                        output_ValueL[i][0]=max_aLmt_ValueL;
-                        output_ValueH[i][0]=min_aLmt_ValueH;
                         ds_upBound_aLmt[i][0]=ds;
                     }
                 }
@@ -1194,6 +1223,131 @@ namespace FastWalk
                 memcpy(  *output_a0H+18*i+6*j+3,   param_a0H+6*j+3, 3*sizeof(double));
             }
         }
+
+        /********** StanceLeg : find switch point - param_dds=0 point & tangent point **********/
+        //initialize
+        for(int i=0;i<sTotalCount;i++)
+        {
+            tangentPoint[i][0]=-1;
+            switchPoint[i][0]=-1;
+            for(int j=0;j<3;j++)
+            {
+                for(int k=0;k<3;k++)
+                {
+                    paramdds0Point[i][6*j+k+3]=-1;
+                }
+            }
+        }
+
+        slopedsBound[0][0]=(ds_upBound[1][0]-ds_upBound[0][0])/delta_s;
+        for(int i=1;i<sTotalCount-1;i++)
+        {
+            slopedsBound[i][0]=(ds_upBound[i+1][0]-ds_upBound[i-1][0])/2/delta_s;
+        }
+        slopedsBound[sTotalCount-1][0]=(ds_upBound[sTotalCount-1][0]-ds_upBound[sTotalCount-2][0])/delta_s;
+
+        for(int i=0;i<sTotalCount;i++)
+        {
+            slopeDelta[i][0]=slopedsBound[i][0]-(dds_upBound[i][0]+dds_lowBound[i][0])/2;
+        }
+
+        for(int i=0;i<sTotalCount-1;i++)
+        {
+            for(int j=0;j<3;j++)
+            {
+                for(int k=0;k<3;k++)
+                {
+                    if(output_dds[i+1][6*j+k+3]*output_dds[i][6*j+k+3]<=0)
+                    {
+                        if(fabs(output_dds[i+1][6*j+k+3])>fabs(output_dds[i][6*j+k+3]))
+                        {
+                            paramdds0Point[paramdds0Count[6*j+k+3]][6*j+k+3]=i;
+                        }
+                        else
+                        {
+                            paramdds0Point[paramdds0Count[6*j+k+3]][6*j+k+3]=i+1;
+                        }
+                        paramdds0Count[6*j+k+3]++;
+                    }
+                }
+            }
+
+            if(slopeDelta[i+1][0]*slopeDelta[i][0]<=0)
+            {
+                bool is2PointSame {false};
+                for(int j=0;j<3;j++)
+                {
+                    for(int k=0;k<3;k++)
+                    {
+                        if(output_dds[i+1][6*j+k+3]*output_dds[i][6*j+k+3]<=0)
+                        {
+                            is2PointSame=true;
+                        }
+                    }
+                }
+
+                if(is2PointSame==false)
+                {
+                    if(fabs(slopeDelta[i+1][0])>fabs(slopeDelta[i][0]))
+                    {
+                        tangentPoint[tangentCount[0]][0]=i;
+                    }
+                    else
+                    {
+                        tangentPoint[tangentCount[0]][0]=i+1;
+                    }
+                    tangentCount[0]++;
+                }
+            }
+        }
+
+        //merge tangentPoint & paramdds0Point into switchPoint
+        for(int i=0;i<tangentCount[0];i++)
+        {
+            switchPoint[i][0]=tangentPoint[i][0];
+        }
+        switchCount[0]=tangentCount[0];
+        for(int j=0;j<3;j++)
+        {
+            for(int k=0;k<3;k++)
+            {
+                for(int i=0;i<paramdds0Count[6*j+k+3];i++)
+                {
+                    switchPoint[i+switchCount[0]][0]=paramdds0Point[i][6*j+k+3];
+                }
+                switchCount[0]+=paramdds0Count[6*j+k+3];
+            }
+        }
+
+        //filtering the same point & sorting by the value
+        for(int i=0;i<switchCount[0];i++)
+        {
+            for(int j=i+1;j<switchCount[0];j++)
+            {
+                if(switchPoint[j][0]<switchPoint[i][0])
+                {
+                    int tmp;
+                    tmp=switchPoint[i][0];
+                    switchPoint[i][0]=switchPoint[j][0];
+                    switchPoint[j][0]=tmp;
+                }
+                else if(switchPoint[j][0]==switchPoint[i][0])
+                {
+                    switchPoint[j][0]=switchPoint[switchCount[0]-1][0];
+                    switchPoint[switchCount[0]-1][0]=-1;
+                    j--;
+                    switchCount[0]--;
+                }
+            }
+        }
+
+        printf("\nStanceLeg Switch Point:");
+        for(int i=0;i<switchCount[0]+1;i++)
+        {
+            printf("%d,",switchPoint[i][0]);
+        }
+        printf("\n\n");
+
 
         /********** StanceLeg : numerical integration to calculate ds **********/
         //backward integration
@@ -1470,17 +1624,17 @@ namespace FastWalk
                     while (ds_upBoundFlag_sw==false)
                     {
                         double ds=0.001*k_sw;
-                        double aLmt_valueL[3] {0};
-                        double aLmt_valueH[3] {0};
-                        double max_aLmt_ValueL {0};
-                        double min_aLmt_ValueH {0};
+                        double dec[3] {0};
+                        double acc[3] {0};
+                        double max_dec {0};
+                        double min_acc {0};
                         for (int k=0;k<3;k++)
                         {
-                            aLmt_valueL[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
-                            aLmt_valueH[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                            dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                            acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
                         }
-                        max_aLmt_ValueL=*std::max_element(aLmt_valueL,aLmt_valueL+3);
-                        min_aLmt_ValueH=*std::min_element(aLmt_valueH,aLmt_valueH+3);
+                        max_dec=*std::max_element(dec,dec+3);
+                        min_acc=*std::min_element(acc,acc+3);
 
                         k_sw++;
                         if(k_sw==kswCount)
@@ -1490,22 +1644,73 @@ namespace FastWalk
                         }
                         else
                         {
-                            if(ds_lowBoundFlag_sw==false && ds_upBoundFlag_sw==false && min_aLmt_ValueH>=max_aLmt_ValueL)
+                            if(ds_lowBoundFlag_sw==false && ds_upBoundFlag_sw==false && min_acc>max_dec)
                             {
-                                //printf("ds_lowBound=%.4f found at k_sw=%d, i=%d\n",ds,k_sw-1,i);
-                                ds_lowBoundFlag_sw=true;
                                 ds_lowBound_aLmt[i][j+1]=ds;
+
+                                if(k_sw==1)
+                                {
+                                    //printf("swing ds_lowBound_aLmt=%.6f\n",ds_lowBound_aLmt[i][j+1]);
+                                    ds_lowBoundFlag_sw=true;
+                                }
+                                else
+                                {
+                                    for(int k_sw2=0;k_sw2<10000;k_sw2++)
+                                    {
+                                        ds=ds_lowBound_aLmt[i][j+1]-0.001*0.0001*k_sw2;
+                                        for (int k=0;k<3;k++)
+                                        {
+                                            dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                                            acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                                        }
+                                        max_dec=*std::max_element(dec,dec+3);
+                                        min_acc=*std::min_element(acc,acc+3);
+
+                                        if(min_acc<max_dec)
+                                        {
+                                            //printf("swing ds_lowBound_aLmt=%.6f\n",ds_lowBound_aLmt[i][j+1]);
+                                            ds_lowBoundFlag_sw=true;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            ds_lowBound_aLmt[i][j+1]=ds;
+                                        }
+                                    }
+                                }
                             }
-                            else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_aLmt_ValueH>=max_aLmt_ValueL)
+                            else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_acc>=max_dec)
                             {
-                                output_ValueL[i][j+1]=max_aLmt_ValueL;
-                                output_ValueH[i][j+1]=min_aLmt_ValueH;
+                                dds_lowBound[i][j+1]=max_dec;
+                                dds_upBound[i][j+1]=min_acc;
                                 ds_upBound_aLmt[i][j+1]=ds;
                             }
-                            else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_aLmt_ValueH<max_aLmt_ValueL)
+                            else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_acc<max_dec)
                             {
-                                //printf("ds_upBound=%.4f found at k_sw=%d, i=%d\n",ds,k_sw-1,i);
-                                ds_upBoundFlag_sw=true;
+                                for(int k_sw2=0;k_sw2<10000;k_sw2++)
+                                {
+                                    ds=ds_upBound_aLmt[i][j+1]+0.001*0.0001*k_sw2;
+                                    for (int k=0;k<3;k++)
+                                    {
+                                        dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                                        acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                                    }
+                                    max_dec=*std::max_element(dec,dec+3);
+                                    min_acc=*std::min_element(acc,acc+3);
+
+                                    if(min_acc<max_dec)
+                                    {
+                                        //printf("swing ds_upBound_aLmt=%.6f,i=%d,j=%d\n",ds_upBound_aLmt[i][j+1],i,j);
+                                        ds_upBoundFlag_sw=true;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        dds_lowBound[i][j+1]=max_dec;
+                                        dds_upBound[i][j+1]=min_acc;
+                                        ds_upBound_aLmt[i][j+1]=ds;
+                                    }
+                                }
                             }
                         }
                     }
@@ -1552,6 +1757,127 @@ namespace FastWalk
                 }
             }
 
+            /********** SwingLeg : find switch point - param_dds=0 point & tangent point **********/
+            for(int j=0;j<3;j++)
+            {
+                //initialize
+                for(int k=0;k<3;k++)
+                {
+                    paramdds0Count[6*j+k]=0;
+                }
+                tangentCount[j+1]=0;
+                switchCount[j+1]=0;
+                for(int i=0;i<sTotalCount;i++)
+                {
+                    tangentPoint[i][j+1]=-1;
+                    switchPoint[i][j+1]=-1;
+                    for(int k=0;k<3;k++)
+                    {
+                        paramdds0Point[i][6*j+k]=-1;
+                    }
+                }
+
+                slopedsBound[0][j+1]=(ds_upBound[1][j+1]-ds_upBound[0][j+1])/delta_s;
+                for(int i=1;i<sTotalCount-1;i++)
+                {
+                    slopedsBound[i][j+1]=(ds_upBound[i+1][j+1]-ds_upBound[i-1][j+1])/2/delta_s;
+                }
+                slopedsBound[sTotalCount-1][j+1]=(ds_upBound[sTotalCount-1][j+1]-ds_upBound[sTotalCount-2][j+1])/delta_s;
+
+                for(int i=0;i<sTotalCount;i++)
+                {
+                    slopeDelta[i][j+1]=slopedsBound[i][j+1]-(dds_upBound[i][j+1]+dds_lowBound[i][j+1])/2;
+                }
+
+                for(int i=0;i<sTotalCount-1;i++)
+                {
+                    for(int k=0;k<3;k++)
+                    {
+                        if(output_dds[i+1][6*j+k]*output_dds[i][6*j+k]<=0)
+                        {
+                            if(fabs(output_dds[i+1][6*j+k])>fabs(output_dds[i][6*j+k]))
+                            {
+                                paramdds0Point[paramdds0Count[6*j+k]][6*j+k]=i;
+                            }
+                            else
+                            {
+                                paramdds0Point[paramdds0Count[6*j+k]][6*j+k]=i+1;
+                            }
+                            paramdds0Count[6*j+k]++;
+                        }
+                    }
+
+                    if(slopeDelta[i+1][j+1]*slopeDelta[i][j+1]<=0)
+                    {
+                        bool is2PointSame {false};
+                        for(int k=0;k<3;k++)
+                        {
+                            if(output_dds[i+1][6*j+k]*output_dds[i][6*j+k]<=0)
+                            {
+                                is2PointSame=true;
+                            }
+                        }
+
+                        if(is2PointSame==false)
+                        {
+                            if(fabs(slopeDelta[i+1][j+1])>fabs(slopeDelta[i][j+1]))
+                            {
+                                tangentPoint[tangentCount[j+1]][j+1]=i;
+                            }
+                            else
+                            {
+                                tangentPoint[tangentCount[j+1]][j+1]=i+1;
+                            }
+                            tangentCount[j+1]++;
+                        }
+                    }
+                }
+
+                //merge tangentPoint & paramdds0Point into switchPoint
+                for(int i=0;i<tangentCount[j+1];i++)
+                {
+                    switchPoint[i][j+1]=tangentPoint[i][j+1];
+                }
+                switchCount[j+1]=tangentCount[j+1];
+                for(int k=0;k<3;k++)
+                {
+                    for(int i=0;i<paramdds0Count[6*j+k];i++)
+                    {
+                        switchPoint[i+switchCount[j+1]][j+1]=paramdds0Point[i][6*j+k];
+                    }
+                    switchCount[j+1]+=paramdds0Count[6*j+k];
+                }
+
+                //filtering the same point & sorting by the value
+                for(int i=0;i<switchCount[j+1];i++)
+                {
+                    for(int k=i+1;k<switchCount[j+1];k++)
+                    {
+                        if(switchPoint[k][j+1]<switchPoint[i][j+1])
+                        {
+                            int tmp;
+                            tmp=switchPoint[i][j+1];
+                            switchPoint[i][j+1]=switchPoint[k][j+1];
+                            switchPoint[k][j+1]=tmp;
+                        }
+                        else if(switchPoint[k][j+1]==switchPoint[i][j+1])
+                        {
+                            switchPoint[k][j+1]=switchPoint[switchCount[j+1]-1][j+1];
+                            switchPoint[switchCount[j+1]-1][j+1]=-1;
+                            k--;
+                            switchCount[j+1]--;
+                        }
+                    }
+                }
+
+                printf("\nSwingLeg Switch Point:");
+                for(int i=0;i<switchCount[j+1]+1;i++)
+                {
+                    printf("%d,",switchPoint[i][j+1]);
+                }
+                printf("\n\n");
+            }
+
             /********** SwingLeg : numerical integration to calculate ds**********/
             for(int j=0;j<3;j++)
             {
@@ -1575,8 +1901,8 @@ namespace FastWalk
                     {
                         stopFlag=true;
                         stop_back=ki_back;
-                        printf("SwingLeg Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][j+1]);
-                        printf("ds_backward[ki_back-1]:%.4f; ds_bound[ki_back-1]:%.4f\n",ds_backward[ki_back-1][j+1],ds_upBound[ki_back-1][j+1]);
+                        //printf("SwingLeg Backward Iteration ends at k=%d, ds_backward:%.4f\n",ki_back,ds_backward[ki_back][j+1]);
+                        //printf("ds_backward[ki_back-1]:%.4f; ds_bound[ki_back-1]:%.4f\n",ds_backward[ki_back-1][j+1],ds_upBound[ki_back-1][j+1]);
                     }
                     else
                     {
@@ -1670,7 +1996,7 @@ namespace FastWalk
                             real_ds[i][j+1]=ds_forward[i][j+1];
                             real_dds[i][j+1]=dds_forward[i][j+1];
                         }
-                        printf("SwingLeg forward reach the end, and never encounter with the backward, ki=%u < %u\n",cycleCount,0x0FFFFFFF);
+                        //printf("SwingLeg forward reach the end, and never encounter with the backward, ki=%u < %u\n",cycleCount,0x0FFFFFFF);
                     }
                     if(ki_for>=stop_back && ds_forward[ki_for][j+1]>=ds_backward[ki_for][j+1])
                     {
@@ -1685,7 +2011,7 @@ namespace FastWalk
                             real_ds[i][j+1]=ds_backward[i][j+1];
                             real_dds[i][j+1]=dds_backward[i][j+1];
                         }
-                        printf("SwingLeg forward & backward encounters at k=%d\n",ki_for);
+                        //printf("SwingLeg forward & backward encounters at k=%d\n",ki_for);
                     }
                     cycleCount++;
                     if(cycleCount==0x0FFFFFFF)
@@ -1726,7 +2052,7 @@ namespace FastWalk
             for(int i=0;i<(sTotalCount-1);i++)
             {
                 if(i%100==99)
-                printf("j_start=%d, ",j_start);
+                    printf("j_start=%d, ",j_start);
                 for(int j=j_start;j<(sTotalCount-1);j++)
                 {
                     if(timeArray_tmp[i][maxTimeID]>=timeArray_tmp[j][0] && timeArray_tmp[i][maxTimeID]<timeArray_tmp[j+1][0])
@@ -1741,7 +2067,7 @@ namespace FastWalk
                     }
                 }
                 if(i%100==99)
-                printf("j_end=%d\n",j_start);
+                    printf("j_end=%d\n",j_start);
             }
             pb_sw_tmp[sTotalCount-1]=pb_sw[sTotalCount-1];
             vb_sw_tmp[sTotalCount-1]=vb_sw[sTotalCount-1]*totalTime[0]/maxTime;
@@ -1771,8 +2097,8 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0L.txt",*output_a0L,sTotalCount,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0H.txt",*output_a0H,sTotalCount,18);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,sTotalCount,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*dds_lowBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*dds_upBound,sTotalCount,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,sTotalCount,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,sTotalCount,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_vLmt.txt",*ds_upBound_vLmt,sTotalCount,4);
