@@ -1125,14 +1125,14 @@ namespace FastWalk
                     if(param_dds[6*j+3+k]>0)
                     {
                         param_a2[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
-                        param_a0L[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
-                        param_a0H[6*j+3+k]=aLmt/param_dds[6*j+3+k];
+                        param_a0L[6*j+3+k]=(-param_const[6*j+k+3]-aLmt)/param_dds[6*j+3+k];
+                        param_a0H[6*j+3+k]=(-param_const[6*j+k+3]+aLmt)/param_dds[6*j+3+k];
                     }
                     else if(param_dds[6*j+3+k]<0)
                     {
                         param_a2[6*j+3+k]=-param_dsds[6*j+3+k]/param_dds[6*j+3+k];
-                        param_a0L[6*j+3+k]=aLmt/param_dds[6*j+3+k];
-                        param_a0H[6*j+3+k]=-aLmt/param_dds[6*j+3+k];
+                        param_a0L[6*j+3+k]=(-param_const[6*j+k+3]+aLmt)/param_dds[6*j+3+k];
+                        param_a0H[6*j+3+k]=(-param_const[6*j+k+3]-aLmt)/param_dds[6*j+3+k];
                     }
                     else
                     {
@@ -1156,8 +1156,20 @@ namespace FastWalk
                 {
                     for (int k=0;k<3;k++)
                     {
+                        if(param_dds[6*j+3+k]>0)
+                        {
+                            dec[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]-aLmt)/param_dds[6*j+3+k];
+                            acc[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]+aLmt)/param_dds[6*j+3+k];
+                        }
+                        else if(param_dds[6*j+3+k]<0)
+                        {
+                            dec[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]+aLmt)/param_dds[6*j+3+k];
+                            acc[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]-aLmt)/param_dds[6*j+3+k];
+                        }
+                        /*
                         dec[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0L[6*j+3+k];
                         acc[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0H[6*j+3+k];
+                        */
                     }
                 }
                 max_dec=*std::max_element(dec,dec+9);
@@ -1180,8 +1192,20 @@ namespace FastWalk
                             {
                                 for (int k=0;k<3;k++)
                                 {
+                                    if(param_dds[6*j+3+k]>0)
+                                    {
+                                        dec[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]-aLmt)/param_dds[6*j+3+k];
+                                        acc[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]+aLmt)/param_dds[6*j+3+k];
+                                    }
+                                    else if(param_dds[6*j+3+k]<0)
+                                    {
+                                        dec[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]+aLmt)/param_dds[6*j+3+k];
+                                        acc[3*j+k]=(-param_dsds[6*j+k+3]*ds*ds-param_const[6*j+k+3]-aLmt)/param_dds[6*j+3+k];
+                                    }
+                                    /*
                                     dec[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0L[6*j+3+k];
                                     acc[3*j+k]=param_a2[6*j+3+k]*ds*ds+param_a0H[6*j+3+k];
+                                    */
                                 }
                             }
                             max_dec=*std::max_element(dec,dec+9);
@@ -1239,6 +1263,7 @@ namespace FastWalk
             }
         }
 
+        //calculate the slope of ds_upBound
         slopedsBound[0][0]=(ds_upBound[1][0]-ds_upBound[0][0])/delta_s;
         for(int i=1;i<sTotalCount-1;i++)
         {
@@ -1257,47 +1282,18 @@ namespace FastWalk
             {
                 for(int k=0;k<3;k++)
                 {
-                    if(output_dds[i+1][6*j+k+3]*output_dds[i][6*j+k+3]<=0)
+                    if(output_dds[i+1][6*j+k+3]*output_dds[i][6*j+k+3]<0 || output_dds[i][6*j+k+3]==0)
                     {
-                        if(fabs(output_dds[i+1][6*j+k+3])>fabs(output_dds[i][6*j+k+3]))
-                        {
-                            paramdds0Point[paramdds0Count[6*j+k+3]][6*j+k+3]=i;
-                        }
-                        else
-                        {
-                            paramdds0Point[paramdds0Count[6*j+k+3]][6*j+k+3]=i+1;
-                        }
+                        paramdds0Point[paramdds0Count[6*j+k+3]][6*j+k+3]=i;
                         paramdds0Count[6*j+k+3]++;
                     }
                 }
             }
 
-            if(slopeDelta[i+1][0]*slopeDelta[i][0]<=0)
+            if(slopeDelta[i+1][0]*slopeDelta[i][0]<0 || slopeDelta[i][0]==0)
             {
-                bool is2PointSame {false};
-                for(int j=0;j<3;j++)
-                {
-                    for(int k=0;k<3;k++)
-                    {
-                        if(output_dds[i+1][6*j+k+3]*output_dds[i][6*j+k+3]<=0)
-                        {
-                            is2PointSame=true;
-                        }
-                    }
-                }
-
-                if(is2PointSame==false)
-                {
-                    if(fabs(slopeDelta[i+1][0])>fabs(slopeDelta[i][0]))
-                    {
-                        tangentPoint[tangentCount[0]][0]=i;
-                    }
-                    else
-                    {
-                        tangentPoint[tangentCount[0]][0]=i+1;
-                    }
-                    tangentCount[0]++;
-                }
+                tangentPoint[tangentCount[0]][0]=i;
+                tangentCount[0]++;
             }
         }
 
@@ -1346,11 +1342,171 @@ namespace FastWalk
         {
             printf("%d,",switchPoint[i][0]);
         }
-        printf("\n\n");
+        printf("\n");
 
 
         /********** StanceLeg : numerical integration to calculate ds **********/
-        //backward integration
+        for(int i=0;i<sTotalCount;i++)
+        {
+            real_ds[i][0]=ds_upBound[i][0];
+            real_dds[i][0]=dds_upBound[i][0];
+        }
+        for(int m=0;m<switchCount[0];m++)
+        {
+            int k_st {switchPoint[m][0]};
+            stopFlag=false;
+            ds_backward[k_st][0]=ds_upBound[k_st][0];
+            while(stopFlag==false)
+            {
+                double dec[9] {0};
+                for (int j=0;j<3;j++)
+                {
+                    for (int k=0;k<3;k++)
+                    {
+                        if(output_dds[k_st][6*j+3+k]>0)
+                        {
+                            dec[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_backward[k_st][0]*ds_backward[k_st][0]-output_const[k_st][6*j+k+3]-aLmt)/output_dds[k_st][6*j+3+k];
+                        }
+                        else if(output_dds[k_st][6*j+3+k]<0)
+                        {
+                            dec[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_backward[k_st][0]*ds_backward[k_st][0]-output_const[k_st][6*j+k+3]+aLmt)/output_dds[k_st][6*j+3+k];
+                        }
+                        //dec[3*j+k]=output_a2[k_st][6*j+3+k]*ds_backward[k_st][0]*ds_backward[k_st][0]+output_a0L[k_st][6*j+3+k];
+                    }
+                }
+                dds_backward[k_st][0]=*std::max_element(dec,dec+9);
+                ds_backward[k_st-1][0]=sqrt(ds_backward[k_st][0]*ds_backward[k_st][0]-2*dds_backward[k_st][0]*delta_s);
+
+                if(ds_backward[k_st-1][0]>ds_upBound[k_st-1][0])
+                {
+                    stopFlag=true;
+                    printf("StanceLeg backward touching upBound at %d, quit switchPoint %d\n",k_st-1,switchPoint[m][0]);
+                }
+                else if(k_st==1)
+                {
+                    for (int j=0;j<3;j++)
+                    {
+                        for (int k=0;k<3;k++)
+                        {
+                            if(output_dds[k_st][6*j+3+k]>0)
+                            {
+                                dec[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_backward[k_st][0]*ds_backward[k_st][0]-output_const[k_st][6*j+k+3]-aLmt)/output_dds[k_st][6*j+3+k];
+                            }
+                            else if(output_dds[k_st][6*j+3+k]<0)
+                            {
+                                dec[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_backward[k_st][0]*ds_backward[k_st][0]-output_const[k_st][6*j+k+3]+aLmt)/output_dds[k_st][6*j+3+k];
+                            }
+                            //dec[3*j+k]=output_a2[k_st-1][6*j+3+k]*ds_backward[k_st-1][0]*ds_backward[k_st-1][0]+output_a0L[k_st-1][6*j+3+k];
+                        }
+                    }
+                    dds_backward[k_st-1][0]=*std::max_element(dec,dec+9);
+                    for(int i=k_st-1;i<switchPoint[m][0]+1;i++)
+                    {
+                        real_ds[i][0]=ds_backward[i][0];
+                        real_dds[i][0]=dds_backward[i][0];
+                    }
+                    stopFlag=true;
+                    printf("StanceLeg backward touching 0, from switchPoint %d\n",switchPoint[m][0]);
+                }
+                else if(ds_backward[k_st-1][0]>=real_ds[k_st-1][0])
+                {
+                    for (int j=0;j<3;j++)
+                    {
+                        for (int k=0;k<3;k++)
+                        {
+                            if(output_dds[k_st][6*j+3+k]>0)
+                            {
+                                dec[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_backward[k_st][0]*ds_backward[k_st][0]-output_const[k_st][6*j+k+3]-aLmt)/output_dds[k_st][6*j+3+k];
+                            }
+                            else if(output_dds[k_st][6*j+3+k]<0)
+                            {
+                                dec[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_backward[k_st][0]*ds_backward[k_st][0]-output_const[k_st][6*j+k+3]+aLmt)/output_dds[k_st][6*j+3+k];
+                            }
+                            //dec[3*j+k]=output_a2[k_st-1][6*j+3+k]*ds_backward[k_st-1][0]*ds_backward[k_st-1][0]+output_a0L[k_st-1][6*j+3+k];
+                        }
+                    }
+                    dds_backward[k_st-1][0]=*std::max_element(dec,dec+9);
+                    for(int i=k_st-1;i<switchPoint[m][0]+1;i++)
+                    {
+                        real_ds[i][0]=ds_backward[i][0];
+                        real_dds[i][0]=dds_backward[i][0];
+                    }
+                    stopFlag=true;
+                    printf("StanceLeg backward touching last curve at %d, from switchPoint %d\n",k_st-1,switchPoint[m][0]);
+                }
+                else
+                {
+                    k_st--;
+                }
+            }
+            if(ds_backward[k_st-1][0]>ds_upBound[k_st-1][0])
+            {
+                continue;
+            }
+
+            bool isEqual0Point {false};
+            for(int j=0;j<3;j++)
+            {
+                for(int k=0;k<3;k++)
+                {
+                    for(int i=0;i<paramdds0Count[6*j+k+3];i++)
+                    {
+                        if(output_dds[switchPoint[i][0]][6*j+k+3]==0 || slopeDelta[switchPoint[i][0]][0]==0)
+                        {
+                            isEqual0Point=true;
+                        }
+                    }
+                }
+            }
+            if(isEqual0Point==false)
+            {
+                k_st=switchPoint[m][0]+1;
+            }
+            else
+            {
+                k_st=switchPoint[m][0];
+            }
+            stopFlag=false;
+            ds_forward[k_st][0]=ds_upBound[k_st][0];
+            while(stopFlag==false)
+            {
+                double acc[9] {0};
+                for (int j=0;j<3;j++)
+                {
+                    for (int k=0;k<3;k++)
+                    {
+                        if(output_dds[k_st][6*j+3+k]>0)
+                        {
+                            acc[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_forward[k_st][0]*ds_forward[k_st][0]-output_const[k_st][6*j+k+3]+aLmt)/output_dds[k_st][6*j+3+k];
+                        }
+                        else if(output_dds[k_st][6*j+3+k]<0)
+                        {
+                            acc[3*j+k]=(-output_dsds[k_st][6*j+k+3]*ds_forward[k_st][0]*ds_forward[k_st][0]-output_const[k_st][6*j+k+3]-aLmt)/output_dds[k_st][6*j+3+k];
+                        }
+                        //acc[3*j+k]=output_a2[k_st][6*j+3+k]*ds_forward[k_st][0]*ds_forward[k_st][0]+output_a0H[k_st][6*j+3+k];
+                    }
+                }
+                dds_forward[k_st][0]=*std::min_element(acc,acc+9);
+                ds_forward[k_st+1][0]=sqrt(ds_forward[k_st][0]*ds_forward[k_st][0]+2*dds_forward[k_st][0]*delta_s);
+
+                if(ds_forward[k_st+1][0]>ds_upBound[k_st+1][0] || k_st==sTotalCount-2)
+                {
+                    for(int i=switchPoint[m][0]+1;i<k_st+1;i++)
+                    {
+                        real_ds[i][0]=ds_forward[i][0];
+                        real_dds[i][0]=dds_forward[i][0];
+                    }
+                    stopFlag=true;
+                    printf("StanceLeg forward touching upBound at %d, from switchPoint %d\n",k_st,switchPoint[m][0]);
+                }
+                else
+                {
+                    k_st++;
+                }
+            }
+        }
+
+        /*//backward integration
         stopFlag=false;
         ki_back=sTotalCount-1;
         ds_backward[ki_back][0]=ds_upBound[ki_back][0];
@@ -1497,7 +1653,7 @@ namespace FastWalk
                 stopFlag=true;
                 printf("WARNING!!! StanceLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
             }
-        }
+        }*/
 
 
         //pb_sw, vb_sw, ab_sw initialized here, and need to be updated during iteration
@@ -1630,8 +1786,18 @@ namespace FastWalk
                         double min_acc {0};
                         for (int k=0;k<3;k++)
                         {
-                            dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
-                            acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                            if(param_dds[6*j+k]>0)
+                            {
+                                dec[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]-aLmt)/param_dds[6*j+k];
+                                acc[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]+aLmt)/param_dds[6*j+k];
+                            }
+                            else if(param_dds[6*j+k]<0)
+                            {
+                                dec[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]+aLmt)/param_dds[6*j+k];
+                                acc[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]-aLmt)/param_dds[6*j+k];
+                            }
+                            //dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                            //acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
                         }
                         max_dec=*std::max_element(dec,dec+3);
                         min_acc=*std::min_element(acc,acc+3);
@@ -1660,8 +1826,18 @@ namespace FastWalk
                                         ds=ds_lowBound_aLmt[i][j+1]-0.001*0.0001*k_sw2;
                                         for (int k=0;k<3;k++)
                                         {
-                                            dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
-                                            acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                                            if(param_dds[6*j+k]>0)
+                                            {
+                                                dec[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]-aLmt)/param_dds[6*j+k];
+                                                acc[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]+aLmt)/param_dds[6*j+k];
+                                            }
+                                            else if(param_dds[6*j+k]<0)
+                                            {
+                                                dec[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]+aLmt)/param_dds[6*j+k];
+                                                acc[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]-aLmt)/param_dds[6*j+k];
+                                            }
+                                            //dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                                            //acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
                                         }
                                         max_dec=*std::max_element(dec,dec+3);
                                         min_acc=*std::min_element(acc,acc+3);
@@ -1692,8 +1868,18 @@ namespace FastWalk
                                     ds=ds_upBound_aLmt[i][j+1]+0.001*0.0001*k_sw2;
                                     for (int k=0;k<3;k++)
                                     {
-                                        dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
-                                        acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
+                                        if(param_dds[6*j+k]>0)
+                                        {
+                                            dec[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]-aLmt)/param_dds[6*j+k];
+                                            acc[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]+aLmt)/param_dds[6*j+k];
+                                        }
+                                        else if(param_dds[6*j+k]<0)
+                                        {
+                                            dec[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]+aLmt)/param_dds[6*j+k];
+                                            acc[k]=(-param_dsds[6*j+k]*ds*ds-param_ds[6*j+k]*ds-param_const[6*j+k]-aLmt)/param_dds[6*j+k];
+                                        }
+                                        //dec[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0L[6*j+k];
+                                        //acc[k]=param_a2[6*j+k]*ds*ds+param_a1[6*j+k]*ds+param_a0H[6*j+k];
                                     }
                                     max_dec=*std::max_element(dec,dec+3);
                                     min_acc=*std::min_element(acc,acc+3);
@@ -1793,43 +1979,17 @@ namespace FastWalk
                 {
                     for(int k=0;k<3;k++)
                     {
-                        if(output_dds[i+1][6*j+k]*output_dds[i][6*j+k]<=0)
+                        if(output_dds[i+1][6*j+k]*output_dds[i][6*j+k]<0 || output_dds[i][6*j+k]==0)
                         {
-                            if(fabs(output_dds[i+1][6*j+k])>fabs(output_dds[i][6*j+k]))
-                            {
-                                paramdds0Point[paramdds0Count[6*j+k]][6*j+k]=i;
-                            }
-                            else
-                            {
-                                paramdds0Point[paramdds0Count[6*j+k]][6*j+k]=i+1;
-                            }
+                            paramdds0Point[paramdds0Count[6*j+k]][6*j+k]=i;
                             paramdds0Count[6*j+k]++;
                         }
                     }
 
-                    if(slopeDelta[i+1][j+1]*slopeDelta[i][j+1]<=0)
+                    if(slopeDelta[i+1][j+1]*slopeDelta[i][j+1]<0 || slopeDelta[i][j+1]==0)
                     {
-                        bool is2PointSame {false};
-                        for(int k=0;k<3;k++)
-                        {
-                            if(output_dds[i+1][6*j+k]*output_dds[i][6*j+k]<=0)
-                            {
-                                is2PointSame=true;
-                            }
-                        }
-
-                        if(is2PointSame==false)
-                        {
-                            if(fabs(slopeDelta[i+1][j+1])>fabs(slopeDelta[i][j+1]))
-                            {
-                                tangentPoint[tangentCount[j+1]][j+1]=i;
-                            }
-                            else
-                            {
-                                tangentPoint[tangentCount[j+1]][j+1]=i+1;
-                            }
-                            tangentCount[j+1]++;
-                        }
+                        tangentPoint[tangentCount[j+1]][j+1]=i;
+                        tangentCount[j+1]++;
                     }
                 }
 
@@ -1875,12 +2035,182 @@ namespace FastWalk
                 {
                     printf("%d,",switchPoint[i][j+1]);
                 }
-                printf("\n\n");
+                printf("\n");
             }
 
             /********** SwingLeg : numerical integration to calculate ds**********/
+
             for(int j=0;j<3;j++)
             {
+                for(int i=0;i<sTotalCount;i++)
+                {
+                    real_ds[i][j+1]=ds_upBound[i][j+1];
+                    real_dds[i][j+1]=dds_upBound[i][j+1];
+                }
+                for(int m=0;m<switchCount[j+1];m++)
+                {
+                    int k_sw {switchPoint[m][j+1]};
+                    stopFlag=false;
+                    ds_backward[k_sw][j+1]=ds_upBound[k_sw][j+1];
+                    while(stopFlag==false)
+                    {
+                        double dec[3] {0};
+                        for (int k=0;k<3;k++)
+                        {
+                            if(output_dds[k_sw][6*j+k]>0)
+                            {
+                                dec[k]=(-output_dsds[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                        -output_ds[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                        -output_const[k_sw][6*j+k]-aLmt)/output_dds[k_sw][6*j+k];
+                            }
+                            else if(output_dds[k_sw][6*j+k]<0)
+                            {
+                                dec[k]=(-output_dsds[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                        -output_ds[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                        -output_const[k_sw][6*j+k]+aLmt)/output_dds[k_sw][6*j+k];
+                            }
+                            //dec[k]=output_a2[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                             //     +output_a1[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                               //   +output_a0L[k_sw][6*j+k];
+                        }
+                        dds_backward[k_sw][j+1]=*std::max_element(dec,dec+3);
+                        ds_backward[k_sw-1][j+1]=sqrt(ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]-2*dds_backward[k_sw][j+1]*delta_s);
+
+                        if(ds_backward[k_sw-1][j+1]>ds_upBound[k_sw-1][j+1])
+                        {
+                            stopFlag=true;
+                            printf("SwingLeg backward touching upBound at %d, quit switchPoint %d\n",k_sw-1,switchPoint[m][j+1]);
+                        }
+                        else if(k_sw==1)
+                        {
+                            for (int k=0;k<3;k++)
+                            {
+                                if(output_dds[k_sw][6*j+k]>0)
+                                {
+                                    dec[k]=(-output_dsds[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                            -output_ds[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                            -output_const[k_sw][6*j+k]-aLmt)/output_dds[k_sw][6*j+k];
+                                }
+                                else if(output_dds[k_sw][6*j+k]<0)
+                                {
+                                    dec[k]=(-output_dsds[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                            -output_ds[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                            -output_const[k_sw][6*j+k]+aLmt)/output_dds[k_sw][6*j+k];
+                                }
+                                //dec[k]=output_a2[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                  //    +output_a1[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                    //  +output_a0L[k_sw][6*j+k];
+                            }
+                            dds_backward[k_sw-1][j+1]=*std::max_element(dec,dec+3);
+                            for(int i=k_sw-1;i<switchPoint[m][j+1]+1;i++)
+                            {
+                                real_ds[i][j+1]=ds_backward[i][j+1];
+                                real_dds[i][j+1]=dds_backward[i][j+1];
+                            }
+                            stopFlag=true;
+                            printf("SwingLeg backward touching 0, from switchPoint %d\n",switchPoint[m][j+1]);
+                        }
+                        else if(ds_backward[k_sw-1][j+1]>=real_ds[k_sw-1][j+1])
+                        {
+                            for (int k=0;k<3;k++)
+                            {
+                                if(output_dds[k_sw][6*j+k]>0)
+                                {
+                                    dec[k]=(-output_dsds[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                            -output_ds[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                            -output_const[k_sw][6*j+k]-aLmt)/output_dds[k_sw][6*j+k];
+                                }
+                                else if(output_dds[k_sw][6*j+k]<0)
+                                {
+                                    dec[k]=(-output_dsds[k_sw][6*j+k]*ds_backward[k_sw][j+1]*ds_backward[k_sw][j+1]
+                                            -output_ds[k_sw][6*j+k]*ds_backward[k_sw][j+1]
+                                            -output_const[k_sw][6*j+k]+aLmt)/output_dds[k_sw][6*j+k];
+                                }
+                                //dec[k]=output_a2[k_sw-1][6*j+k]*ds_backward[k_sw-1][j+1]*ds_backward[k_sw-1][j+1]
+                                  //    +output_a1[k_sw-1][6*j+k]*ds_backward[k_sw-1][j+1]
+                                    //  +output_a0L[k_sw-1][6*j+k];
+                            }
+                            dds_backward[k_sw-1][j+1]=*std::max_element(dec,dec+3);
+                            for(int i=k_sw-1;i<switchPoint[m][j+1]+1;i++)
+                            {
+                                real_ds[i][j+1]=ds_backward[i][j+1];
+                                real_dds[i][j+1]=dds_backward[i][j+1];
+                            }
+                            stopFlag=true;
+                            printf("SwingLeg backward touching last curve at %d, from switchPoint %d\n",k_sw-1,switchPoint[m][j+1]);
+                        }
+                        else
+                        {
+                            k_sw--;
+                        }
+                    }
+                    if(ds_backward[k_sw-1][j+1]>ds_upBound[k_sw-1][j+1])
+                    {
+                        continue;
+                    }
+
+                    bool isEqual0Point {false};
+                    for(int k=0;k<3;k++)
+                    {
+                        for(int i=0;i<paramdds0Count[6*j+k];i++)
+                        {
+                            if(output_dds[switchPoint[i][j+1]][6*j+k]==0 || slopeDelta[switchPoint[i][j+1]][j+1]==0)
+                            {
+                                isEqual0Point=true;
+                            }
+                        }
+                    }
+                    if(isEqual0Point==false)
+                    {
+                        k_sw=switchPoint[m][j+1]+1;
+                    }
+                    else
+                    {
+                        k_sw=switchPoint[m][j+1];
+                    }
+                    stopFlag=false;
+                    ds_forward[k_sw][j+1]=ds_upBound[k_sw][j+1];
+                    while(stopFlag==false)
+                    {
+                        double acc[3] {0};
+                        for (int k=0;k<3;k++)
+                        {
+                            if(output_dds[k_sw][6*j+k]>0)
+                            {
+                                acc[k]=(-output_dsds[k_sw][6*j+k]*ds_forward[k_sw][j+1]*ds_forward[k_sw][j+1]
+                                        -output_ds[k_sw][6*j+k]*ds_forward[k_sw][j+1]
+                                        -output_const[k_sw][6*j+k]+aLmt)/output_dds[k_sw][6*j+k];
+                            }
+                            else if(output_dds[k_sw][6*j+k]<0)
+                            {
+                                acc[k]=(-output_dsds[k_sw][6*j+k]*ds_forward[k_sw][j+1]*ds_forward[k_sw][j+1]
+                                        -output_ds[k_sw][6*j+k]*ds_forward[k_sw][j+1]
+                                        -output_const[k_sw][6*j+k]-aLmt)/output_dds[k_sw][6*j+k];
+                            }
+                            //acc[k]=output_a2[k_sw][6*j+k]*ds_forward[k_sw][j+1]*ds_forward[k_sw][j+1]
+                              //    +output_a1[k_sw][6*j+k]*ds_forward[k_sw][j+1]
+                                //  +output_a0H[k_sw][6*j+k];
+                        }
+                        dds_forward[k_sw][j+1]=*std::min_element(acc,acc+3);
+                        ds_forward[k_sw+1][j+1]=sqrt(ds_forward[k_sw][j+1]*ds_forward[k_sw][j+1]+2*dds_forward[k_sw][j+1]*delta_s);
+
+                        if(ds_forward[k_sw+1][j+1]>ds_upBound[k_sw+1][j+1] || k_sw==sTotalCount-2)
+                        {
+                            for(int i=switchPoint[m][j+1]+1;i<k_sw+1;i++)
+                            {
+                                real_ds[i][j+1]=ds_forward[i][j+1];
+                                real_dds[i][j+1]=dds_forward[i][j+1];
+                            }
+                            stopFlag=true;
+                            printf("SwingLeg forward touching upBound at %d, from switchPoint %d\n",k_sw,switchPoint[m][j+1]);
+                        }
+                        else
+                        {
+                            k_sw++;
+                        }
+                    }
+                }
+                /*
                 //backward integration
                 stopFlag=false;
                 ki_back=sTotalCount-1;
@@ -2019,7 +2349,7 @@ namespace FastWalk
                         stopFlag=true;
                         printf("WARNING!!! SwingLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
                     }
-                }
+                }*/
 
                 totalTime[j+1]=0;
                 for (int i=1;i<sTotalCount;i++)
@@ -2051,8 +2381,8 @@ namespace FastWalk
             double ab_sw_tmp[sTotalCount] {0};
             for(int i=0;i<(sTotalCount-1);i++)
             {
-                if(i%100==99)
-                    printf("j_start=%d, ",j_start);
+                //if(i%100==99)
+                    //printf("j_start=%d, ",j_start);
                 for(int j=j_start;j<(sTotalCount-1);j++)
                 {
                     if(timeArray_tmp[i][maxTimeID]>=timeArray_tmp[j][0] && timeArray_tmp[i][maxTimeID]<timeArray_tmp[j+1][0])
@@ -2066,8 +2396,8 @@ namespace FastWalk
                         break;
                     }
                 }
-                if(i%100==99)
-                    printf("j_end=%d\n",j_start);
+                //if(i%100==99)
+                    //printf("j_end=%d\n",j_start);
             }
             pb_sw_tmp[sTotalCount-1]=pb_sw[sTotalCount-1];
             vb_sw_tmp[sTotalCount-1]=vb_sw[sTotalCount-1]*totalTime[0]/maxTime;
@@ -2110,6 +2440,9 @@ namespace FastWalk
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",*ds_backward,sTotalCount,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",*dds_forward,sTotalCount,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",*dds_backward,sTotalCount,4);
+
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds.txt",*real_ds,sTotalCount,4);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds.txt",*real_dds,sTotalCount,4);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray.txt",*timeArray_tmp,sTotalCount,4);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pb_sw.txt",pb_sw,sTotalCount,1);
