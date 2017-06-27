@@ -20,6 +20,7 @@ using namespace std;
 #endif
 
 #include "Move_Gait.h"
+#include "TimeOptimalGait.h"
 
 
 int main(int argc, char *argv[])
@@ -97,8 +98,10 @@ int main(int argc, char *argv[])
     printf("\n");
     */
 
-    FastWalk::TimeOptimalGait1by1();
+    //FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
+    TimeOptimalGait optimalgait;
+    optimalgait.GetOptimalGait();
 
     FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
