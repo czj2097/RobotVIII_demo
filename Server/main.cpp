@@ -98,10 +98,11 @@ int main(int argc, char *argv[])
     printf("\n");
     */
 
-    //FastWalk::TimeOptimalGait1by1();
+    FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
-    TimeOptimalGait optimalgait;
-    optimalgait.GetOptimalGait();
+    //TimeOptimalGait optimalgait;
+    //optimalgait.GetOptimalGait2s();
+    //optimalgait.OutputData();
 
     FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;

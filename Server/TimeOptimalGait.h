@@ -22,7 +22,10 @@ public:
     void GetStanceOptimalDsByIteration();
     void GetSwingOptimalDsByIteration(int legID);
 
-    void GetOptimalGait();
+    void GetOptimalGait2s();
+    void GetOptimalGait2t();
+
+    void OutputData();
 
 private:
     Robots::RobotTypeI rbt;
@@ -126,8 +129,16 @@ private:
 
     double real_ds[1801][6] {{0}};
     double real_dds[1801][6] {{0}};
+    double real_ddsMax[1801][6] {{0}};
+    double real_ddsMin[1801][6] {{0}};
 
-
+    double timeArray[1801][6] {{0}};
+    double timeArray_tmp[1801][6] {{0}};
+    double totalTime[6] {0};
+    double maxTime {0};
+    int maxTotalCount {0};
+    int maxTotalCount_last {1};
+    int maxTimeID {0};
 };
 
 #endif

@@ -1225,6 +1225,7 @@ namespace FastWalk
         }
 
         /********** StanceLeg : find switch point - param_dds=0 point & tangent point **********/
+        /*
         //initialize
         for(int i=0;i<sTotalCount;i++)
         {
@@ -1318,9 +1319,11 @@ namespace FastWalk
             printf("%.4f,",switchPoint[i][0]);
         }
         printf("\n");
+        */
 
 
         /********** StanceLeg : numerical integration to calculate ds **********/
+        /*
         for(int i=0;i<sTotalCount;i++)
         {
             real_ds[i][0]=ds_upBound[i][0];
@@ -1447,9 +1450,9 @@ namespace FastWalk
                     k_st++;
                 }
             }
-        }
+        }*/
 
-        /*//backward integration
+        //backward integration
         stopFlag=false;
         ki_back=sTotalCount-1;
         ds_backward[ki_back][0]=ds_upBound[ki_back][0];
@@ -1596,7 +1599,7 @@ namespace FastWalk
                 stopFlag=true;
                 printf("WARNING!!! StanceLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
             }
-        }*/
+        }
 
 
         //pb_sw, vb_sw, ab_sw initialized here, and need to be updated during iteration
@@ -1857,6 +1860,7 @@ namespace FastWalk
             }
 
             /********** SwingLeg : find switch point - param_dds=0 point & tangent point **********/
+            /*
             for(int j=0;j<3;j++)
             {
                 //initialize
@@ -1948,12 +1952,13 @@ namespace FastWalk
                     printf("%.4f,",switchPoint[i][j+1]);
                 }
                 printf("\n");
-            }
+            }*/
 
             /********** SwingLeg : numerical integration to calculate ds**********/
 
             for(int j=0;j<3;j++)
             {
+                /*
                 for(int i=0;i<sTotalCount;i++)
                 {
                     real_ds[i][j+1]=ds_upBound[i][j+1];
@@ -2073,8 +2078,8 @@ namespace FastWalk
                             k_sw++;
                         }
                     }
-                }
-                /*
+                }*/
+
                 //backward integration
                 stopFlag=false;
                 ki_back=sTotalCount-1;
@@ -2213,7 +2218,7 @@ namespace FastWalk
                         stopFlag=true;
                         printf("WARNING!!! SwingLeg integration takes too long, force stop!!! ki=%d\n",cycleCount);
                     }
-                }*/
+                }
 
                 totalTime[j+1]=0;
                 for (int i=1;i<sTotalCount;i++)
