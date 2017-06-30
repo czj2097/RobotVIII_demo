@@ -1225,7 +1225,6 @@ namespace FastWalk
         }
 
         /********** StanceLeg : find switch point - param_dds=0 point & tangent point **********/
-        /*
         //initialize
         for(int i=0;i<sTotalCount;i++)
         {
@@ -1319,7 +1318,6 @@ namespace FastWalk
             printf("%.4f,",switchPoint[i][0]);
         }
         printf("\n");
-        */
 
 
         /********** StanceLeg : numerical integration to calculate ds **********/
@@ -1451,7 +1449,6 @@ namespace FastWalk
                 }
             }
         }*/
-
         //backward integration
         stopFlag=false;
         ki_back=sTotalCount-1;
@@ -1644,7 +1641,7 @@ namespace FastWalk
                     pEE[6*j]=initPee[6*j]+f_sw[0];
                     pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
                     pEE[6*j+2]=initPee[6*j+2]+f_sw[2];
-                    rbt.pLegs[j]->SetPee(pEE+6*j);
+                    rbt.pLegs[2*j]->SetPee(pEE+6*j);
                 }
 
                 //calculate param of swing leg
@@ -1860,7 +1857,6 @@ namespace FastWalk
             }
 
             /********** SwingLeg : find switch point - param_dds=0 point & tangent point **********/
-            /*
             for(int j=0;j<3;j++)
             {
                 //initialize
@@ -1952,13 +1948,12 @@ namespace FastWalk
                     printf("%.4f,",switchPoint[i][j+1]);
                 }
                 printf("\n");
-            }*/
+            }
 
             /********** SwingLeg : numerical integration to calculate ds**********/
 
             for(int j=0;j<3;j++)
-            {
-                /*
+            {/*
                 for(int i=0;i<sTotalCount;i++)
                 {
                     real_ds[i][j+1]=ds_upBound[i][j+1];
@@ -2079,7 +2074,6 @@ namespace FastWalk
                         }
                     }
                 }*/
-
                 //backward integration
                 stopFlag=false;
                 ki_back=sTotalCount-1;

@@ -358,8 +358,9 @@ void TimeOptimalGait::GetStanceSwitchPoint()
     //initialize
     for(int i=0;i<1801;i++)
     {
-        tangentPoint[i][0]=-1;
-        switchPoint[i][0]=-1;
+        tangentPoint[i][stanceLegID[0]]=-1;
+        switchPoint[i][stanceLegID[0]]=-1;
+        vaCrossPoint[i][stanceLegID[0]]=-1;
         for(int j=0;j<3;j++)
         {
             for(int k=0;k<3;k++)
@@ -376,41 +377,59 @@ void TimeOptimalGait::GetStanceSwitchPoint()
         slopedsBound[i][stanceLegID[0]]=(ds_upBound[i+1][stanceLegID[0]]-ds_upBound[i-1][stanceLegID[0]])/2/delta_s;
     }
     slopedsBound[1800][stanceLegID[0]]=(ds_upBound[1800][stanceLegID[0]]-ds_upBound[1799][stanceLegID[0]])/delta_s;
-
     for(int i=0;i<1801;i++)
     {
         slopeDelta[i][stanceLegID[0]]=slopedsBound[i][stanceLegID[0]]-(dds_upBound[i][stanceLegID[0]]+dds_lowBound[i][stanceLegID[0]])/2;
+        vaDelta[i][stanceLegID[0]]=ds_upBound_vLmt[i][stanceLegID[0]]-ds_upBound_aLmt[i][stanceLegID[0]];
     }
 
     for(int i=0;i<1800;i++)
     {
-        for(int j=0;j<3;j++)
+        if(ds_upBound_vLmt[i][stanceLegID[0]]>ds_upBound_aLmt[i][stanceLegID[0]])
         {
-            for(int k=0;k<3;k++)
+            for(int j=0;j<3;j++)
             {
-                if(output_dds[i+1][3*stanceLegID[j]+k]*output_dds[i][3*stanceLegID[j]+k]<0 || output_dds[i][3*stanceLegID[j]+k]==0)
+                for(int k=0;k<3;k++)
                 {
-                    paramdds0Point[paramdds0Count[3*stanceLegID[j]+k]][3*stanceLegID[j]+k]
-                            =i+fabs(output_dds[i][3*stanceLegID[j]+k])/(fabs(output_dds[i][3*stanceLegID[j]+k])+fabs(output_dds[i+1][3*stanceLegID[j]+k]));
-                    paramdds0Count[6*j+k+3]++;
+                    if(output_dds[i+1][3*stanceLegID[j]+k]*output_dds[i][3*stanceLegID[j]+k]<0 || output_dds[i][3*stanceLegID[j]+k]==0)
+                    {
+                        paramdds0Point[paramdds0Count[3*stanceLegID[j]+k]][3*stanceLegID[j]+k]=i
+                                +fabs(output_dds[i][3*stanceLegID[j]+k])/(fabs(output_dds[i][3*stanceLegID[j]+k])+fabs(output_dds[i+1][3*stanceLegID[j]+k]));
+                        paramdds0Count[6*j+k+3]++;
+                    }
                 }
             }
         }
 
         if(slopeDelta[i+1][stanceLegID[0]]*slopeDelta[i][stanceLegID[0]]<0 || slopeDelta[i][stanceLegID[0]]==0)
         {
-            tangentPoint[tangentCount[stanceLegID[0]]][stanceLegID[0]]
-                    =i+fabs(slopeDelta[i][stanceLegID[0]])/(fabs(slopeDelta[i][stanceLegID[0]])+fabs(slopeDelta[i+1][stanceLegID[0]]));
+            tangentPoint[tangentCount[stanceLegID[0]]][stanceLegID[0]]=i
+                    +fabs(slopeDelta[i][stanceLegID[0]])/(fabs(slopeDelta[i][stanceLegID[0]])+fabs(slopeDelta[i+1][stanceLegID[0]]));
             tangentCount[0]++;
+        }
+
+        if(vaDelta[i+1][stanceLegID[0]]*vaDelta[i][stanceLegID[0]]<0 || vaDelta[i][stanceLegID[0]]==0)
+        {
+            vaCrossPoint[vaCrossCount[stanceLegID[0]]][stanceLegID[0]]=i
+                    +fabs(vaDelta[i][stanceLegID[0]])/(fabs(vaDelta[i][stanceLegID[0]])+fabs(vaDelta[i+1][stanceLegID[0]]));
+            vaCrossCount[0]++;
         }
     }
 
     //merge tangentPoint & paramdds0Point into switchPoint
+    switchPoint[0][stanceLegID[0]]=0;
+    switchPoint[1][stanceLegID[0]]=1800;
+    switchCount[stanceLegID[0]]=2;
     for(int i=0;i<tangentCount[stanceLegID[0]];i++)
     {
-        switchPoint[i][stanceLegID[0]]=tangentPoint[i][stanceLegID[0]];
+        switchPoint[i+switchCount[stanceLegID[0]]][stanceLegID[0]]=tangentPoint[i][stanceLegID[0]];
     }
-    switchCount[stanceLegID[0]]=tangentCount[stanceLegID[0]];
+    switchCount[stanceLegID[0]]+=tangentCount[stanceLegID[0]];
+    for(int i=0;i<vaCrossCount[stanceLegID[0]];i++)
+    {
+        switchPoint[i+switchCount[stanceLegID[0]]][stanceLegID[0]]=vaCrossPoint[i][stanceLegID[0]];
+    }
+    switchCount[stanceLegID[0]]+=vaCrossCount[stanceLegID[0]];
     for(int j=0;j<3;j++)
     {
         for(int k=0;k<3;k++)
@@ -428,13 +447,13 @@ void TimeOptimalGait::GetStanceSwitchPoint()
     {
         for(int j=i+1;j<switchCount[stanceLegID[0]];j++)
         {
-            if(switchPoint[j][stanceLegID[0]]<switchPoint[i][stanceLegID[0]])
+            if((int)switchPoint[j][stanceLegID[0]]<(int)switchPoint[i][stanceLegID[0]])
             {
                 auto tmp=switchPoint[i][stanceLegID[0]];
                 switchPoint[i][stanceLegID[0]]=switchPoint[j][stanceLegID[0]];
                 switchPoint[j][stanceLegID[0]]=tmp;
             }
-            else if(switchPoint[j][stanceLegID[0]]==switchPoint[i][stanceLegID[0]])
+            else if((int)switchPoint[j][stanceLegID[0]]==(int)switchPoint[i][stanceLegID[0]])
             {
                 switchPoint[j][stanceLegID[0]]=switchPoint[switchCount[stanceLegID[0]]-1][stanceLegID[0]];
                 switchPoint[switchCount[stanceLegID[0]]-1][stanceLegID[0]]=-1;
@@ -444,10 +463,10 @@ void TimeOptimalGait::GetStanceSwitchPoint()
         }
     }
 
-    printf("\nStanceLeg Switch Point:");
+    printf("StanceLeg Switch Point:");
     for(int i=0;i<switchCount[stanceLegID[0]]+1;i++)
     {
-        printf("%.4f,",switchPoint[i][stanceLegID[0]]);
+        printf("%.1f,",switchPoint[i][stanceLegID[0]]);
     }
     printf("\n");
 }
@@ -461,8 +480,10 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
     }
     tangentCount[legID]=0;
     switchCount[legID]=0;
+    vaCrossCount[legID]=0;
     for(int i=0;i<1801;i++)
     {
+        vaCrossPoint[i][legID]=-1;
         tangentPoint[i][legID]=-1;
         switchPoint[i][legID]=-1;
         for(int k=0;k<3;k++)
@@ -481,16 +502,20 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
     for(int i=0;i<1801;i++)
     {
         slopeDelta[i][legID]=slopedsBound[i][legID]-(dds_upBound[i][legID]+dds_lowBound[i][legID])/2;
+        vaDelta[i][legID]=ds_upBound_vLmt[i][legID]-ds_upBound_aLmt[i][legID];
     }
 
     for(int i=0;i<1800;i++)
     {
-        for(int k=0;k<3;k++)
+        if(ds_upBound_vLmt[i][legID]>ds_upBound_aLmt[i][legID])
         {
-            if(output_dds[i+1][3*legID+k]*output_dds[i][3*legID+k]<0 || output_dds[i][3*legID+k]==0)
+            for(int k=0;k<3;k++)
             {
-                paramdds0Point[paramdds0Count[3*legID+k]][3*legID+k]=i+fabs(output_dds[i][3*legID+k])/(fabs(output_dds[i][3*legID+k])+fabs(output_dds[i+1][3*legID+k]));;
-                paramdds0Count[3*legID+k]++;
+                if(output_dds[i+1][3*legID+k]*output_dds[i][3*legID+k]<0 || output_dds[i][3*legID+k]==0)
+                {
+                    paramdds0Point[paramdds0Count[3*legID+k]][3*legID+k]=i+fabs(output_dds[i][3*legID+k])/(fabs(output_dds[i][3*legID+k])+fabs(output_dds[i+1][3*legID+k]));;
+                    paramdds0Count[3*legID+k]++;
+                }
             }
         }
 
@@ -499,14 +524,28 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
             tangentPoint[tangentCount[legID]][legID]=i+fabs(slopeDelta[i][legID])/(fabs(slopeDelta[i][legID])+fabs(slopeDelta[i+1][legID]));
             tangentCount[legID]++;
         }
+
+        if(vaDelta[i+1][legID]*vaDelta[i][legID]<0 || vaDelta[i][legID]==0)
+        {
+            vaCrossPoint[vaCrossCount[legID]][legID]=i+fabs(vaDelta[i][legID])/(fabs(vaDelta[i][legID])+fabs(vaDelta[i+1][legID]));
+            vaCrossCount[0]++;
+        }
     }
 
     //merge tangentPoint & paramdds0Point into switchPoint
+    switchPoint[0][legID]=0;
+    switchPoint[1][legID]=1800;
+    switchCount[legID]=2;
     for(int i=0;i<tangentCount[legID];i++)
     {
-        switchPoint[i][legID]=tangentPoint[i][legID];
+        switchPoint[i+switchCount[legID]][legID]=tangentPoint[i][legID];
     }
-    switchCount[legID]=tangentCount[legID];
+    switchCount[legID]+=tangentCount[legID];
+    for(int i=0;i<vaCrossCount[legID];i++)
+    {
+        switchPoint[i+switchCount[legID]][legID]=vaCrossPoint[i][legID];
+    }
+    switchCount[legID]+=vaCrossCount[legID];
     for(int k=0;k<3;k++)
     {
         for(int i=0;i<paramdds0Count[3*legID+k];i++)
@@ -521,13 +560,13 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
     {
         for(int k=i+1;k<switchCount[legID];k++)
         {
-            if(switchPoint[k][legID]<switchPoint[i][legID])
+            if((int)switchPoint[k][legID]<(int)switchPoint[i][legID])
             {
                 auto tmp=switchPoint[i][legID];
                 switchPoint[i][legID]=switchPoint[k][legID];
                 switchPoint[k][legID]=tmp;
             }
-            else if(switchPoint[k][legID]==switchPoint[i][legID])
+            else if((int)switchPoint[k][legID]==(int)switchPoint[i][legID])
             {
                 switchPoint[k][legID]=switchPoint[switchCount[legID]-1][legID];
                 switchPoint[switchCount[legID]-1][legID]=-1;
@@ -537,10 +576,10 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
         }
     }
 
-    printf("\nSwingLeg Switch Point:");
+    printf("SwingLeg Switch Point:");
     for(int i=0;i<switchCount[legID]+1;i++)
     {
-        printf("%.4f,",switchPoint[i][legID]);
+        printf("%.1f,",switchPoint[i][legID]);
     }
     printf("\n");
 }
@@ -555,9 +594,16 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
     for(int m=0;m<switchCount[stanceLegID[0]];m++)
     {
         int k_st {(int)switchPoint[m][stanceLegID[0]]};
+        if(ds_upBound[k_st][stanceLegID[0]]>real_ds[k_st][stanceLegID[0]] && (int)switchPoint[m][stanceLegID[0]]!=1800)//start of backward
+        {
+            printf("StanceLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][stanceLegID[0]]);
+            continue;
+        }
         stopFlag=false;
+        quitSwitchPoint=false;
         ds_backward[k_st][stanceLegID[0]]=ds_upBound[k_st][stanceLegID[0]];
-        while(stopFlag==false)
+
+        while(stopFlag==false && (int)switchPoint[m][stanceLegID[0]]!=0)
         {
             double dec[9] {0};
             for (int j=0;j<3;j++)
@@ -573,6 +619,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
             if(ds_backward[k_st-1][stanceLegID[0]]>ds_upBound[k_st-1][stanceLegID[0]])
             {
                 stopFlag=true;
+                quitSwitchPoint=true;
                 printf("StanceLeg backward touching upBound at %d, quit switchPoint %.4f\n",k_st-1,switchPoint[m][stanceLegID[0]]);
             }
             else if(k_st==1)
@@ -616,7 +663,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
                 k_st--;
             }
         }
-        if(ds_backward[k_st-1][stanceLegID[0]]>ds_upBound[k_st-1][stanceLegID[0]])
+        if(quitSwitchPoint==true || (int)switchPoint[m][stanceLegID[0]]==1800)//end of backward
         {
             continue;
         }
@@ -626,12 +673,11 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
         {
             for(int k=0;k<3;k++)
             {
-                for(int i=0;i<paramdds0Count[3*stanceLegID[j]+k];i++)
+                if(output_dds[(int)switchPoint[m][stanceLegID[0]]][3*stanceLegID[j]+k]==0
+                        || slopeDelta[(int)switchPoint[m][stanceLegID[0]]][stanceLegID[0]]==0
+                        || vaDelta[(int)switchPoint[m][stanceLegID[0]]][stanceLegID[0]]==0)
                 {
-                    if(output_dds[(int)switchPoint[i][stanceLegID[0]]][3*stanceLegID[j]+k]==0 || slopeDelta[(int)switchPoint[i][stanceLegID[0]]][stanceLegID[0]]==0)
-                    {
-                        isEqual0Point=true;
-                    }
+                    isEqual0Point=true;
                 }
             }
         }
@@ -664,6 +710,11 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
                 {
                     real_ds[i][stanceLegID[0]]=ds_forward[i][stanceLegID[0]];
                     real_dds[i][stanceLegID[0]]=dds_forward[i][stanceLegID[0]];
+                }
+                if(k_st==1799)
+                {
+                    real_ds[1800][stanceLegID[0]]=std::min(ds_upBound[1800][stanceLegID[0]],ds_forward[1800][stanceLegID[0]]);
+                    real_dds[1800][stanceLegID[0]]=std::min(dds_upBound[1800][stanceLegID[0]],dds_forward[1800][stanceLegID[0]]);
                 }
                 stopFlag=true;
                 printf("StanceLeg forward touching upBound at %d, from switchPoint %.4f\n",k_st,switchPoint[m][stanceLegID[0]]);
@@ -838,9 +889,22 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
     for(int m=0;m<switchCount[legID];m++)
     {
         int k_sw {(int)switchPoint[m][legID]};
+        if(ds_upBound[k_sw][legID]>real_ds[k_sw][legID] && (int)switchPoint[m][legID]!=1800)//start of backward
+        {
+            printf("SwingLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
+            continue;
+        }
         stopFlag=false;
-        ds_backward[k_sw][legID]=ds_upBound[k_sw][legID];
-        while(stopFlag==false)
+        if((int)switchPoint[m][legID]==1800)
+        {
+            ds_backward[k_sw][legID]=0;
+        }
+        else
+        {
+            ds_backward[k_sw][legID]=ds_upBound[k_sw][legID];
+        }
+
+        while(stopFlag==false  && (int)switchPoint[m][legID]!=0)
         {
             double dec[3] {0};
             for (int k=0;k<3;k++)
@@ -896,7 +960,7 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
                 k_sw--;
             }
         }
-        if(ds_backward[k_sw-1][legID]>ds_upBound[k_sw-1][legID])
+        if(ds_backward[k_sw-1][legID]>ds_upBound[k_sw-1][legID] || (int)switchPoint[m][legID]==1800)
         {
             continue;
         }
@@ -904,13 +968,12 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
         bool isEqual0Point {false};
         for(int k=0;k<3;k++)
         {
-            for(int i=0;i<paramdds0Count[3*legID+k];i++)
-            {
-                if(output_dds[(int)switchPoint[i][legID]][3*legID+k]==0 || slopeDelta[(int)switchPoint[i][legID]][legID]==0)
+                if(output_dds[(int)switchPoint[m][legID]][3*legID+k]==0
+                        || slopeDelta[(int)switchPoint[m][legID]][legID]==0
+                        || vaDelta[(int)switchPoint[m][legID]][legID]==0)
                 {
                     isEqual0Point=true;
                 }
-            }
         }
         if(isEqual0Point==false)
         {
@@ -921,7 +984,14 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
             k_sw=switchPoint[m][legID];
         }
         stopFlag=false;
-        ds_forward[k_sw][legID]=ds_upBound[k_sw][legID];
+        if((int)switchPoint[m][legID]==0)
+        {
+            ds_forward[k_sw][legID]=0;
+        }
+        else
+        {
+            ds_forward[k_sw][legID]=ds_upBound[k_sw][legID];
+        }
         while(stopFlag==false)
         {
             double acc[3] {0};
@@ -940,6 +1010,11 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
                 {
                     real_ds[i][legID]=ds_forward[i][legID];
                     real_dds[i][legID]=dds_forward[i][legID];
+                }
+                if(k_sw==1799)
+                {
+                    real_ds[1800][legID]=std::min(ds_upBound[1800][legID],ds_forward[1800][legID]);
+                    real_dds[1800][legID]=std::min(dds_upBound[1800][legID],dds_forward[1800][legID]);
                 }
                 stopFlag=true;
                 printf("SwingLeg forward touching upBound at %d, from switchPoint %.4f\n",k_sw,switchPoint[m][legID]);
@@ -1097,7 +1172,7 @@ void TimeOptimalGait::GetSwingOptimalDsByIteration(int legID)
 }
 
 
-void TimeOptimalGait::GetOptimalGait2s()
+void TimeOptimalGait::GetOptimalDs()
 {
     rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
@@ -1130,8 +1205,8 @@ void TimeOptimalGait::GetOptimalGait2s()
     }
 
     GetStanceSwitchPoint();
-    //GetStanceOptimalDsBySwitchPoint();
-    GetStanceOptimalDsByIteration();
+    GetStanceOptimalDsBySwitchPoint();
+    //GetStanceOptimalDsByIteration();
 
     //pb_sw, vb_sw, ab_sw initialized here, and need to be updated during iteration
     totalTime[stanceLegID[0]]=0;
@@ -1152,6 +1227,7 @@ void TimeOptimalGait::GetOptimalGait2s()
     int iterCount {0};
     while(maxTotalCount!=maxTotalCount_last)
     {
+        printf("\n");
         iterCount++;
         maxTotalCount_last=maxTotalCount;
         //generate the traj & calculate the bound of ds
@@ -1191,8 +1267,8 @@ void TimeOptimalGait::GetOptimalGait2s()
 
         for(int j=0;j<3;j++)
         {
-            //GetSwingOptimalDsBySwitchPoint(2*j);
-            GetSwingOptimalDsByIteration(2*j);
+            GetSwingOptimalDsBySwitchPoint(2*j);
+            //GetSwingOptimalDsByIteration(2*j);
 
             totalTime[2*j]=0;
             for (int i=1;i<1801;i++)
@@ -1247,9 +1323,9 @@ void TimeOptimalGait::GetOptimalGait2s()
         vb_sw_tmp[1800]=vb_sw[1800]*totalTime[stanceLegID[0]]/maxTime;
         ab_sw_tmp[1800]=ab_sw[1800]*totalTime[stanceLegID[0]]/maxTime*totalTime[stanceLegID[0]]/maxTime;
 
-        memcpy(pb_sw,pb_sw_tmp,(1801)*sizeof(double));
-        memcpy(vb_sw,vb_sw_tmp,(1801)*sizeof(double));
-        memcpy(ab_sw,ab_sw_tmp,(1801)*sizeof(double));
+        //memcpy(pb_sw,pb_sw_tmp,(1801)*sizeof(double));
+        //memcpy(vb_sw,vb_sw_tmp,(1801)*sizeof(double));
+        //memcpy(ab_sw,ab_sw_tmp,(1801)*sizeof(double));
     }
 
     printf("Iteration finished, iterCount=%d, maxTime=%.4f, timeArray:%.4f,%.4f\n\n",iterCount,maxTime,timeArray[0][stanceLegID[0]],timeArray[1][stanceLegID[0]]);
@@ -1257,6 +1333,66 @@ void TimeOptimalGait::GetOptimalGait2s()
     gettimeofday(&tpend,NULL);
     tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
     printf("UsedTime:%f\n",tused);
+}
+
+void TimeOptimalGait::GetOptimalGait2s()
+{
+    /*
+    double vEE[18] {0};
+    double aEE[18] {0};
+
+    for (int i=0;i<1801;i++)
+    {
+        s=0.1*i*PI/180;//degree to rad
+
+        f_s[0]=0;
+        f_s[1]=stepH*sin(PI/2*(1-cos(s)));
+        f_s[2]=stepD/2*cos(PI/2*(1-cos(s)));
+        b_s=stepD/4-stepD/2*(s/PI);
+
+        df_s[0]=0;
+        df_s[1]=stepH*cos(PI/2*(1-cos(s)))*PI/2*sin(s);
+        df_s[2]=-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*sin(s);
+        db_s=-stepD/2/PI;
+
+        ddf_s[0]=0;
+        ddf_s[1]=-stepH*sin(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)+stepH*cos(PI/2*(1-cos(s)))*PI/2*cos(s);
+        ddf_s[2]=-stepD/2*cos(PI/2*(1-cos(s)))*PI/2*sin(s)*PI/2*sin(s)-stepD/2*sin(PI/2*(1-cos(s)))*PI/2*cos(s);
+        ddb_s=0;
+
+        memcpy(df_s_B,df_s,3*sizeof(double));
+        df_s_B[2]=df_s[2]-db_s;
+        memcpy(ddf_s_B,ddf_s,3*sizeof(double));
+
+        rbt.SetPeb(initPeb);
+        rbt.SetVb(initVeb);
+        rbt.SetAb(initAeb);
+        for (int j=0;j<3;j++)
+        {
+            //swing leg
+            pEE[6*j]=initPee[6*j]+f_s[0];
+            pEE[6*j+1]=initPee[6*j+1]+f_s[1];
+            pEE[6*j+2]=initPee[6*j+2]+f_s[2]-b_s;
+
+            vEE[6*j]=df_s[0]*real_ds[i];
+            vEE[6*j+1]=df_s[1]*real_ds[i];
+            vEE[6*j+2]=(df_s[2]-db_s)*real_ds[i];
+
+            aEE[6*j]=ddf_s[0]*real_ds[i]*real_ds[i]+df_s[0]*real_dds[i];
+            aEE[6*j+1]=ddf_s[1]*real_ds[i]*real_ds[i]+df_s[1]*real_dds[i];
+            aEE[6*j+2]=(ddf_s[2]-ddb_s)*real_ds[i]*real_ds[i]+(df_s[2]-db_s)*real_dds[i];
+
+            rbt.pLegs[2*j]->SetPee(pEE+6*j,rbt.body());
+            rbt.pLegs[2*j]->SetVee(vEE+6*j,rbt.body());
+            rbt.pLegs[2*j]->SetAee(aEE+6*j,rbt.body());
+
+            rbt.pLegs[2*j]->GetPee(*output_Pee+9*i+3*j,rbt.body());
+            rbt.pLegs[2*j]->GetPin(*output_Pin+9*i+3*j);
+            rbt.pLegs[2*j]->GetVin(*output_Vin+9*i+3*j);
+            rbt.pLegs[2*j]->GetAin(*output_Ain+9*i+3*j);
+        }
+    }*/
+
 }
 
 void TimeOptimalGait::GetOptimalGait2t()

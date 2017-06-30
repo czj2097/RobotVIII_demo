@@ -22,6 +22,7 @@ public:
     void GetStanceOptimalDsByIteration();
     void GetSwingOptimalDsByIteration(int legID);
 
+    void GetOptimalDs();
     void GetOptimalGait2s();
     void GetOptimalGait2t();
 
@@ -107,12 +108,16 @@ private:
 
     double slopedsBound[1801][6] {{0}};
     double slopeDelta[1801][6] {{0}};
+    double vaDelta[1801][6] {{0}};
     double paramdds0Point[1801][18] {{0}};
+    double vaCrossPoint[1801][6] {{0}};
     double tangentPoint[1801][6] {{0}};
     double switchPoint[1801][6] {{0}};
     int paramdds0Count[18] {{0}};
+    int vaCrossCount[6] {{0}};
     int tangentCount[6] {{0}};
     int switchCount[6] {{0}};
+    bool quitSwitchPoint {false};
     double ds_forward[1801][6] {{0}};
     double ds_backward[1801][6] {{0}};
     double dds_forward[1801][6] {{0}};
@@ -139,6 +144,11 @@ private:
     int maxTotalCount {0};
     int maxTotalCount_last {1};
     int maxTimeID {0};
+
+    double output_Pee[1800][9] {{0}};
+    double output_Pin[1800][9] {{0}};
+    double output_Vin[1800][9] {{0}};
+    double output_Ain[1800][9] {{0}};
 };
 
 #endif
