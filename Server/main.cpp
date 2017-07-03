@@ -102,6 +102,8 @@ int main(int argc, char *argv[])
     //FastWalk::WalkPYAnalyse();
     TimeOptimalGait optimalgait;
     optimalgait.GetOptimalDs();
+    optimalgait.GetOptimalGait2s();
+    optimalgait.GetOptimalGait2t();
     optimalgait.OutputData();
 
     FastWalk::JointSpaceWalk jointspacewalker;

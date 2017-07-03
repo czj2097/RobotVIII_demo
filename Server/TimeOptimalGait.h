@@ -55,6 +55,9 @@ private:
     double pb_sw[1801] {0};
     double vb_sw[1801] {0};
     double ab_sw[1801] {0};
+    double pb_sw_tmp[1801] {0};
+    double vb_sw_tmp[1801] {0};
+    double ab_sw_tmp[1801] {0};
     double f_sw[3] {0};
     double df_sw[3] {0};
     double ddf_sw[3] {0};
@@ -136,6 +139,7 @@ private:
     double real_dds[1801][6] {{0}};
     double real_ddsMax[1801][6] {{0}};
     double real_ddsMin[1801][6] {{0}};
+    double real_ds_tmp[1801][6] {{0}};
 
     double timeArray[1801][6] {{0}};
     double timeArray_tmp[1801][6] {{0}};
@@ -145,10 +149,10 @@ private:
     int maxTotalCount_last {1};
     int maxTimeID {0};
 
-    double output_Pee[1800][9] {{0}};
-    double output_Pin[1800][9] {{0}};
-    double output_Vin[1800][9] {{0}};
-    double output_Ain[1800][9] {{0}};
+    double output_Pee[1801][18] {{0}};
+    double output_Pin[1801][18] {{0}};
+    double output_Vin[1801][18] {{0}};
+    double output_Ain[1801][18] {{0}};
 };
 
 #endif
