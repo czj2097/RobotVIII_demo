@@ -622,8 +622,9 @@
             </odb>
             <odj>
                 <odj_param type="group">
-                    <isPull abbreviation="i" type="int" default="1"/>
-                    <isStop abbreviation="s" type="int" default="0"/>
+                    <isForward abbreviation="f" type="int" default="1"/>
+                    <isLeft abbreviation="l" type="int" default="0"/>
+                    <isQuit abbreviation="q" type="int" default="0"/>
                     <isConfirm abbreviation="c" type="int" default="0"/>
                     <u abbreviation="u" type="int" default="0"/>
                     <v abbreviation="v" type="int" default="0"/>

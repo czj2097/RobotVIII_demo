@@ -81,6 +81,7 @@ namespace ForceTask
 	{
 		now2Start,
 		leftWalk,
+        adjustLeg,
 		forwardWalk,
 	};
 

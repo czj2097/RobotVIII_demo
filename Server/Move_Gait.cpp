@@ -3258,6 +3258,7 @@ namespace ForceTask
 	std::atomic_bool isContinue;
 	std::atomic_int moveDir[6];
 	std::atomic_bool isPull;
+    std::atomic_bool isLeft;
 	std::atomic_bool isConfirm;
 
 	void parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
@@ -3308,7 +3309,7 @@ namespace ForceTask
 	{
 		for(auto &i:params)
 		{
-			if(i.first=="isStop")
+            if(i.first=="isStop")
 			{
 				if(i.second=="0")
 					isContinue=true;
@@ -3538,6 +3539,7 @@ namespace ForceTask
 			}
 		}
 		isPull=true;
+        isLeft=true;
 		isContinue=true;
 		isConfirm=false;
 
@@ -3550,14 +3552,21 @@ namespace ForceTask
 	{
 		for(auto &i:params)
 		{
-			if(i.first=="isPull")
+            if(i.first=="isForward")
 			{
 				if(i.second=="1")
-					isPull=true;
+                    isPull=false;
 				else
-					isPull=false;
+                    isPull=true;
 			}
-			else if(i.first=="isStop")
+            else if(i.first=="isLeft")
+            {
+                if(i.second=="1")
+                    isLeft=true;
+                else
+                    isLeft=false;
+            }
+            else if(i.first=="isQuit")
 			{
 				if(i.second=="0")
 					isContinue=true;
@@ -3627,13 +3636,14 @@ namespace ForceTask
 		double touchPE[6];
 
 		//PushState
-		double followPeeInB[18];
+        double currentPeeInB[18];
 		double now2StartPE[6];
 		double xBodyInB[3]{1,0,0};
 		double yBodyInB[3]{0,1,0};
 		double pushBodyPE313[6];//for pause
 		double pushPee[18];//for pause
 		double d0=0.43;//distance from the handle to the middle of the door
+        double d1=0.05;//distance leg 1 & 4 move inside to across the door
 		double h0=0.05;//height from the start position to the walk through position
 
 		//Force Control
@@ -3705,7 +3715,7 @@ namespace ForceTask
 				if (param.count-ODP.countIter<5000)
 				{
 					Fbody[2]=1;
-					if(isPull==true)
+                    if(isLeft==true)
 						Fbody[0]=1;
 					else
 						Fbody[0]=-1;
@@ -3757,7 +3767,12 @@ namespace ForceTask
 					robot.GetPee(ODP.nowPee);
 
 					//Set rotate param
-					if(fabs(ODP.planeYPR[0])>PI/9)
+                    if(fabs(ODP.planeYPR[0])>=PI/4)
+                    {
+                        rt_printf("WARNING!!! Too large angle between the door and the robot!");
+                        return 1;
+                    }
+                    else if(fabs(ODP.planeYPR[0])>PI/9)
 					{
 						ODP.walkParam.n=2;
 						ODP.walkParam.beta=ODP.planeYPR[0]*0.88/3*2;
@@ -3780,6 +3795,7 @@ namespace ForceTask
 				//1.now2start
 				if(param.count-ODP.countIter<ODP.now2StartCount)
 				{
+                    ODP.startPE[1]+=h0;
 					for (int i=0;i<6;i++)
 					{
 						now2StartPE[i]=ODP.nowPE[i]+(ODP.startPE[i]-ODP.nowPE[i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
@@ -3840,7 +3856,7 @@ namespace ForceTask
 					ODP.countIter=param.count;
 					robot.GetPee(ODP.endPeeInB,robot.body());
 					robot.GetPeb(ODP.beginPE);//For calculation of DoorLocation
-					if(isPull==false)
+                    if(isLeft==false)
 						ODP.moveState=MoveState::Rightward;
 					else
 						ODP.moveState=MoveState::Leftward;
@@ -3852,7 +3868,7 @@ namespace ForceTask
 
 				Fbody[0]=-1;
 
-				if(isPull==true)
+                if(isLeft==true)
 				{
 					if (fabs(ODP.forceInB[0])>ForceRange[0])
 					{
@@ -3873,7 +3889,7 @@ namespace ForceTask
 						ODP.moveState=MoveState::Follow;
 					}
 				}
-				else//Push
+                else//Right
 				{
 					if (param.count-ODP.countIter>3000)
 					{
@@ -3891,7 +3907,7 @@ namespace ForceTask
 
 				Fbody[0]=1;
 
-				if(isPull==false)
+                if(isLeft==false)
 				{
 					if (fabs(ODP.forceInB[0])>ForceRange[0])
 					{
@@ -3907,7 +3923,7 @@ namespace ForceTask
 						ODP.moveState=MoveState::Follow;
 					}
 				}
-				else//Pull
+                else//Leftward
 				{
 					if (param.count-ODP.countIter>3000)
 					{
@@ -3926,13 +3942,13 @@ namespace ForceTask
 					for(int i=0;i<3;i++)
 					{
 						//leg 0,2,4
-						followPeeInB[6*i]=ODP.startPeeInB[6*i]+(ODP.endPeeInB[6*i]-ODP.startPeeInB[6*i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
-						followPeeInB[6*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
-						followPeeInB[6*i+2]=ODP.startPeeInB[6*i+2];
+                        currentPeeInB[6*i]=ODP.startPeeInB[6*i]+(ODP.endPeeInB[6*i]-ODP.startPeeInB[6*i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
+                        currentPeeInB[6*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+                        currentPeeInB[6*i+2]=ODP.startPeeInB[6*i+2];
 						//leg 1,3,5
-						followPeeInB[6*i+3]=ODP.startPeeInB[6*i+3];
-						followPeeInB[6*i+4]=ODP.startPeeInB[6*i+4];
-						followPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
+                        currentPeeInB[6*i+3]=ODP.startPeeInB[6*i+3];
+                        currentPeeInB[6*i+4]=ODP.startPeeInB[6*i+4];
+                        currentPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
 					}
 				}
 				else if(param.count-ODP.countIter<2*ODP.followCount)
@@ -3940,17 +3956,17 @@ namespace ForceTask
 					for(int i=0;i<3;i++)
 					{
 						//leg 1,3,5
-						followPeeInB[6*i+3]=ODP.startPeeInB[6*i+3]+(ODP.endPeeInB[6*i+3]-ODP.startPeeInB[6*i+3])/2*(1-cos((param.count-ODP.countIter-ODP.followCount)*PI/ODP.followCount));
-						followPeeInB[6*i+4]=ODP.startPeeInB[6*i+4]+0.05*(1-cos((param.count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
-						followPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
+                        currentPeeInB[6*i+3]=ODP.startPeeInB[6*i+3]+(ODP.endPeeInB[6*i+3]-ODP.startPeeInB[6*i+3])/2*(1-cos((param.count-ODP.countIter-ODP.followCount)*PI/ODP.followCount));
+                        currentPeeInB[6*i+4]=ODP.startPeeInB[6*i+4]+0.05*(1-cos((param.count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
+                        currentPeeInB[6*i+5]=ODP.startPeeInB[6*i+5];
 						//leg 0,2,4
-						followPeeInB[6*i]=ODP.endPeeInB[6*i];
-						followPeeInB[6*i+1]=ODP.endPeeInB[6*i+1];
-						followPeeInB[6*i+2]=ODP.endPeeInB[6*i+2];
+                        currentPeeInB[6*i]=ODP.endPeeInB[6*i];
+                        currentPeeInB[6*i+1]=ODP.endPeeInB[6*i+1];
+                        currentPeeInB[6*i+2]=ODP.endPeeInB[6*i+2];
 					}
 				}
 				robot.SetPeb(ODP.nowPE);
-				robot.SetPee(followPeeInB,robot.body());
+                robot.SetPee(currentPeeInB,robot.body());
 
 				if(param.count-ODP.countIter+1==2*ODP.followCount)
 				{
@@ -3972,7 +3988,7 @@ namespace ForceTask
 
 				if (ODP.downwardFlag)
 				{
-					if(isPull==false)
+                    if(isLeft==false)
 					{
 						Fbody[1]=-cos((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
 						Fbody[0]=sin((param.count-ODP.countIter)*PI/ODP.downwardCount/2);
@@ -4066,7 +4082,7 @@ namespace ForceTask
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,yBodyInB,ODP.yNowInG);
 
                     ODP.now2startDistanceInB[0]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.xNowInG);
-                    ODP.now2startDistanceInB[1]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.yNowInG)+h0;
+                    ODP.now2startDistanceInB[1]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.yNowInG)-h0;
 					ODP.now2startDistanceInB[2]=0;
 
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,ODP.now2startDistanceInB,ODP.now2startDistanceInG);
@@ -4090,7 +4106,7 @@ namespace ForceTask
 
 					if(param.count-ODP.countIter+1==ODP.now2StartCount)
 					{
-						if(isConfirm==true)
+                        if(isConfirm==true)
 						{
 							ODP.pushState=PushState::leftWalk;
 							ODP.countIter=param.count+1;
@@ -4116,7 +4132,40 @@ namespace ForceTask
 
 					ODP.ret=Robots::walkGait(robot,ODP.walkParam);
 
-					if(ODP.ret==0)
+                    if(ODP.ret==0)
+                    {
+                        ODP.pushState=PushState::adjustLeg;
+                        ODP.countIter=param.count+1;
+                        robot.GetPeb(ODP.nowPE);
+                        robot.GetPee(ODP.startPeeInB,robot.body());
+                    }
+                    break;
+
+                case PushState::adjustLeg:
+                    for(int i=0;i<6;i++)
+                    {
+                        if(i==1) //leg 1
+                        {
+                            currentPeeInB[3*i]=ODP.startPeeInB[6*i]+d1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
+                            currentPeeInB[3*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+                            currentPeeInB[3*i+2]=ODP.startPeeInB[6*i+2];
+                        }
+                        else if(i==4) //leg 4
+                        {
+                            currentPeeInB[3*i]=ODP.startPeeInB[6*i]-d1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
+                            currentPeeInB[3*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+                            currentPeeInB[3*i+2]=ODP.startPeeInB[6*i+2];
+                        }
+                        else
+                        {
+                            currentPeeInB[3*i]=ODP.startPeeInB[3*i];
+                            currentPeeInB[3*i+1]=ODP.startPeeInB[3*i+1];
+                            currentPeeInB[3*i+2]=ODP.startPeeInB[3*i+2];
+                        }
+                    }
+                    robot.SetPeb(ODP.nowPE);
+                    robot.SetPee(currentPeeInB,robot.body());
+                    if(param.count-ODP.countIter+1==ODP.followCount)
 					{
 						if(isConfirm==true)
 						{
@@ -4216,7 +4265,6 @@ namespace ForceTask
 
 				robot.GetPmb(*bodyPm);
 				robot.GetPeb(bodyPE);
-				double pBody[6];
 				aris::dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
 				aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
 				aris::dynamic::s_pm2pe(*realPm,realPE,"313");
@@ -4261,7 +4309,6 @@ namespace ForceTask
 
 			robot.GetPmb(*bodyPm);
 			robot.GetPeb(bodyPE);
-			double pBody[6];
 			aris::dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
 			aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
 			aris::dynamic::s_pm2pe(*realPm,realPE,"313");
