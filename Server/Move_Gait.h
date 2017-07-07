@@ -14,7 +14,6 @@
 
 using namespace aris::control;
 
-//static const double PI = 3.141592653589793;
 namespace NormalGait
 {
 	enum WalkState
@@ -37,7 +36,7 @@ namespace NormalGait
 		double targetBodyPE213[6]{0};
 		std::int32_t totalCount;
 	};
-	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+    void parseMoveWithRotate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	void StartRecordData();
@@ -47,12 +46,12 @@ namespace NormalGait
 
 namespace ForceTask
 {
-	void parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+    void parseContinueMoveBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    void parseContinueMoveJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
-    void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+    void parseOpenDoorBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    void parseOpenDoorJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
     void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
@@ -167,7 +166,7 @@ namespace ForceTask
 	public:
 		ForceWalk();
 		~ForceWalk();
-		static void parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+        static void parseForceWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 		static int forceWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	private:
@@ -255,7 +254,7 @@ namespace FastWalk
 	public:
 		FastWalkPY();
 		~FastWalkPY();
-		static void parseFastWalkByPY(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+        static void parseFastWalkByPY(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 		static int fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	private:
@@ -279,7 +278,7 @@ namespace FastWalk
 		public:
 			JointSpaceWalk();
 			~JointSpaceWalk();
-			static void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+            static void parseJointSpaceFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 			static int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 		private:

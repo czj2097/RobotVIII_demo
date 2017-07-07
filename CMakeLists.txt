@@ -25,11 +25,11 @@ FUNCTION(PREPEND_H var prefix)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND_H)
 
-project(CMakeDemo_by_PY)
+project(robot_app)
 
 if(UNIX)
-	set(CMAKE_C_COMPILER "/usr/bin/gcc")
-	set(CMAKE_CXX_COMPILER "/usr/bin/g++")
+	set(CMAKE_C_COMPILER "/usr/bin/gcc-4.8")
+	set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.8")
 #	set(CMAKE_C_COMPILER "/usr/bin/clang")
 #	set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 endif(UNIX)
@@ -59,34 +59,24 @@ endif(UNIX)
 
 # set include and lib folders
 if(UNIX)
-
+set(GENERAL_INCL_DIR "/usr/Aris_Dependent")
 set(SYSTEM_LINK_LIB pthread)
-set(XENOMAI_INCL_DIR "/usr/xenomai/include")
-set(XENOMAI_LINK_DIR "/usr/xenomai/lib")
+set(XENOMAI_INCL_DIR "/usr/Aris_Dependent/xenomai/include")
+set(XENOMAI_LINK_DIR "/usr/Aris_Dependent/xenomai/lib")
 set(XENOMAI_LINK_LIB native rtdm xenomai)
-set(ETHERLAB_INCL_DIR "/opt/etherlab/include")
-set(ETHERLAB_LINK_DIR "/opt/etherlab/lib")
-set(ETHERLAB_LINK_LIB ethercat rt)
-set(XSENS_INCL_DIR "/usr/IMU/include")
-set(XSENS_LINK_LIB IMU xcommunication xstypes)
-set(XSENS_LINK_DIR "/usr/IMU/lib")
-set(XNNITE_INCL_DIR "/usr/include/nite")#Driver for kinect
-set(XNNITE_LINK_DIR "/usr/lib")
-set(XNNITE_LINK_LIB )
-set(OPENNI_INCL_DIR "/usr/include/ni")#open NI for kinect
-set(OPENNI_LINK_DIR "/usr/lib")
-set(OPENNI_LINK_LIB OpenNI)
-set(ARIS_INCL_DIR "/usr/aris2/include")
-set(ARIS_LINK_DIR "/usr/aris2/lib")
-set(ARIS_LINK_LIB aris_server aris_sensor aris_dynamic aris_control aris_core)
-set(ROBOTS_INCL_DIR "/usr/Robots2/include")
-set(ROBOTS_LINK_DIR "/usr/Robots2/lib")
-set(EIGEN_INCL_DIR "/usr/local/include/eigen3")
+set(ETHERLAB_INCL_DIR "/usr/Aris_Dependent/etherlab/include")
+set(ETHERLAB_LINK_DIR "/usr/Aris_Dependent/etherlab/lib")
+set(ETHERLAB_LINK_LIB ethercat_rtdm rt)
+set(ARIS_INCL_DIR "/usr/aris/include")
+set(ARIS_LINK_DIR "/usr/aris/lib")
+set(ARIS_LINK_LIB aris_server aris_dynamic aris_control aris_core)
+set(ROBOTS_INCL_DIR "/usr/Robots/include")
+set(ROBOTS_LINK_DIR "/usr/Robots/lib")
 set(ROBOTS_LINK_LIB Robot_Type_I Robot_Type_II Robot_Base)
 
-set(ALL_INCL_DIR ${ROBOTS_INCL_DIR} ${ARIS_INCL_DIR} ${OPENNI_INCL_DIR} ${XNNITE_INCL_DIR} ${XSENS_INCL_DIR} ${ETHERLAB_INCL_DIR} ${XENOMAI_INCL_DIR} ${EIGEN_INCL_DIR})
-set(ALL_LINK_DIR ${ROBOTS_LINK_DIR} ${ARIS_LINK_DIR} ${OPENNI_LINK_DIR} ${XNNITE_LINK_DIR} ${XSENS_LINK_DIR} ${ETHERLAB_LINK_DIR} ${XENOMAI_LINK_DIR})
-set(ALL_LINK_LIB ${ROBOTS_LINK_LIB} ${ARIS_LINK_LIB} ${OPENNI_LINK_LIB} ${XNNITE_LINK_LIB} ${XSENS_LINK_LIB} ${ETHERLAB_LINK_LIB} ${XENOMAI_LINK_LIB} ${SYSTEM_LINK_LIB})
+set(ALL_INCL_DIR ${ROBOTS_INCL_DIR} ${ARIS_INCL_DIR} ${ETHERLAB_INCL_DIR} ${XENOMAI_INCL_DIR} ${GENERAL_INCL_DIR})
+set(ALL_LINK_DIR ${ROBOTS_LINK_DIR} ${ARIS_LINK_DIR} ${ETHERLAB_LINK_DIR} ${XENOMAI_LINK_DIR})
+set(ALL_LINK_LIB ${ROBOTS_LINK_LIB} ${ARIS_LINK_LIB} ${ETHERLAB_LINK_LIB} ${XENOMAI_LINK_LIB} ${SYSTEM_LINK_LIB})
 endif(UNIX)
 if(WIN32)
 set(GENERAL_INCL_DIR "C:/Aris_Dependent")
@@ -119,8 +109,6 @@ target_link_libraries(Server ${ALL_LINK_LIB})
 add_executable(rbt Client/client.cpp)
 target_link_libraries(rbt ${ALL_LINK_LIB})
 
-add_executable(LogReader Server/LogReader.cpp)
-
 ################################### install ####################################
 if(UNIX)
 	set(CMAKE_INSTALL_PREFIX "/usr/Robots/CMakeDemo/")
@@ -130,3 +118,29 @@ if(WIN32)
 endif(WIN32)
 
 install(TARGETS Server rbt RUNTIME DESTINATION bin)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

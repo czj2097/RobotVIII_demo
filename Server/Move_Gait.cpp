@@ -1,5 +1,4 @@
 ﻿#include "Move_Gait.h"
-#include "rtdk.h"
 
 #ifdef UNIX
 #include "rtdk.h"
@@ -18,7 +17,7 @@ Pipe<FastWalk::outputParam> fastWalkPipe(true);
 
 namespace NormalGait
 {
-	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void parseMoveWithRotate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		MoveRotateParam param;
 
@@ -26,31 +25,31 @@ namespace NormalGait
 		{
 			if(i.first=="u")
 			{
-				param.targetBodyPE213[0]=stod(i.second);
+                param.targetBodyPE213[0]=std::stod(i.second);
 			}
 			else if(i.first=="v")
 			{
-				param.targetBodyPE213[1]=stod(i.second);
+                param.targetBodyPE213[1]=std::stod(i.second);
 			}
 			else if(i.first=="w")
 			{
-				param.targetBodyPE213[2]=stod(i.second);
+                param.targetBodyPE213[2]=std::stod(i.second);
 			}
 			else if(i.first=="yaw")
 			{
-				param.targetBodyPE213[3]=stod(i.second)*PI/180;
+                param.targetBodyPE213[3]=std::stod(i.second)*PI/180;
 			}
 			else if(i.first=="pitch")
 			{
-				param.targetBodyPE213[4]=stod(i.second)*PI/180;
+                param.targetBodyPE213[4]=std::stod(i.second)*PI/180;
 			}
 			else if(i.first=="roll")
 			{
-				param.targetBodyPE213[5]=stod(i.second)*PI/180;
+                param.targetBodyPE213[5]=std::stod(i.second)*PI/180;
 			}
 			else if(i.first=="totalCount")
 			{
-				param.totalCount=stoi(i.second);
+                param.totalCount=std::stoi(i.second);
 			}
 			else
 			{
@@ -2333,7 +2332,7 @@ namespace FastWalk
 	FastWalkPY::~FastWalkPY()
 	{
 	}
-	void FastWalkPY::parseFastWalkByPY(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void FastWalkPY::parseFastWalkByPY(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		FastWalkByPYParam param;
 
@@ -2344,7 +2343,7 @@ namespace FastWalk
 		{
 			if(i.first=="n")
 			{
-				param.n=stoi(i.second);
+                param.n=std::stoi(i.second);
 			}
 			else
 			{
@@ -2725,7 +2724,7 @@ namespace FastWalk
 	{
 	}
 
-	void JointSpaceWalk::parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void JointSpaceWalk::parseJointSpaceFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		JointSpaceWalkParam param;
 
@@ -2738,7 +2737,7 @@ namespace FastWalk
 			}
 			else if(i.first=="acc")
 			{
-				bodyAcc=stod(i.second);
+                bodyAcc=std::stod(i.second);
                 walkState=NormalGait::WalkState::ForwardAcc;
 			}
 			else if(i.first=="stop")
@@ -2747,15 +2746,15 @@ namespace FastWalk
 			}
 			else if(i.first=="totalCount")
 			{
-				totalCount=stoi(i.second);
+                totalCount=std::stoi(i.second);
 			}
 			else if(i.first=="height")
 			{
-				height=stod(i.second);
+                height=std::stod(i.second);
 			}
 			else if(i.first=="beta")
 			{
-				beta=stod(i.second);
+                beta=std::stod(i.second);
 			}
 			else
 			{
@@ -3018,12 +3017,6 @@ namespace FastWalk
 			}
 		}
 
-        /*
-        //test IMU//
-        double eul[3];
-        param.imu_data->toEulBody2Ground(eul,"213");
-        rt_printf("eul:%.4f,%.4f,%.4f\n",eul[0],eul[1],eul[2]);*/
-
 		robot.GetPin(OPP.outputPin);
 		robot.GetPee(OPP.outputPee,robot.body());
 		fastWalkPipe.sendToNrt(OPP);
@@ -3261,7 +3254,7 @@ namespace ForceTask
     std::atomic_bool isLeft;
 	std::atomic_bool isConfirm;
 
-	void parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void parseContinueMoveBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		ContinueMoveParam param;
 
@@ -3269,27 +3262,27 @@ namespace ForceTask
 		{
 			if(i.first=="u")
 			{
-				moveDir[0]=stoi(i.second);
+                moveDir[0]=std::stoi(i.second);
 			}
 			else if(i.first=="v")
 			{
-				moveDir[1]=stoi(i.second);
+                moveDir[1]=std::stoi(i.second);
 			}
 			else if(i.first=="w")
 			{
-				moveDir[2]=stoi(i.second);
+                moveDir[2]=std::stoi(i.second);
 			}
 			else if(i.first=="yaw")
 			{
-				moveDir[3]=stoi(i.second);
+                moveDir[3]=std::stoi(i.second);
 			}
 			else if(i.first=="pitch")
 			{
-				moveDir[4]=stoi(i.second);
+                moveDir[4]=std::stoi(i.second);
 			}
 			else if(i.first=="roll")
 			{
-				moveDir[5]=stoi(i.second);
+                moveDir[5]=std::stoi(i.second);
 			}
 			else
 			{
@@ -3305,7 +3298,7 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
-	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void parseContinueMoveJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		for(auto &i:params)
 		{
@@ -3325,27 +3318,27 @@ namespace ForceTask
 			}
 			else if(i.first=="u")
 			{
-				moveDir[0]=stoi(i.second);
+                moveDir[0]=std::stoi(i.second);
 			}
 			else if(i.first=="v")
 			{
-				moveDir[1]=stoi(i.second);
+                moveDir[1]=std::stoi(i.second);
 			}
 			else if(i.first=="w")
 			{
-				moveDir[2]=stoi(i.second);
+                moveDir[2]=std::stoi(i.second);
 			}
 			else if(i.first=="yaw")
 			{
-				moveDir[3]=stoi(i.second);
+                moveDir[3]=std::stoi(i.second);
 			}
 			else if(i.first=="pitch")
 			{
-				moveDir[4]=stoi(i.second);
+                moveDir[4]=std::stoi(i.second);
 			}
 			else if(i.first=="roll")
 			{
-				moveDir[5]=stoi(i.second);
+                moveDir[5]=std::stoi(i.second);
 			}
 			else
 			{
@@ -3502,7 +3495,7 @@ namespace ForceTask
 		}
 	}
 
-	void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void parseOpenDoorBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		ContinueMoveParam param;
 
@@ -3511,27 +3504,27 @@ namespace ForceTask
 
 			if(i.first=="u")
 			{
-				moveDir[0]=stoi(i.second);
+                moveDir[0]=std::stoi(i.second);
 			}
 			else if(i.first=="v")
 			{
-				moveDir[1]=stoi(i.second);
+                moveDir[1]=std::stoi(i.second);
 			}
 			else if(i.first=="w")
 			{
-				moveDir[2]=stoi(i.second);
+                moveDir[2]=std::stoi(i.second);
 			}
 			else if(i.first=="yaw")
 			{
-				moveDir[3]=stoi(i.second);
+                moveDir[3]=std::stoi(i.second);
 			}
 			else if(i.first=="pitch")
 			{
-				moveDir[4]=stoi(i.second);
+                moveDir[4]=std::stoi(i.second);
 			}
 			else if(i.first=="roll")
 			{
-				moveDir[5]=stoi(i.second);
+                moveDir[5]=std::stoi(i.second);
 			}
 			else
 			{
@@ -3548,7 +3541,7 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
-	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void parseOpenDoorJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		for(auto &i:params)
 		{
@@ -3582,27 +3575,27 @@ namespace ForceTask
 			}
 			else if(i.first=="u")
 			{
-				moveDir[0]=stoi(i.second);
+                moveDir[0]=std::stoi(i.second);
 			}
 			else if(i.first=="v")
 			{
-				moveDir[1]=stoi(i.second);
+                moveDir[1]=std::stoi(i.second);
 			}
 			else if(i.first=="w")
 			{
-				moveDir[2]=stoi(i.second);
+                moveDir[2]=std::stoi(i.second);
 			}
 			else if(i.first=="yaw")
 			{
-				moveDir[3]=stoi(i.second);
+                moveDir[3]=std::stoi(i.second);
 			}
 			else if(i.first=="pitch")
 			{
-				moveDir[4]=stoi(i.second);
+                moveDir[4]=std::stoi(i.second);
 			}
 			else if(i.first=="roll")
 			{
-				moveDir[5]=stoi(i.second);
+                moveDir[5]=std::stoi(i.second);
 			}
 			else
 			{
@@ -3690,8 +3683,13 @@ namespace ForceTask
 				robot.GetPeb(ODP.startPE);
 			}
             double forceInF[6];
-            forceInit(param.count,param.force_data->at(0).fce,forceInF);
-            aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,ODP.forceInB);
+            double pmF2B[4][4] {1,0,0,0,
+                               0,0,1,0,
+                               0,-1,0,0,
+                               0,0,0,1};
+            forceInit(param.count,param.ruicong_data->at(0).force[0].fce,forceInF);
+            aris::dynamic::s_f2f(*pmF2B,forceInF,ODP.forceInB);
+            //aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,ODP.forceInB);
 
 			switch(ODP.moveState)
 			{
@@ -3881,7 +3879,7 @@ namespace ForceTask
 							ODP.vector1[i]=ODP.handlePE[i]-ODP.beginPE[i];
 						}
 					}
-					else if (fabs(ODP.forceInB[0])<=ForceRange[0] && param.count-ODP.countIter>7500)
+                    else if (fabs(ODP.forceInB[0])<=ForceRange[0] && param.count-ODP.countIter>5000)
 					{
 						ODP.countIter=param.count+1;
 						robot.GetPee(ODP.startPeeInB,robot.body());
@@ -3915,7 +3913,7 @@ namespace ForceTask
 						robot.GetPeb(ODP.handlePE);
 						ODP.moveState=MoveState::Leftward;
 					}
-					else if (fabs(ODP.forceInB[0])<ForceRange[0] && param.count-ODP.countIter>7500)
+                    else if (fabs(ODP.forceInB[0])<ForceRange[0] && param.count-ODP.countIter>5000)
 					{
 						ODP.countIter=param.count+1;
 						robot.GetPee(ODP.startPeeInB,robot.body());
@@ -4275,7 +4273,7 @@ namespace ForceTask
 			}
 			if (param.count%100==0)
 			{
-				rt_printf("moveState:%d,forceRaw:%f,%f,%f,force:%f,%f,%f\n",ODP.moveState,param.force_data->at(0).Fx,param.force_data->at(0).Fy,param.force_data->at(0).Fz,ODP.forceInB[0],ODP.forceInB[1],ODP.forceInB[2]);
+                rt_printf("moveState:%d,forceRaw:%f,%f,%f,force:%f,%f,%f\n",ODP.moveState,param.force_data->at(0).force[0].Fx,param.force_data->at(0).force[0].Fy,param.force_data->at(0).force[0].Fz,ODP.forceInB[0],ODP.forceInB[1],ODP.forceInB[2]);
 			}
 
 			//Aris::Dynamic::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
@@ -4384,7 +4382,7 @@ namespace ForceTask
 	{
 	}
 
-	void ForceWalk::parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void ForceWalk::parseForceWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		ForceWalkParam param;
 
@@ -4397,12 +4395,12 @@ namespace ForceTask
 			}
             else if(i.first=="forwardAcc")
 			{
-                forwardAcc=stod(i.second);
+                forwardAcc=std::stod(i.second);
                 walkState=NormalGait::WalkState::ForwardAcc;
 			}
             else if(i.first=="betaAcc")
             {
-                turnAcc=stod(i.second);
+                turnAcc=std::stod(i.second);
                 walkState=NormalGait::WalkState::TurnAcc;
             }
 			else if(i.first=="stop")
@@ -4411,23 +4409,23 @@ namespace ForceTask
 			}
 			else if(i.first=="totalCount")
 			{
-                totalCount=stoi(i.second);
+                totalCount=std::stoi(i.second);
 			}
 			else if(i.first=="height")
 			{
-                height_tmp=stod(i.second);
+                height_tmp=std::stod(i.second);
 			}
             else if(i.first=="roll")
 			{
-                inputEul_tmp[2]=stod(i.second);
+                inputEul_tmp[2]=std::stod(i.second);
 			}
             else if(i.first=="pitch")
             {
-                inputEul_tmp[1]=stod(i.second);
+                inputEul_tmp[1]=std::stod(i.second);
             }
             else if(i.first=="alpha")
             {
-                alpha_tmp=stod(i.second);
+                alpha_tmp=std::stod(i.second);
             }
 			else
 			{
@@ -4523,7 +4521,7 @@ namespace ForceTask
         {
             if(legID==0 || legID==1)
             {
-                param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
+                //param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
                 for (int i=0;i<3;i++)
                 {
                     if(bodyEul213[i]>PI)
