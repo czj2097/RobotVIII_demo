@@ -4273,7 +4273,7 @@ namespace ForceTask
 			}
 			if (param.count%100==0)
 			{
-                rt_printf("moveState:%d,forceRaw:%f,%f,%f,force:%f,%f,%f\n",ODP.moveState,param.force_data->at(0).force[0].Fx,param.force_data->at(0).force[0].Fy,param.force_data->at(0).force[0].Fz,ODP.forceInB[0],ODP.forceInB[1],ODP.forceInB[2]);
+                rt_printf("moveState:%d,forceRaw:%f,%f,%f,force:%f,%f,%f\n",ODP.moveState,param.ruicong_data->at(0).force[0].Fx,param.ruicong_data->at(0).force[0].Fy,param.ruicong_data->at(0).force[0].Fz,ODP.forceInB[0],ODP.forceInB[1],ODP.forceInB[2]);
 			}
 
 			//Aris::Dynamic::s_pm_dot_pnt(*bodyPm,ODP.toolInR,ODP.toolInG);
