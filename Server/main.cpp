@@ -123,8 +123,12 @@ int main(int argc, char *argv[])
 	}
 	else if (std::string(argv[1]) == "VIII")
 	{
-		xml_address = "/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml";
+        xml_address = "../../resource/Robot_VIII.xml";
 	}
+    else if (std::string(argv[1]) == "EDU2")
+    {
+        xml_address = "../../resource/RobotEDU2.xml";
+    }
 	else
 	{
 		throw std::runtime_error("invalid robot name, please type in III or VIII");
