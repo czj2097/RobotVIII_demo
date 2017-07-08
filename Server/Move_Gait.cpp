@@ -160,7 +160,7 @@ namespace FastWalk
 
 
 		Robots::RobotTypeI rbt;
-		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
         double f_s[18]{0};
         double df_s[18]{0};
@@ -256,9 +256,9 @@ namespace FastWalk
 			//}
 		}
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Jvi.txt",*outputJvi,2001,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dJvi_t.txt",*outputdJvi_t,2001,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
+        aris::dynamic::dlmwrite("../../build/bin/Jvi.txt",*outputJvi,2001,9);
+        aris::dynamic::dlmwrite("../../build/bin/dJvi_t.txt",*outputdJvi_t,2001,9);
+        aris::dynamic::dlmwrite("../../build/bin/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
 
 
 
@@ -276,7 +276,7 @@ namespace FastWalk
 
 
         Robots::RobotTypeI rbt;
-        rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
         double initPeb[6] {0};
         double initVeb[6] {0};
@@ -770,7 +770,7 @@ namespace FastWalk
             ki_test++;
         }
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/test_ds_k.txt",output_ds_k,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/test_ds_k.txt",output_ds_k,1800,1);
 
 
         /**********calculate final trajectory**********/
@@ -907,38 +907,38 @@ namespace FastWalk
             }
         }
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,totalCount,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,2*totalCount,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,2*totalCount,9);
+        aris::dynamic::dlmwrite("../../build/bin/real_s.txt",real_s,totalCount,1);
+        aris::dynamic::dlmwrite("../../build/bin/real_Pee.txt",real_Pee,2*totalCount,9);
+        aris::dynamic::dlmwrite("../../build/bin/real_Pin.txt",real_Pin,2*totalCount,9);
         delete [] real_s;
         delete [] real_Pee;
         delete [] real_Pin;
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt",*output_dsds,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_fsB.txt",*output_fsB,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_Lmt.txt",*output_Lmt,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstL.txt",*output_ConstL,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ConstH.txt",*output_ConstH,1800,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*output_ValueL,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*output_ValueH,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1800,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_max.txt",*ds_max,1800,4);
+        aris::dynamic::dlmwrite("../../build/bin/param_dsds1.txt",*output_dsds1,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dsds2.txt",*output_dsds2,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dsds.txt",*output_dsds,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dds.txt",*output_dds,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_fsB.txt",*output_fsB,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_Lmt.txt",*output_Lmt,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_ConstL.txt",*output_ConstL,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_ConstH.txt",*output_ConstH,1800,18);
+        aris::dynamic::dlmwrite("../../build/bin/max_ValueL.txt",*output_ValueL,1800,4);
+        aris::dynamic::dlmwrite("../../build/bin/min_ValueH.txt",*output_ValueH,1800,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1800,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1800,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_max.txt",*ds_max,1800,4);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",real_ddsMax,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",real_ddsMin,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",ds_forward,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",ds_backward,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",dds_forward,1800,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",dds_backward,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/dds_max.txt",real_ddsMax,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/dds_min.txt",real_ddsMin,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/ds_forward.txt",ds_forward,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/ds_backward.txt",ds_backward,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/dds_forward.txt",dds_forward,1800,1);
+        aris::dynamic::dlmwrite("../../build/bin/dds_backward.txt",dds_backward,1800,1);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,1800,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,1800,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,1800,9);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,1800,9);
+        aris::dynamic::dlmwrite("../../build/bin/Pee.txt",*output_Pee,1800,9);
+        aris::dynamic::dlmwrite("../../build/bin/Pin.txt",*output_Pin,1800,9);
+        aris::dynamic::dlmwrite("../../build/bin/Vin.txt",*output_Vin,1800,9);
+        aris::dynamic::dlmwrite("../../build/bin/Ain.txt",*output_Ain,1800,9);
 
 
         gettimeofday(&tpend,NULL);
@@ -954,7 +954,7 @@ namespace FastWalk
 
 
         Robots::RobotTypeI rbt;
-        rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
         double stepH {0.1};
         double stepD {0.8};
@@ -2272,49 +2272,49 @@ namespace FastWalk
 
         printf("Iteration finished, iterCount=%d, maxTime=%.4f, timeArray:%.4f,%.4f\n\n",iterCount,maxTime,timeArray[0][0],timeArray[1][0]);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_PeeB.txt",*output_PeeB,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds1.txt",*output_dsds1,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds2.txt",*output_dsds2,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds1.txt",*output_ds1,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds2.txt",*output_ds2,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt",*output_const1,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt",*output_const2,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const.txt", *output_const, sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_PeeB.txt",*output_PeeB,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dsds1.txt",*output_dsds1,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dsds2.txt",*output_dsds2,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dsds.txt", *output_dsds, sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_ds1.txt",*output_ds1,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_ds2.txt",*output_ds2,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_ds.txt", *output_ds, sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_const1.txt",*output_const1,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_const2.txt",*output_const2,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_const.txt", *output_const, sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_dds.txt",*output_dds,sTotalCount,18);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a1.txt",*output_a1,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0L.txt",*output_a0L,sTotalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0H.txt",*output_a0H,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_a2.txt",*output_a2,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_a1.txt",*output_a1,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_a0L.txt",*output_a0L,sTotalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/param_a0H.txt",*output_a0H,sTotalCount,18);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*dds_lowBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*dds_upBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_vLmt.txt",*ds_upBound_vLmt,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound.txt",*ds_lowBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound.txt",*ds_upBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",*real_ddsMax,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",*real_ddsMin,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",*ds_forward,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",*ds_backward,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",*dds_forward,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",*dds_backward,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/max_ValueL.txt",*dds_lowBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/min_ValueH.txt",*dds_upBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_bound_vLmt.txt",*ds_upBound_vLmt,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_lowBound.txt",*ds_lowBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_upBound.txt",*ds_upBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/dds_max.txt",*real_ddsMax,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/dds_min.txt",*real_ddsMin,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_forward.txt",*ds_forward,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/ds_backward.txt",*ds_backward,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/dds_forward.txt",*dds_forward,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/dds_backward.txt",*dds_backward,sTotalCount,4);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds.txt",*real_ds,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds.txt",*real_dds,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/real_ds.txt",*real_ds,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/real_dds.txt",*real_dds,sTotalCount,4);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray.txt",*timeArray_tmp,sTotalCount,4);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pb_sw.txt",pb_sw,sTotalCount,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/vb_sw.txt",vb_sw,sTotalCount,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ab_sw.txt",ab_sw,sTotalCount,1);
+        aris::dynamic::dlmwrite("../../build/bin/timeArray.txt",*timeArray_tmp,sTotalCount,4);
+        aris::dynamic::dlmwrite("../../build/bin/pb_sw.txt",pb_sw,sTotalCount,1);
+        aris::dynamic::dlmwrite("../../build/bin/vb_sw.txt",vb_sw,sTotalCount,1);
+        aris::dynamic::dlmwrite("../../build/bin/ab_sw.txt",ab_sw,sTotalCount,1);
 
-        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,sTotalCount,9);
-        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,sTotalCount,9);
-        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,sTotalCount,9);
-        //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,sTotalCount,9);
+        //aris::dynamic::dlmwrite("../../build/bin/Pee.txt",*output_Pee,sTotalCount,9);
+        //aris::dynamic::dlmwrite("../../build/bin/Pin.txt",*output_Pin,sTotalCount,9);
+        //aris::dynamic::dlmwrite("../../build/bin/Vin.txt",*output_Vin,sTotalCount,9);
+        //aris::dynamic::dlmwrite("../../build/bin/Ain.txt",*output_Ain,sTotalCount,9);
 
 
         gettimeofday(&tpend,NULL);
@@ -2376,7 +2376,7 @@ namespace FastWalk
     void FastWalkPYAnalyse()
 	{
 		Robots::RobotTypeI rbt;
-		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
 		double pIn_acc[900][19];
 		double pIn_const[1800][19];
@@ -2418,7 +2418,7 @@ namespace FastWalk
     void WalkPYAnalyse()//ellipse traj
 	{
 		Robots::RobotTypeI rbt;
-		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
         printf("wk analyse begin\n");
 		Robots::WalkParam param;
@@ -2443,10 +2443,10 @@ namespace FastWalk
 			rbt.GetPin(*pIn+18*param.count);
 		}
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEB.txt",*pEB,2*param.n*param.totalCount,6);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEE.txt",*pEE,2*param.n*param.totalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pEE_B.txt",*pEE_B,2*param.n*param.totalCount,18);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/wk_pIn.txt",*pIn,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/wk_pEB.txt",*pEB,2*param.n*param.totalCount,6);
+        aris::dynamic::dlmwrite("../../build/bin/wk_pEE.txt",*pEE,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/wk_pEE_B.txt",*pEE_B,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("../../build/bin/wk_pIn.txt",*pIn,2*param.n*param.totalCount,18);
 	}
 
 
@@ -2454,7 +2454,7 @@ namespace FastWalk
 	void screwInterpolationTraj()
 	{
 		Robots::RobotTypeI rbt;
-		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
 		timeval tpstart,tpend;
 		float tused;
@@ -2695,10 +2695,10 @@ namespace FastWalk
 			rbt.GetPee(*pEE_adjust+18*i,rbt.body());
 		}
 
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/vIn.txt",*vIn,3000,18);
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn.txt",*pIn,3000,18);
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pIn_adjust.txt",*pIn_adjust,totalCount,18);
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/pEE_adjust.txt",*pEE_adjust,totalCount,18);
+        aris::dynamic::dlmwrite("../../Server/vIn.txt",*vIn,3000,18);
+        aris::dynamic::dlmwrite("../../Server/pIn.txt",*pIn,3000,18);
+        aris::dynamic::dlmwrite("../../Server/pIn_adjust.txt",*pIn_adjust,totalCount,18);
+        aris::dynamic::dlmwrite("../../Server/pEE_adjust.txt",*pEE_adjust,totalCount,18);
 
 	}
 
@@ -3083,7 +3083,7 @@ namespace FastWalk
 		gettimeofday(&tpstart,NULL);
 
 		Robots::RobotTypeI rbt;
-		rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+        rbt.loadXml("../../resource/Robot_VIII.xml");
 
 		double initPeb[6]{0,0,0,0,0,0};
 		double initPee[18]{ -0.3, -0.85, -0.65,
@@ -3124,7 +3124,7 @@ namespace FastWalk
 			}
 		}
 
-		aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/Server/maxVel.txt",*maxVel,stepDNum*stepHNum*angleNum,18);
+        aris::dynamic::dlmwrite("../../Server/maxVel.txt",*maxVel,stepDNum*stepHNum*angleNum,18);
 
 		gettimeofday(&tpend,NULL);
 		tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
@@ -3644,7 +3644,7 @@ namespace ForceTask
 		double C[6]{50,50,50,50,50,50};
 		double M[6]{1,1,1,1,1,1};
 		double deltaT{0.001};
-		double ForceRange[2]{10,90};
+        double ForceRange[2]{1,9};
 		double forceRatio{1};//1 on RobotIII, 1000 on RobotVIII & single motor
 
 		//Position Generetion From Force
