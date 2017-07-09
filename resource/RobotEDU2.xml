@@ -585,7 +585,7 @@
                     <height abbreviation="h" type="double" default="0"/>
                 </tw_param>
             </tw>
-            <odb>
+            <odb default="odb_param">
                 <odb_param type="group">
                     <u abbreviation="u" type="double" default="0"/>
                     <v abbreviation="v" type="double" default="0"/>
@@ -595,7 +595,7 @@
                     <yaw abbreviation="y" type="double" default="0"/>
                 </odb_param>
             </odb>
-            <odj>
+            <odj default="odj_param">
                 <odj_param type="group">
                     <isForward abbreviation="f" type="int" default="1"/>
                     <isLeft abbreviation="l" type="int" default="0"/>

@@ -3635,9 +3635,9 @@ namespace ForceTask
 		double yBodyInB[3]{0,1,0};
 		double pushBodyPE313[6];//for pause
 		double pushPee[18];//for pause
-		double d0=0.43;//distance from the handle to the middle of the door
-        double d1=0.05;//distance leg 1 & 4 move inside to across the door
-		double h0=0.05;//height from the start position to the walk through position
+		double d0=0.51;//distance from the handle to the middle of the door
+        double d1=0.15;//distance leg 1 & 4 move inside to across the door
+		double h0=0.07;//height from the start position to the walk through position
 
 		//Force Control
 		double Fbody[6]{0,0,0,0,0,0};
@@ -3678,6 +3678,7 @@ namespace ForceTask
 				aris::dynamic::s_pe2pe("313",beginBodyPE,"213",ODP.bodyPE_last);
 				ODP.pauseFlag=false;
 				ODP.moveState_last=MoveState::None;
+				ODP.moveState=MoveState::None;
 
 				//start param of now2start in LocateAjust
 				robot.GetPeb(ODP.startPE);
@@ -3710,7 +3711,7 @@ namespace ForceTask
 				break;
 
 			case MoveState::PointLocate1:
-                if (param.count-ODP.countIter<4000)
+                if (param.count-ODP.countIter<2500)
 				{
 					Fbody[2]=1;
                     if(isLeft==true)
@@ -3723,7 +3724,7 @@ namespace ForceTask
 					Fbody[2]=-1;
 				}
 
-                if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>4000)
+                if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>2500)
 				{
 					ODP.countIter=param.count;
 					robot.GetPeb(ODP.pointLocation2);
@@ -3734,7 +3735,7 @@ namespace ForceTask
 				break;
 
 			case MoveState::PointLocate2:
-                if (param.count-ODP.countIter<4000)
+                if (param.count-ODP.countIter<2500)
 				{
 					Fbody[2]=1;
 					Fbody[1]=1;
@@ -3744,7 +3745,7 @@ namespace ForceTask
 					Fbody[2]=-1;
 				}
 
-                if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>4000)
+                if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>2500)
 				{
 					ODP.countIter=param.count+1;
 					robot.GetPeb(ODP.pointLocation3);
@@ -3784,6 +3785,7 @@ namespace ForceTask
 					ODP.walkParam.alpha=0;
 					ODP.walkParam.totalCount=2000;
 
+                   			ODP.startPE[1]+=h0;
 					rt_printf("yaw:%f,pitch:%f,roll:%f\n",ODP.planeYPR[0],ODP.planeYPR[1],ODP.planeYPR[2]);
 				}
 
@@ -3793,7 +3795,6 @@ namespace ForceTask
 				//1.now2start
 				if(param.count-ODP.countIter<ODP.now2StartCount)
 				{
-                    ODP.startPE[1]+=h0;
 					for (int i=0;i<6;i++)
 					{
 						now2StartPE[i]=ODP.nowPE[i]+(ODP.startPE[i]-ODP.nowPE[i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
@@ -3879,7 +3880,7 @@ namespace ForceTask
 							ODP.vector1[i]=ODP.handlePE[i]-ODP.beginPE[i];
 						}
 					}
-                    else if (fabs(ODP.forceInB[0])<=ForceRange[0] && param.count-ODP.countIter>5000)
+                    else if (fabs(ODP.forceInB[0])<=ForceRange[0] && param.count-ODP.countIter>2500)
 					{
 						ODP.countIter=param.count+1;
 						robot.GetPee(ODP.startPeeInB,robot.body());
@@ -3889,7 +3890,7 @@ namespace ForceTask
 				}
                 else//Right
 				{
-					if (param.count-ODP.countIter>3000)
+					if (param.count-ODP.countIter>2500)
 					{
 						ODP.countIter=param.count;
 						ODP.moveState=MoveState::Downward;
@@ -3913,7 +3914,7 @@ namespace ForceTask
 						robot.GetPeb(ODP.handlePE);
 						ODP.moveState=MoveState::Leftward;
 					}
-                    else if (fabs(ODP.forceInB[0])<ForceRange[0] && param.count-ODP.countIter>5000)
+                    else if (fabs(ODP.forceInB[0])<ForceRange[0] && param.count-ODP.countIter>2500)
 					{
 						ODP.countIter=param.count+1;
 						robot.GetPee(ODP.startPeeInB,robot.body());
@@ -3923,7 +3924,7 @@ namespace ForceTask
 				}
                 else//Leftward
 				{
-					if (param.count-ODP.countIter>3000)
+					if (param.count-ODP.countIter>2500)
 					{
 						ODP.countIter=param.count;
 						ODP.moveState=MoveState::Downward;
@@ -3998,7 +3999,7 @@ namespace ForceTask
 					}
 				}
 
-				if(ODP.downwardFlag==false && fabs(ODP.forceInB[1])>20)
+				if(ODP.downwardFlag==false && fabs(ODP.forceInB[1])>ForceRange[0])
 				{
 					ODP.downwardFlag = true;
 					ODP.countIter=param.count;
@@ -4080,7 +4081,7 @@ namespace ForceTask
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,yBodyInB,ODP.yNowInG);
 
                     ODP.now2startDistanceInB[0]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.xNowInG);
-                    ODP.now2startDistanceInB[1]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.yNowInG)-h0;
+                    ODP.now2startDistanceInB[1]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.yNowInG)-h0+0.04;
 					ODP.now2startDistanceInB[2]=0;
 
 					aris::dynamic::s_pm_dot_v3(*ODP.nowPm,ODP.now2startDistanceInB,ODP.now2startDistanceInG);
@@ -4090,6 +4091,10 @@ namespace ForceTask
 
 			case MoveState::Push:
 				//Three Step using position control
+				if (param.count%100==0)
+				{
+					rt_printf("pushState:%d\n",ODP.pushState);
+				}
 				switch(ODP.pushState)
 				{
 				case PushState::now2Start:
@@ -4144,15 +4149,15 @@ namespace ForceTask
                     {
                         if(i==1) //leg 1
                         {
-                            currentPeeInB[3*i]=ODP.startPeeInB[6*i]+d1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
-                            currentPeeInB[3*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
-                            currentPeeInB[3*i+2]=ODP.startPeeInB[6*i+2];
+                            currentPeeInB[3*i]=ODP.startPeeInB[3*i]+d1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
+                            currentPeeInB[3*i+1]=ODP.startPeeInB[3*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+                            currentPeeInB[3*i+2]=ODP.startPeeInB[3*i+2];
                         }
                         else if(i==4) //leg 4
                         {
-                            currentPeeInB[3*i]=ODP.startPeeInB[6*i]-d1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
-                            currentPeeInB[3*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
-                            currentPeeInB[3*i+2]=ODP.startPeeInB[6*i+2];
+                            currentPeeInB[3*i]=ODP.startPeeInB[3*i]-d1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
+                            currentPeeInB[3*i+1]=ODP.startPeeInB[3*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+                            currentPeeInB[3*i+2]=ODP.startPeeInB[3*i+2];
                         }
                         else
                         {
@@ -4174,7 +4179,7 @@ namespace ForceTask
                             ODP.walkParam.n=6;
 							ODP.walkParam.alpha=0;
 							ODP.walkParam.beta=0;
-                            ODP.walkParam.d=0.3;
+                            ODP.walkParam.d=0.1;
 						}
 						else//for pause, teseted useless
 						{
