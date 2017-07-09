@@ -3688,8 +3688,8 @@ namespace ForceTask
                                0,-1,0,0,
                                0,0,0,1};
             forceInit(param.count,param.ruicong_data->at(0).force[0].fce,forceInF);
-            aris::dynamic::s_f2f(*pmF2B,forceInF,ODP.forceInB);
-            //aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,ODP.forceInB);
+            //aris::dynamic::s_f2f(*pmF2B,forceInF,ODP.forceInB);
+            aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,ODP.forceInB);
 
 			switch(ODP.moveState)
 			{
@@ -4171,10 +4171,10 @@ namespace ForceTask
 							ODP.countIter=param.count+1;
 
 							ODP.walkParam.totalCount=2000;
-							ODP.walkParam.n=4;
+                            ODP.walkParam.n=6;
 							ODP.walkParam.alpha=0;
 							ODP.walkParam.beta=0;
-							ODP.walkParam.d=0.5;
+                            ODP.walkParam.d=0.3;
 						}
 						else//for pause, teseted useless
 						{
