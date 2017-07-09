@@ -3710,7 +3710,7 @@ namespace ForceTask
 				break;
 
 			case MoveState::PointLocate1:
-				if (param.count-ODP.countIter<5000)
+                if (param.count-ODP.countIter<4000)
 				{
 					Fbody[2]=1;
                     if(isLeft==true)
@@ -3723,7 +3723,7 @@ namespace ForceTask
 					Fbody[2]=-1;
 				}
 
-				if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>5000)
+                if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>4000)
 				{
 					ODP.countIter=param.count;
 					robot.GetPeb(ODP.pointLocation2);
@@ -3734,7 +3734,7 @@ namespace ForceTask
 				break;
 
 			case MoveState::PointLocate2:
-				if (param.count-ODP.countIter<5000)
+                if (param.count-ODP.countIter<4000)
 				{
 					Fbody[2]=1;
 					Fbody[1]=1;
@@ -3744,7 +3744,7 @@ namespace ForceTask
 					Fbody[2]=-1;
 				}
 
-				if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>5000)
+                if (fabs(ODP.forceInB[2])>ForceRange[0] && (param.count-ODP.countIter)>4000)
 				{
 					ODP.countIter=param.count+1;
 					robot.GetPeb(ODP.pointLocation3);
@@ -4031,7 +4031,7 @@ namespace ForceTask
 
 				Fbody[2]=1;
 
-				if (param.count-ODP.countIter>2500)
+                if (param.count-ODP.countIter>2000)
 					ODP.moveState=MoveState::Upward;
 
 				break;
@@ -4053,7 +4053,7 @@ namespace ForceTask
 
 				Fbody[2]=-1;
 
-				if (param.count-ODP.countIter>2500)
+                if (param.count-ODP.countIter>2000)
 				{
 					ODP.moveState=MoveState::PrePush;
 				}

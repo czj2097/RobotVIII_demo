@@ -585,6 +585,30 @@
                     <height abbreviation="h" type="double" default="0"/>
                 </tw_param>
             </tw>
+            <odb>
+                <odb_param type="group">
+                    <u abbreviation="u" type="double" default="0"/>
+                    <v abbreviation="v" type="double" default="0"/>
+                    <w abbreviation="w" type="double" default="0"/>
+                    <roll abbreviation="r" type="double" default="0"/>
+                    <pitch abbreviation="p" type="double" default="0"/>
+                    <yaw abbreviation="y" type="double" default="0"/>
+                </odb_param>
+            </odb>
+            <odj>
+                <odj_param type="group">
+                    <isForward abbreviation="f" type="int" default="1"/>
+                    <isLeft abbreviation="l" type="int" default="0"/>
+                    <isQuit abbreviation="q" type="int" default="0"/>
+                    <isConfirm abbreviation="c" type="int" default="0"/>
+                    <u abbreviation="u" type="int" default="0"/>
+                    <v abbreviation="v" type="int" default="0"/>
+                    <w abbreviation="w" type="int" default="0"/>
+                    <roll abbreviation="r" type="int" default="0"/>
+                    <pitch abbreviation="p" type="int" default="0"/>
+                    <yaw abbreviation="y" type="int" default="0"/>
+                </odj_param>
+            </odj>
             <ro/>
         </Commands>
     </Server>
