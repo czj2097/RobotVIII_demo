@@ -1239,6 +1239,14 @@ void TimeOptimalGait::GetOptimalDs()
     while(maxTotalCount!=maxTotalCount_last)
     {
         printf("\n");
+        for(int i=0;i<1801;i++)
+        {
+            for(int j=0;j<3;j++)
+            {
+                ds_backward[i][2*j]=0;
+                ds_forward[i][2*j]=0;
+            }
+        }
         iterCount++;
         maxTotalCount_last=maxTotalCount;
         //generate the traj & calculate the bound of ds
