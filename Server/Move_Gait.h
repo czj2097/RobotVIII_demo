@@ -42,6 +42,16 @@ namespace NormalGait
 	void StartRecordData();
 	void inv3(double * matrix,double * invmatrix);
 	double norm(double * vector_in);
+
+    void testWorkSpace();
+
+    struct AdjustRcParam final :public aris::server::GaitParamBase
+    {
+        double distance {0};
+        std::int32_t totalCount {1500};
+    };
+    void parseAdjustRc(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    int adjustRc(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 }
 
 namespace ForceTask

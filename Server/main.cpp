@@ -26,6 +26,8 @@ int main(int argc, char *argv[])
     //FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
 
+    NormalGait::testWorkSpace();
+
     FastWalk::JointSpaceWalk jointspacewalker;
 	FastWalk::FastWalkPY pyfastwalker;
     ForceTask::ForceWalk forcewalker;
@@ -66,6 +68,7 @@ int main(int argc, char *argv[])
 	rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
 
 	rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
+    rs.addCmd("arc",NormalGait::parseAdjustRc,NormalGait::adjustRc);
 
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);

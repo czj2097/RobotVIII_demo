@@ -88,6 +88,76 @@ namespace NormalGait
 		return param.totalCount - param.count - 1;
 	}
 
+    void parseAdjustRc(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    {
+        AdjustRcParam param;
+
+        for(auto &i:params)
+        {
+            if(i.first=="distance")
+            {
+                param.distance=std::stod(i.second);
+            }
+            else if(i.first=="totalCount")
+            {
+                param.totalCount=std::stoi(i.second);
+            }
+            else
+            {
+                std::cout<<"parse failed"<<std::endl;
+            }
+        }
+
+        msg.copyStruct(param);
+
+        std::cout<<"finished parse"<<std::endl;
+    }
+
+    int adjustRc(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const AdjustRcParam &>(param_in);
+
+        static double StartPeb[6];
+        static double StartPee[18];
+        double currentPee[18];
+        if(param.count==0)
+        {
+            robot.GetPeb(StartPeb);
+            robot.GetPee(StartPee);
+        }
+
+
+        for(int i=0;i<3;i++)//0 2 4
+        {
+            if(param.count<param.totalCount)
+            {
+                currentPee[6*i]=StartPee[6*i]+param.distance/2*sin(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
+                currentPee[6*i+1]=StartPee[6*i+1]+0.05*(1-cos(param.count*2*PI/param.totalCount));
+                currentPee[6*i+2]=StartPee[6*i+2]+param.distance/2*cos(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
+
+                currentPee[6*i+3]=StartPee[6*i+3];
+                currentPee[6*i+4]=StartPee[6*i+4];
+                currentPee[6*i+5]=StartPee[6*i+5];
+            }
+            else
+            {
+                currentPee[6*i]=StartPee[6*i]+param.distance*sin(PI/6+2*i*PI/3);
+                currentPee[6*i+1]=StartPee[6*i+1];
+                currentPee[6*i+2]=StartPee[6*i+2]+param.distance*cos(PI/6+2*i*PI/3);
+
+                currentPee[6*i+3]=StartPee[6*i+3]+param.distance/2*sin(PI/6+(2*i+1)*PI/3)*(1-cos(param.count*PI/param.totalCount));
+                currentPee[6*i+4]=StartPee[3*i+4]+0.05*(1-cos(param.count*2*PI/param.totalCount));
+                currentPee[6*i+5]=StartPee[6*i+5]+param.distance/2*cos(PI/6+(2*i+1)*PI/3)*(1-cos(param.count*PI/param.totalCount));
+            }
+        }
+
+        robot.SetPeb(StartPeb);
+        robot.SetPee(currentPee);
+
+        return 2*param.totalCount - param.count - 1;
+    }
+
 	void StartRecordData()
 	{
 		fastWalkThread = std::thread([&]()
@@ -148,6 +218,35 @@ namespace NormalGait
 	{
 		return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
 	}
+
+    void testWorkSpace()
+    {
+        Robots::RobotTypeI rbt;
+        rbt.loadXml("../../resource/Robot_VIII.xml");
+
+        double Peb[6] {0};
+        double initPee[18] {-0.6*sin(PI/6), -0.58, -0.6*cos(PI/6),
+                        -0.6,           -0.58,  0,
+                        -0.6*sin(PI/6), -0.58,  0.6*cos(PI/6),
+                         0.6*sin(PI/6), -0.58, -0.6*cos(PI/6),
+                         0.6,           -0.58,  0,
+                         0.6*sin(PI/6), -0.58,  0.6*cos(PI/6)};
+
+        double Pee[18] {-0.6*sin(PI/6), -0.58, -0.6*cos(PI/6),
+                        -0.6,           -0.58,  0,
+                        -0.6*sin(PI/6), -0.58,  0.6*cos(PI/6),
+                         0,             -0.58+0.03, -0.61,
+                         0.6,           -0.58,  0,
+                         0.6*sin(PI/6), -0.58,  0.6*cos(PI/6)};
+        double Pin[3];
+
+        rbt.SetPeb(Peb);
+        rbt.SetPee(Pee);
+
+        rbt.pLegs[3]->GetPin(Pin);
+
+        printf("Pin:%.4f, %.4f, %.4f\n", Pin[0],Pin[1],Pin[2]);
+    }
 }
 
 namespace FastWalk
@@ -3630,7 +3729,7 @@ namespace ForceTask
 
 		//PushState
         double currentPeeInB[18];
-		double now2StartPE[6];
+        double now2StartPE[6];
 		double xBodyInB[3]{1,0,0};
 		double yBodyInB[3]{0,1,0};
 		double pushBodyPE313[6];//for pause
