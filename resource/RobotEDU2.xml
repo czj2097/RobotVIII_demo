@@ -599,12 +599,13 @@
                     <roll abbreviation="r" type="double" default="0"/>
                     <pitch abbreviation="p" type="double" default="0"/>
                     <yaw abbreviation="y" type="double" default="0"/>
+                    <isForward abbreviation="f" type="int" default="1"/>
+                    <isLeft abbreviation="l" type="int" default="0"/>
+                    <isJump abbreviation="j" type="int" default="0"/>
                 </odb_param>
             </odb>
             <odj default="odj_param">
                 <odj_param type="group">
-                    <isForward abbreviation="f" type="int" default="1"/>
-                    <isLeft abbreviation="l" type="int" default="0"/>
                     <isQuit abbreviation="q" type="int" default="0"/>
                     <isConfirm abbreviation="c" type="int" default="0"/>
                     <u abbreviation="u" type="int" default="0"/>

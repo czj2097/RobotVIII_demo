@@ -52,6 +52,18 @@ namespace NormalGait
     };
     void parseAdjustRc(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     int adjustRc(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+    struct CircleWalkParam final :public aris::server::GaitParamBase
+    {
+        double startAngle {0};
+        double radius {1};
+        std::int32_t totalCount {1000};
+        std::int32_t n {1};
+        double h {0.05};
+        double beta {0};
+        std::int32_t direction {1};//-1 clockwise, 1 anticlockwise
+    };
+    int circleWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 }
 
 namespace ForceTask
@@ -78,21 +90,29 @@ namespace ForceTask
 		Rightward,
 		Leftward,
 		Follow,
+        Jump,
+        NonJump,
 		Downward,
-		Upward,
 		Pullhandle,
 		Pushhandle,
-		PrePush,
+        PrePull,
+        PrePush,
+        Pull,
 		Push,
 	};
 
 	enum PushState
 	{
-		now2Start,
-		leftWalk,
-        adjustLeg,
-		forwardWalk,
+        push2Start,
+        alignWalk,
+        forwardWalk,
 	};
+
+    enum PullState
+    {
+        pull2Start,
+        circleWalk,
+    };
 
 	struct ContinueMoveParam final :public aris::server::GaitParamBase
 	{
@@ -112,59 +132,63 @@ namespace ForceTask
 	{
 		MoveState moveState;
 		PushState pushState;
-		int ret{0};
-		std::int32_t count;
-		std::int32_t countIter{0};
+        PullState pullState;
+        int ret {0};
+        std::int32_t count {0};
+        std::int32_t countIter {0};
 		Robots::WalkParam walkParam;
 
-		const double toolInR[3]{0,0.08,-0.385};
-		double toolInG[3];
-		double toolVel[3]{0,0,0};
+        const double toolInR[3] {0,0.08,-0.385};
+        double toolInG[3] {0};
+        double toolVel[3] {0};
 
 		//MoveState: PointLocation
-		double pointLocation1[6];
-		double pointLocation2[6];
-		double pointLocation3[6];
-		double location[3][3];
+        double pointLocation1[6] {0};
+        double pointLocation2[6] {0};
+        double pointLocation3[6] {0};
+        double location[3][3] {{0}};
 
 		//Door Location
-		double planeYPR[3]{0,0,0};
-		double handleLocation[3]{0,0,0};
+        double planeYPR[3] {0};
+        double handleLocation[3] {0};
+        const int jumpCount {1000};
+        double jumpStartPe[6] {0};
+        bool isLastFollow;
+
 		//startPE
-		double beginPE[6];
-		double vector0[3];
-        double vector1[3];
-		double vector2[3];
+        double beginPE[6] {0};
+        double vector0[3] {0};
+        double vector1[3] {0};
+        double vector2[3] {0};
 
 		//now2Start used twice
-		double nowPE[6]; //used in Follow again
-		double nowPee[18];
-		double startPE[6];
-		const int now2StartCount{2000};
+        double nowPE[6] {0}; //used in Follow again
+        double nowPee[18] {0};
+        double startPE[6] {0};
+        const int now2StartCount {1000};
 
 		//MoveState: Follow
-		double startPeeInB[18];
-		double endPeeInB[18];
-		const int followCount{2000};
+        double startPeeInB[18] {0};
+        double endPeeInB[18] {0};
+        const int followCount {1000};
 
 		//MoveState: Downward
-		bool downwardFlag;
-		int downwardCount;
+        bool downwardFlag;
+        int downwardCount {0};
 
 		//PushState
-		double handlePE[6];
-		double nowPm[4][4];
-		double xNowInG[3];
-		double yNowInG[3];
-		double now2startDistance[3];
-		double now2startDistanceInB[6]{0,0,0,0,0,0};
-		double now2startDistanceInG[6]{0,0,0,0,0,0};
-		double handle2startDistance[3];
+        double nowPm[4][4] {{0}};
+        double xNowInG[3] {0};
+        double yNowInG[3] {0};
+        double now2startDistance[3] {0};
+        double now2startDistanceInB[6] {0};
+        double now2startDistanceInG[6] {0};
+        double now2startPeeDistInG[3] {0};
 
 		//pause
 		MoveState moveState_last;
 		int pauseCount{0};
-		bool pauseFlag;
+        bool isPause;
 	};
 
 
