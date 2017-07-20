@@ -63,7 +63,18 @@ namespace NormalGait
         double beta {0};
         std::int32_t direction {1};//-1 clockwise, 1 anticlockwise
     };
+    void parseCircleWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     int circleWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+    struct LegWorkParam final :public aris::server::GaitParamBase
+    {
+        double distance {0};
+        std::int32_t totalCount {1000};
+        double h {0.05};
+        double beta {0};
+    };
+    void parseLegWork(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    int legWork(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 }
 
 namespace ForceTask
@@ -105,13 +116,16 @@ namespace ForceTask
 	{
         push2Start,
         alignWalk,
-        forwardWalk,
+        pushWalk,
 	};
 
     enum PullState
     {
         pull2Start,
         circleWalk,
+        legWork,
+        rotate,
+        pullWalk,
     };
 
 	struct ContinueMoveParam final :public aris::server::GaitParamBase
@@ -137,6 +151,7 @@ namespace ForceTask
         std::int32_t count {0};
         std::int32_t countIter {0};
 		Robots::WalkParam walkParam;
+        NormalGait::CircleWalkParam circleWalkParam;
 
         const double toolInR[3] {0,0.08,-0.385};
         double toolInG[3] {0};
@@ -184,6 +199,9 @@ namespace ForceTask
         double now2startDistanceInB[6] {0};
         double now2startDistanceInG[6] {0};
         double now2startPeeDistInG[3] {0};
+
+        //PullState
+        const int legWorkCount {1000};
 
 		//pause
 		MoveState moveState_last;

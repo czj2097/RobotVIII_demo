@@ -133,7 +133,7 @@ namespace NormalGait
             if(param.count<param.totalCount)
             {
                 currentPee[6*i]=StartPee[6*i]+param.distance/2*sin(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
-                currentPee[6*i+1]=StartPee[6*i+1]+0.05*(1-cos(param.count*2*PI/param.totalCount));
+                currentPee[6*i+1]=StartPee[6*i+1]+0.025*(1-cos(param.count*2*PI/param.totalCount));
                 currentPee[6*i+2]=StartPee[6*i+2]+param.distance/2*cos(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
 
                 currentPee[6*i+3]=StartPee[6*i+3];
@@ -146,9 +146,9 @@ namespace NormalGait
                 currentPee[6*i+1]=StartPee[6*i+1];
                 currentPee[6*i+2]=StartPee[6*i+2]+param.distance*cos(PI/6+2*i*PI/3);
 
-                currentPee[6*i+3]=StartPee[6*i+3]+param.distance/2*sin(PI/6+(2*i+1)*PI/3)*(1-cos(param.count*PI/param.totalCount));
-                currentPee[6*i+4]=StartPee[3*i+4]+0.05*(1-cos(param.count*2*PI/param.totalCount));
-                currentPee[6*i+5]=StartPee[6*i+5]+param.distance/2*cos(PI/6+(2*i+1)*PI/3)*(1-cos(param.count*PI/param.totalCount));
+                currentPee[6*i+3]=StartPee[6*i+3]+param.distance/2*sin(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
+                currentPee[6*i+4]=StartPee[3*i+4]+0.025*(1-cos((param.count-param.totalCount)*2*PI/param.totalCount));
+                currentPee[6*i+5]=StartPee[6*i+5]+param.distance/2*cos(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
             }
         }
 
@@ -235,7 +235,7 @@ namespace NormalGait
         double Pee[18] {-0.6*sin(PI/6), -0.58, -0.6*cos(PI/6),
                         -0.6,           -0.58,  0,
                         -0.6*sin(PI/6), -0.58,  0.6*cos(PI/6),
-                         0,             -0.58+0.03, -0.61,
+                         -0.1,          -0.58, -0.5,
                          0.6,           -0.58,  0,
                          0.6*sin(PI/6), -0.58,  0.6*cos(PI/6)};
         double Pin[3];
@@ -246,6 +246,51 @@ namespace NormalGait
         rbt.pLegs[3]->GetPin(Pin);
 
         printf("Pin:%.4f, %.4f, %.4f\n", Pin[0],Pin[1],Pin[2]);
+    }
+
+    void parseCircleWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    {
+        CircleWalkParam param;
+
+        for(auto &i:params)
+        {
+            if(i.first=="startangle")
+            {
+                param.startAngle=std::stod(i.second);
+            }
+            else if(i.first=="radius")
+            {
+                param.radius=std::stod(i.second);
+            }
+            else if(i.first=="totalCount")
+            {
+                param.totalCount=std::stoi(i.second);
+            }
+            else if(i.first=="n")
+            {
+                param.n=std::stoi(i.second);
+            }
+            else if(i.first=="h")
+            {
+                param.h=std::stod(i.second);
+            }
+            else if(i.first=="beta")
+            {
+                param.beta=std::stod(i.second);
+            }
+            else if(i.first=="direction")
+            {
+                param.direction=std::stoi(i.second);
+            }
+            else
+            {
+                std::cout<<"parse failed"<<std::endl;
+            }
+        }
+
+        msg.copyStruct(param);
+
+        std::cout<<"finished parse"<<std::endl;
     }
 
     int circleWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
@@ -271,26 +316,31 @@ namespace NormalGait
         int half_period = param.count/param.totalCount;
         int period = param.count/(2*param.totalCount);
         double bodyStartAngle=param.startAngle+(0.5*half_period-0.25)*param.beta*param.direction;
-        double leg024StartAngle=param.startAngle+(period-0.5)*param.beta*param.direction;
-        double leg135StartAngle=param.startAngle+period*param.beta*param.direction;
+        double legStartAngle0=param.startAngle+(period-0.5)*param.beta*param.direction;
+        double legStartAngle1=param.startAngle+period*param.beta*param.direction;
 
-        if(param.count<param.totalCount)
+        if(param.count<param.totalCount)//acc
         {
             Peb[0]=param.radius*(sin(param.startAngle)-sin(param.startAngle+0.25*param.direction*param.beta*param.count*param.count/param.totalCount/param.totalCount));
             Peb[2]=param.radius*(cos(param.startAngle)-cos(param.startAngle+0.25*param.direction*param.beta*param.count*param.count/param.totalCount/param.totalCount));
 
             for(int i=0;i<3;i++)
             {
-                Pee[6*i]=beginPee[6*i]+param.radius*(sin(param.startAngle)-sin(param.startAngle+0.5*param.direction*param.beta))/2*(1-cos(param.count*PI/param.totalCount));
-                Pee[6*i+1]=beginPee[6*i+1]+0.05*(1-cos(param.count*2*PI/param.totalCount));
-                Pee[6*i+2]=beginPee[6*i+2]+param.radius*(cos(param.startAngle)-cos(param.startAngle+0.5*param.direction*param.beta))/2*(1-cos(param.count*PI/param.totalCount));
-
-                Pee[6*i+3]=beginPee[6*i+3];
-                Pee[6*i+4]=beginPee[6*i+4];
-                Pee[6*i+5]=beginPee[6*i+5];
+                if(param.direction==-1)
+                {
+                    Pee[6*i]=beginPee[6*i]+param.radius*(sin(param.startAngle)-sin(param.startAngle+0.5*param.direction*param.beta))/2*(1-cos(param.count*PI/param.totalCount));
+                    Pee[6*i+1]=beginPee[6*i+1]+0.05*(1-cos(param.count*2*PI/param.totalCount));
+                    Pee[6*i+2]=beginPee[6*i+2]+param.radius*(cos(param.startAngle)-cos(param.startAngle+0.5*param.direction*param.beta))/2*(1-cos(param.count*PI/param.totalCount));
+                }
+                else
+                {
+                    Pee[6*i+3]=beginPee[6*i+3]+param.radius*(sin(param.startAngle)-sin(param.startAngle+0.5*param.direction*param.beta))/2*(1-cos(param.count*PI/param.totalCount));
+                    Pee[6*i+4]=beginPee[6*i+4]+0.05*(1-cos(param.count*2*PI/param.totalCount));
+                    Pee[6*i+5]=beginPee[6*i+5]+param.radius*(cos(param.startAngle)-cos(param.startAngle+0.5*param.direction*param.beta))/2*(1-cos(param.count*PI/param.totalCount));
+                }
             }
         }
-        else if(param.count<(2*param.n-1)*param.totalCount)
+        else if(param.count<(2*param.n-1)*param.totalCount)//const
         {
             Peb[0]=param.radius*(sin(bodyStartAngle)-sin(bodyStartAngle+0.5*param.direction*param.beta*period_count/param.totalCount));
             Peb[2]=param.radius*(cos(bodyStartAngle)-cos(bodyStartAngle+0.5*param.direction*param.beta*period_count/param.totalCount));
@@ -299,42 +349,55 @@ namespace NormalGait
             {
                 if(half_period%2==1)
                 {
-                    Pee[6*i+3]=beginPee[6*i+3]+param.radius*(sin(leg135StartAngle)-sin(leg135StartAngle+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
-                    Pee[6*i+4]=beginPee[6*i+4]+0.05*(1-cos(period_count*2*PI/param.totalCount));
-                    Pee[6*i+5]=beginPee[6*i+5]+param.radius*(cos(leg135StartAngle)-cos(leg135StartAngle+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
-
-                    Pee[6*i]=beginPee[6*i];
-                    Pee[6*i+1]=beginPee[6*i+1];
-                    Pee[6*i+2]=beginPee[6*i+2];
+                    if(param.direction==-1)
+                    {
+                        Pee[6*i+3]=beginPee[6*i+3]+param.radius*(sin(legStartAngle1)-sin(legStartAngle1+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                        Pee[6*i+4]=beginPee[6*i+4]+0.05*(1-cos(period_count*2*PI/param.totalCount));
+                        Pee[6*i+5]=beginPee[6*i+5]+param.radius*(cos(legStartAngle1)-cos(legStartAngle1+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                    }
+                    else
+                    {
+                        Pee[6*i]=beginPee[6*i]+param.radius*(sin(legStartAngle1)-sin(legStartAngle1+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                        Pee[6*i+1]=beginPee[6*i+1]+0.05*(1-cos(period_count*2*PI/param.totalCount));
+                        Pee[6*i+2]=beginPee[6*i+2]+param.radius*(cos(legStartAngle1)-cos(legStartAngle1+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                    }
                 }
                 else
                 {
-                    Pee[6*i]=beginPee[6*i]+param.radius*(sin(leg024StartAngle)-sin(leg024StartAngle+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
-                    Pee[6*i+1]=beginPee[6*i+1]+0.05*(1-cos(period_count*2*PI/param.totalCount));
-                    Pee[6*i+2]=beginPee[6*i+2]+param.radius*(cos(leg024StartAngle)-cos(leg024StartAngle+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
-
-                    Pee[6*i+3]=beginPee[6*i+3];
-                    Pee[6*i+4]=beginPee[6*i+4];
-                    Pee[6*i+5]=beginPee[6*i+5];
+                    if(param.direction==-1)
+                    {
+                        Pee[6*i]=beginPee[6*i]+param.radius*(sin(legStartAngle0)-sin(legStartAngle0+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                        Pee[6*i+1]=beginPee[6*i+1]+0.05*(1-cos(period_count*2*PI/param.totalCount));
+                        Pee[6*i+2]=beginPee[6*i+2]+param.radius*(cos(legStartAngle0)-cos(legStartAngle0+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                    }
+                    else
+                    {
+                        Pee[6*i+3]=beginPee[6*i+3]+param.radius*(sin(legStartAngle0)-sin(legStartAngle0+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                        Pee[6*i+4]=beginPee[6*i+4]+0.05*(1-cos(period_count*2*PI/param.totalCount));
+                        Pee[6*i+5]=beginPee[6*i+5]+param.radius*(cos(legStartAngle0)-cos(legStartAngle0+param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                    }
                 }
             }
         }
-        else
+        else//dec
         {
-            Peb[0]=param.radius*(sin(bodyStartAngle)-sin(bodyStartAngle+0.5*param.direction*param.beta*period_count/param.totalCount
-                                                                      -0.25*param.direction*param.beta*param.count*param.count/param.totalCount/param.totalCount));
-            Peb[2]=param.radius*(cos(bodyStartAngle)-cos(bodyStartAngle+0.5*param.direction*param.beta*period_count/param.totalCount
-                                                                      -0.25*param.direction*param.beta*param.count*param.count/param.totalCount/param.totalCount));
+            Peb[0]=param.radius*(sin(bodyStartAngle)-sin(bodyStartAngle+0.5*param.direction*param.beta*period_count/param.totalCount-0.25*param.direction*param.beta*param.count*param.count/param.totalCount/param.totalCount));
+            Peb[2]=param.radius*(cos(bodyStartAngle)-cos(bodyStartAngle+0.5*param.direction*param.beta*period_count/param.totalCount-0.25*param.direction*param.beta*param.count*param.count/param.totalCount/param.totalCount));
 
             for(int i=0;i<3;i++)
             {
-                Pee[6*i+3]=beginPee[6*i+3]+param.radius*(sin(leg135StartAngle)-sin(leg135StartAngle+0.5*param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
-                Pee[6*i+4]=beginPee[6*i+4]+0.05*(1-cos(period_count*2*PI/param.totalCount));
-                Pee[6*i+5]=beginPee[6*i+5]+param.radius*(cos(leg135StartAngle)-cos(leg135StartAngle+0.5*param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
-
-                Pee[6*i]=beginPee[6*i];
-                Pee[6*i+1]=beginPee[6*i+1];
-                Pee[6*i+2]=beginPee[6*i+2];
+                if(param.direction==-1)
+                {
+                    Pee[6*i+3]=beginPee[6*i+3]+param.radius*(sin(legStartAngle1)-sin(legStartAngle1+0.5*param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                    Pee[6*i+4]=beginPee[6*i+4]+0.05*(1-cos(period_count*2*PI/param.totalCount));
+                    Pee[6*i+5]=beginPee[6*i+5]+param.radius*(cos(legStartAngle1)-cos(legStartAngle1+0.5*param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                }
+                else
+                {
+                    Pee[6*i]=beginPee[6*i]+param.radius*(sin(legStartAngle1)-sin(legStartAngle1+0.5*param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                    Pee[6*i+1]=beginPee[6*i+1]+0.05*(1-cos(period_count*2*PI/param.totalCount));
+                    Pee[6*i+2]=beginPee[6*i+2]+param.radius*(cos(legStartAngle1)-cos(legStartAngle1+0.5*param.direction*param.beta))/2*(1-cos(period_count*PI/param.totalCount));
+                }
             }
         }
         return param.count-2*param.n*param.totalCount-1;
@@ -3732,7 +3795,7 @@ namespace ForceTask
                 else
                     isLeft=false;
             }
-            else if(i.first=="j")
+            else if(i.first=="isJump")
             {
                 if(i.second=="1")
                     isJump=true;
@@ -3823,26 +3886,25 @@ namespace ForceTask
 		double planeVertical[3]{0,0,0};
 		double planeVerticalInB[3]{0,0,0};
 
-		//PushState
+        //PushState & PullState
         double currentPe[6] {0};
         double currentPee[18] {0};
 		double xBodyInB[3]{1,0,0};
 		double yBodyInB[3]{0,1,0};
 		double pushBodyPE313[6];//for pause
 		double pushPee[18];//for pause
-        double handle2MiddleDist=0.51;//distance from the handle to the middle of the door
+        double handle2MiddleDist=0.55;//distance from the handle to the middle of the door
         double jumpH=0.04;
         double jumpDist=0.04;
         double nonJumpDist=0.06;
         double handleLen=0.1;
-        double circleRadius=1.1;
 
 		//Force Control
 		double Fbody[6]{0,0,0,0,0,0};
 		double C[6]{50,50,50,50,50,50};
 		double M[6]{1,1,1,1,1,1};
 		double deltaT{0.001};
-        double ForceRange[2]{1,9};
+        double ForceRange[2]{4,9};
         double rotateRatio {1};//0.88
         double forceRatio {1};//1 on RobotIII, 1000 on RobotVIII & single motor
 
@@ -3884,12 +3946,7 @@ namespace ForceTask
 				robot.GetPeb(ODP.startPE);
 			}
             double forceInF[6];
-            double pmF2B[4][4] {1,0,0,0,
-                               0,0,1,0,
-                               0,-1,0,0,
-                               0,0,0,1};
             forceInit(param.count,param.ruicong_data->at(0).force[0].fce,forceInF);
-            //aris::dynamic::s_f2f(*pmF2B,forceInF,ODP.forceInB);
             aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,ODP.forceInB);
 
 			switch(ODP.moveState)
@@ -4072,13 +4129,12 @@ namespace ForceTask
                     ODP.moveState=MoveState::Follow;
                     if(fabs(ODP.forceInB[0])>ForceRange[0])
                     {
-                        ODP.isLastFollow==true;
+                        ODP.isLastFollow=true;
 
                         for (int i=0;i<3;i++)
                         {
                             ODP.vector1[i]=ODP.nowPE[i]-ODP.beginPE[i];//calculation of DoorLocation
                         }
-
                     }
                 }
 
@@ -4101,7 +4157,7 @@ namespace ForceTask
                     ODP.moveState=MoveState::Follow;
                     if(fabs(ODP.forceInB[0])>ForceRange[0])
                     {
-                        ODP.isLastFollow==true;
+                        ODP.isLastFollow=true;
 
                         for (int i=0;i<3;i++)
                         {
@@ -4119,7 +4175,7 @@ namespace ForceTask
 					{
 						//leg 0,2,4
                         currentPee[6*i]=ODP.startPeeInB[6*i]+(ODP.endPeeInB[6*i]-ODP.startPeeInB[6*i])/2*(1-cos((param.count-ODP.countIter)*PI/ODP.followCount));
-                        currentPee[6*i+1]=ODP.startPeeInB[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
+                        currentPee[6*i+1]=ODP.startPeeInB[6*i+1]+0.025*(1-cos((param.count-ODP.countIter)*2*PI/ODP.followCount));
                         currentPee[6*i+2]=ODP.startPeeInB[6*i+2];
 						//leg 1,3,5
                         currentPee[6*i+3]=ODP.startPeeInB[6*i+3];
@@ -4133,7 +4189,7 @@ namespace ForceTask
 					{
 						//leg 1,3,5
                         currentPee[6*i+3]=ODP.startPeeInB[6*i+3]+(ODP.endPeeInB[6*i+3]-ODP.startPeeInB[6*i+3])/2*(1-cos((param.count-ODP.countIter-ODP.followCount)*PI/ODP.followCount));
-                        currentPee[6*i+4]=ODP.startPeeInB[6*i+4]+0.05*(1-cos((param.count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
+                        currentPee[6*i+4]=ODP.startPeeInB[6*i+4]+0.025*(1-cos((param.count-ODP.countIter-ODP.followCount)*2*PI/ODP.followCount));
                         currentPee[6*i+5]=ODP.startPeeInB[6*i+5];
 						//leg 0,2,4
                         currentPee[6*i]=ODP.endPeeInB[6*i];
@@ -4360,7 +4416,7 @@ namespace ForceTask
                         {
                             //leg 0,2,4
                             currentPee[6*i]=ODP.nowPee[6*i]+ODP.now2startPeeDistInG[0]/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
-                            currentPee[6*i+1]=ODP.nowPee[6*i+1]+0.05*(1-cos((param.count-ODP.countIter)*2*PI/ODP.now2StartCount));
+                            currentPee[6*i+1]=ODP.nowPee[6*i+1]+0.025*(1-cos((param.count-ODP.countIter)*2*PI/ODP.now2StartCount));
                             currentPee[6*i+2]=ODP.nowPee[6*i+2]+ODP.now2startPeeDistInG[2]/2*(1-cos((param.count-ODP.countIter)*PI/ODP.now2StartCount));
                             //leg 1,3,5
                             currentPee[6*i+3]=ODP.nowPee[6*i+3];
@@ -4374,7 +4430,7 @@ namespace ForceTask
                         {
                             //leg 1,3,5
                             currentPee[6*i+3]=ODP.nowPee[6*i+3]+ODP.now2startPeeDistInG[0]/2*(1-cos((param.count-ODP.countIter-ODP.now2StartCount)*PI/ODP.now2StartCount));
-                            currentPee[6*i+4]=ODP.nowPee[6*i+4]+0.05*(1-cos((param.count-ODP.countIter-ODP.now2StartCount)*2*PI/ODP.now2StartCount));
+                            currentPee[6*i+4]=ODP.nowPee[6*i+4]+0.025*(1-cos((param.count-ODP.countIter-ODP.now2StartCount)*2*PI/ODP.now2StartCount));
                             currentPee[6*i+5]=ODP.nowPee[6*i+5]+ODP.now2startPeeDistInG[2]/2*(1-cos((param.count-ODP.countIter-ODP.now2StartCount)*PI/ODP.now2StartCount));
                             //leg 0,2,4
                             currentPee[6*i]=ODP.nowPee[6*i]+ODP.now2startPeeDistInG[0];
@@ -4393,23 +4449,108 @@ namespace ForceTask
                             ODP.pullState=PullState::circleWalk;
                             ODP.countIter=param.count+1;
 
-                            ODP.walkParam.n=2;
-                            ODP.walkParam.alpha=PI/2;
-                            ODP.walkParam.beta=0;
-                            ODP.walkParam.totalCount=1000;
-                            if(isJump==false)
-                            {
-                                ODP.walkParam.d=handle2MiddleDist/3*2;
-                            }
-                            else
-                            {
-                                ODP.walkParam.d=(handle2MiddleDist-0.1)/3*2;
-                            }
+                            ODP.circleWalkParam.radius=1.1;
+                            ODP.circleWalkParam.n=4;
+                            ODP.circleWalkParam.beta=0.1;
+                            ODP.circleWalkParam.h=0.05;
+                            ODP.circleWalkParam.totalCount=1000;
+                            ODP.circleWalkParam.direction=(isLeft==false ? -1 : 1);
+                            ODP.circleWalkParam.startAngle=(isLeft==false ? -PI/2 : PI/2);
                         }
                     }
                     break;
 
                 case PullState::circleWalk:
+                    ODP.circleWalkParam.count=param.count-ODP.countIter;
+                    ODP.ret=NormalGait::circleWalk(robot,ODP.circleWalkParam);
+
+                    if(ODP.ret==0)
+                    {
+                        if(isConfirm==true)
+                        {
+                            ODP.pullState=PullState::legWork;
+                            ODP.countIter=param.count+1;
+                            robot.GetPeb(ODP.nowPE);
+                            robot.GetPee(ODP.nowPee,robot.body());
+                        }
+                    }
+                    break;
+
+                case PullState::legWork:
+                    memcpy(currentPe,ODP.nowPE,6*sizeof(double));
+                    memcpy(currentPee,ODP.nowPee,18*sizeof(double));
+                    if(param.count-ODP.countIter<ODP.legWorkCount)
+                    {
+                        if(isLeft==false)//leg 2
+                        {
+                            currentPee[9]=ODP.nowPee[9];
+                            currentPee[10]=ODP.nowPee[10]+0.025*(1-cos((param.count-ODP.countIter)*2*PI/ODP.legWorkCount));
+                            currentPee[11]=ODP.nowPee[11]-0.1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.legWorkCount));
+                        }
+                        else//leg 0
+                        {
+                            currentPee[0]=ODP.nowPee[0];
+                            currentPee[1]=ODP.nowPee[1]+0.025*(1-cos((param.count-ODP.countIter)*2*PI/ODP.legWorkCount));
+                            currentPee[2]=ODP.nowPee[2]-0.1/2*(1-cos((param.count-ODP.countIter)*PI/ODP.legWorkCount));
+                        }
+                        if(param.count-ODP.countIter==ODP.legWorkCount-1)
+                        {
+                            memcpy(ODP.nowPee,currentPee,18*sizeof(double));
+                        }
+                    }
+                    else if(param.count-ODP.countIter<2*ODP.legWorkCount)
+                    {
+                        currentPe[1]=ODP.nowPE[1]+jumpH/2*(1-cos((param.count-ODP.countIter-ODP.legWorkCount)*PI/ODP.legWorkCount));
+                        if(param.count-ODP.countIter==2*ODP.legWorkCount-1)
+                        {
+                            memcpy(ODP.nowPE,currentPe,18*sizeof(double));
+                            aris::dynamic::s_pe2pm(ODP.nowPE,*ODP.nowPm,"313");
+                        }
+                    }
+                    else
+                    {
+                        double backDistInB[3] {0,0,0.1};
+                        double backDistInG[3] {0};
+                        aris::dynamic::s_pm_dot_v3(*ODP.nowPm,backDistInB,backDistInG);
+                        currentPe[0]=ODP.nowPE[0]+backDistInG[0]/2*(1-cos((param.count-ODP.countIter-2*ODP.legWorkCount)*PI/ODP.legWorkCount));
+                        currentPe[2]=ODP.nowPE[2]+backDistInG[2]/2*(1-cos((param.count-ODP.countIter-2*ODP.legWorkCount)*PI/ODP.legWorkCount));
+                        if(param.count-ODP.countIter==3*ODP.legWorkCount-1)
+                        {
+                            ODP.pullState=PullState::rotate;
+                            ODP.countIter=param.count+1;
+
+                            ODP.circleWalkParam.radius=(isLeft==false ? sqrt(currentPee[9]*currentPee[9]+currentPee[11]*currentPee[11]) : sqrt(currentPee[0]*currentPee[0]+currentPee[2]*currentPee[2]));
+                            ODP.circleWalkParam.n=6;
+                            ODP.circleWalkParam.beta=PI/2/(ODP.circleWalkParam.n-0.5);
+                            ODP.circleWalkParam.h=0.05;
+                            ODP.circleWalkParam.totalCount=1000;
+                            ODP.circleWalkParam.startAngle=0;
+                            ODP.circleWalkParam.direction=(isLeft==false ? 1 : -1);
+                        }
+                    }
+
+                    robot.SetPeb(currentPe);
+                    robot.SetPee(currentPee,robot.body());
+
+                    break;
+
+                case PullState::rotate:
+                    ODP.circleWalkParam.count=param.count-ODP.countIter;
+                    ODP.ret=NormalGait::circleWalk(robot,ODP.circleWalkParam);
+
+                    if(ODP.ret==0)
+                    {
+                        if(isConfirm==true)
+                        {
+                            ODP.pullState=PullState::pullWalk;
+                            ODP.countIter=param.count+1;
+                            robot.GetPeb(ODP.nowPE);
+                            robot.GetPee(ODP.nowPee,robot.body());
+                        }
+                    }
+                    break;
+
+                case PullState::pullWalk:
 
                     break;
 
@@ -4474,24 +4615,10 @@ namespace ForceTask
 							ODP.countIter=param.count+1;
 
 							ODP.walkParam.n=2;
-                            if(isLeft==true)
-                            {
-                                ODP.walkParam.alpha=PI/2;
-                            }
-                            else
-                            {
-                                ODP.walkParam.alpha=-PI/2;
-                            }
+                            ODP.walkParam.alpha=(isLeft==true ? PI/2 : -PI/2);
 							ODP.walkParam.beta=0;
                             ODP.walkParam.totalCount=1000;
-                            if(isJump==false)
-                            {
-                                ODP.walkParam.d=handle2MiddleDist/3*2;
-                            }
-                            else
-                            {
-                                ODP.walkParam.d=(handle2MiddleDist-0.1)/3*2;
-                            }
+                            ODP.walkParam.d=(isJump==false ? handle2MiddleDist/3*2 : (handle2MiddleDist-0.1)/3*2);
 						}
 						else//pause, tested useless
 						{
@@ -4512,7 +4639,7 @@ namespace ForceTask
                     {
                         if(isConfirm==true)
                         {
-                            ODP.pushState=PushState::forwardWalk;
+                            ODP.pushState=PushState::pushWalk;
                             ODP.countIter=param.count+1;
 
                             ODP.walkParam.totalCount=1000;
@@ -4531,7 +4658,7 @@ namespace ForceTask
                     }
                     break;
 
-				case PushState::forwardWalk:
+                case PushState::pushWalk:
 					//3.Move through the door
 					ODP.walkParam.count=param.count-ODP.countIter;
 
@@ -4571,7 +4698,8 @@ namespace ForceTask
 				break;
 			}
 
-			if(ODP.moveState!=MoveState::Push && ODP.moveState!=MoveState::LocateAjust && ODP.moveState!=MoveState::Follow)
+            if(ODP.moveState!=MoveState::Push && ODP.moveState!=MoveState::LocateAjust && ODP.moveState!=MoveState::Follow
+                    && ODP.moveState!=MoveState::Jump && ODP.moveState!=MoveState::NonJump)
 			{
                if (isConfirm==false && ODP.isPause==false)
 				{
@@ -4631,7 +4759,7 @@ namespace ForceTask
 
 			robot.GetPee(pEE);
 			memcpy(ODP.pEE_last,pEE,sizeof(double)*18);
-			memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
+            memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);//used to record data
 			memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
 
 			openDoorPipe.sendToNrt(ODP);
@@ -4660,7 +4788,7 @@ namespace ForceTask
 			robot.SetPee(nowPee);
 
 			memcpy(ODP.pEE_last,nowPee,sizeof(double)*18);
-			memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);
+            memcpy(ODP.bodyPE_last,bodyPE,sizeof(double)*6);//used to record data
 			memcpy(ODP.bodyVel_last,bodyVel,sizeof(double)*6);
 
             if ( fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10

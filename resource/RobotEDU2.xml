@@ -540,17 +540,17 @@
                     <beta abbreviation="b" type="double" default="0"/>
                 </wk_param>
             </wk>
-            <mb default="mb_param">
-                <mb_param type="group">
-                    <totalCount abbreviation="t" type="int" default="2000"/>
-                    <x abbreviation="x" type="double" default="0"/>
-                    <y abbreviation="y" type="double" default="0"/>
-                    <z abbreviation="z" type="double" default="0"/>
-                    <pitch abbreviation="u" type="double" default="0"/>
-                    <yaw abbreviation="v" type="double" default="0"/>
-                    <roll abbreviation="w" type="double" default="0"/>
-                </mb_param>
-            </mb>
+            <mwr default="mwr_param">
+                <mwr_param type="group">
+                    <totalCount abbreviation="t" type="int" default="1000"/>
+                    <u abbreviation="u" type="double" default="0"/>
+                    <v abbreviation="v" type="double" default="0"/>
+                    <w abbreviation="w" type="double" default="0"/>
+                    <pitch abbreviation="p" type="double" default="0"/>
+                    <yaw abbreviation="y" type="double" default="0"/>
+                    <roll abbreviation="r" type="double" default="0"/>
+                </mwr_param>
+            </mwr>
 	    <sh default="sh_param">
 		    <sh_param type="group">
 			    <totalCount abbreviation="t" type="int" default="2000"/>
@@ -591,6 +591,25 @@
                     <totalCount abbreviation="t" type="int" default="1000"/>
                 </arc_param>
             </arc>
+            <cwk default="cwk_param">
+                <cwk_param type="group">
+                    <startangle abbreviation="a" type="double" default="0"/>
+                    <radius abbreviation="r" type="double" default="1"/>
+                    <totalCount abbreviation="t" type="int" default="1000"/>
+                    <n abbreviation="n" type="int" default="1"/>
+                    <h abbreviation="h" type="double" default="0.05"/>
+                    <beta abbreviation="b" type="double" default="0.05"/>
+                    <direction abbreviation="d" type="int" default="1"/>
+                </cwk_param>
+            </cwk>
+            <lgw default="lgw_param">
+                <lgw_param type="group">
+                    <distance abbreviation="d" type="double" default="0.1"/>
+                    <totalCount abbreviation="t" type="int" default="1000"/>
+                    <h abbreviation="h" type="double" default="0.05"/>
+                    <beta abbreviation="b" type="int" default="1.57"/>
+                </lgw_param>
+            </lgw>
             <odb default="odb_param">
                 <odb_param type="group">
                     <u abbreviation="u" type="double" default="0"/>

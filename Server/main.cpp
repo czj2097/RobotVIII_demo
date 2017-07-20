@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
 
 	rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
     rs.addCmd("arc",NormalGait::parseAdjustRc,NormalGait::adjustRc);
+    rs.addCmd("cwk",NormalGait::parseCircleWalk,NormalGait::circleWalk);
 
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
