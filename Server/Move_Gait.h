@@ -12,6 +12,8 @@
 #include <Robot_Type_I.h>
 #include <sys/time.h>
 
+#include "LowPassFilter.h"
+
 using namespace aris::control;
 
 namespace NormalGait
@@ -140,6 +142,9 @@ namespace ForceTask
 		double pEE_last[18];
 
 		double forceInB[6];
+        double forceInB_last[6];
+        double forceInB_sndlast[6];
+        double forceInB_avg[6];
 	};
 
 	struct OpenDoorParam :public ForceTaskParamBase
@@ -152,6 +157,7 @@ namespace ForceTask
         std::int32_t countIter {0};
 		Robots::WalkParam walkParam;
         NormalGait::CircleWalkParam circleWalkParam;
+        LowpassFilter<6> filter;
 
         const double toolInR[3] {0,0.08,-0.385};
         double toolInG[3] {0};
