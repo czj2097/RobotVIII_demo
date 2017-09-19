@@ -35,10 +35,9 @@ private:
     const double vLmt {0.9};
     const double aLmt {3.2};
     const double delta_s {PI/1800};
-    const int stanceLegID[3] {1,3,5};
-
     double stepH {0.1};
     double stepD {0.8};
+    double dutyCycle {0.6};
     double initPeb[6] {0};
     double initPee[18] {  -0.3, -0.85, -0.65,
                          -0.45, -0.85,     0,
@@ -46,12 +45,19 @@ private:
                            0.3, -0.85, -0.65,
                           0.45, -0.85,     0,
                            0.3, -0.85,  0.65 };//024 swing, 135 stance
+    double initPee[18] { -0.6*sin(PI/6),        , -0.6*cos(PI/6),
+                         -0.6*sin(PI/6+PI/3),   , -0.6*cos(PI/6+PI/3),
+                         -0.6*sin(PI/6+2*PI/3), , -0.6*cos(PI/6+2*PI/3),
+                          0.6*sin(PI/6+2*PI/3), ,  0.6*cos(PI/6+2*PI/3),
+                          0.6*sin(PI/6+PI/3),   ,  0.6*cos(PI/6+*PI/3),
+                          0.6*sin(PI/6),        ,  0.6*cos(PI/6)         };
+    const int stanceLegID[3] {1,3,5};
 
-    double s_t {0};
+    double s_b {0};
     double s_w {0};
-    double b_st[1801] {0};
-    double db_st[1801] {0};
-    double ddb_st[1801] {0};
+    double b_sb[1801] {0};
+    double db_sb[1801] {0};
+    double ddb_sb[1801] {0};
     double pb_sw[1801] {0};
     double vb_sw[1801] {0};
     double ab_sw[1801] {0};
@@ -116,10 +122,10 @@ private:
     double vaCrossPoint[1801][6] {{0}};
     double tangentPoint[1801][6] {{0}};
     double switchPoint[1801][6] {{0}};
-    int paramdds0Count[18] {{0}};
-    int vaCrossCount[6] {{0}};
-    int tangentCount[6] {{0}};
-    int switchCount[6] {{0}};
+    int paramdds0Count[18] {0};
+    int vaCrossCount[6] {0};
+    int tangentCount[6] {0};
+    int switchCount[6] {0};
     bool quitSwitchPoint {false};
     double ds_forward[1801][6] {{0}};
     double ds_backward[1801][6] {{0}};

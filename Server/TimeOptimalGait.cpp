@@ -8,11 +8,11 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
     double pEB[6] {0};
     double pEE[18] {0};
 
-    b_st[count]=stepD/4-stepD/2*(s_t/PI);
-    db_st[count]=-stepD/2/PI;
-    ddb_st[count]=0;
+    b_sb[count]=stepD/4-stepD/2*(s_b/PI);
+    db_sb[count]=-stepD/2/PI;
+    ddb_sb[count]=0;
 
-    pEB[2]=initPeb[2]+b_st[count];
+    pEB[2]=initPeb[2]+b_sb[count];
     pEE[3*legID]=initPee[3*legID];
     pEE[3*legID+1]=initPee[3*legID+1];
     pEE[3*legID+2]=initPee[3*legID+2];
@@ -24,9 +24,9 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
     rbt.pLegs[legID]->GetPee(*output_PeeB+18*count+3*legID,rbt.body());
 
     double db_st3[3] {0};
-    db_st3[2]=-db_st[count];
+    db_st3[2]=-db_sb[count];
     double ddb_st3[3] {0};
-    ddb_st3[2]=-ddb_st[count];
+    ddb_st3[2]=-ddb_sb[count];
 
     std::fill_n(dJvi,9,0);
     aris::dynamic::s_daxpy(9,db_st3[0],dJvi_x,1,dJvi,1);//for s_t
@@ -1195,7 +1195,7 @@ void TimeOptimalGait::GetOptimalDs()
     //generate the traj & calculate the bound of ds
     for (int i=0;i<1801;i++)
     {
-        s_t=i*PI/1800;//degree to rad
+        s_b=i*PI/1800;//degree to rad
 
         for(int j=0;j<3;j++)
         {
@@ -1228,9 +1228,9 @@ void TimeOptimalGait::GetOptimalDs()
             totalTime[stanceLegID[0]]+=2*delta_s/(real_ds[i-1][stanceLegID[0]]+real_ds[i][stanceLegID[0]]);
             timeArray[i][stanceLegID[0]]=totalTime[stanceLegID[0]];
         }
-        pb_sw_tmp[i]=pb_sw[i]=b_st[i];
-        vb_sw_tmp[i]=vb_sw[i]=db_st[i]*real_ds[i][stanceLegID[0]];
-        ab_sw_tmp[i]=ab_sw[i]=ddb_st[i]*real_ds[i][stanceLegID[0]]*real_ds[i][stanceLegID[0]]+db_st[i]*real_dds[i][stanceLegID[0]];
+        pb_sw_tmp[i]=pb_sw[i]=b_sb[i];
+        vb_sw_tmp[i]=vb_sw[i]=db_sb[i]*real_ds[i][stanceLegID[0]];
+        ab_sw_tmp[i]=ab_sw[i]=ddb_sb[i]*real_ds[i][stanceLegID[0]]*real_ds[i][stanceLegID[0]]+db_sb[i]*real_dds[i][stanceLegID[0]];
     }
 
 
