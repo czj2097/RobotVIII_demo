@@ -101,7 +101,6 @@ int main(int argc, char *argv[])
     //FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
     TimeOptimalGait optimalgait;
-    //optimalgait.GetStanceOptimalDsByMinorIteration();
     //optimalgait.GetOptimalGait2s();
     //optimalgait.GetOptimalGait2t();
     optimalgait.GetOptimalDs();

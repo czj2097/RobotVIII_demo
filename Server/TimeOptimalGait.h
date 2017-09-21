@@ -33,7 +33,6 @@ public:
 private:
     double GetMaxDec(int count, double ds);
     double GetMinAcc(int count, double ds);
-
     Robots::RobotTypeI rbt;
 
     const double vLmt {0.9};
@@ -57,10 +56,8 @@ private:
                           0.30, -0.58,  0.52 };
     const int stanceLegID[3] {1,3,5};
 
+
     double s_b[2251] {0};
-    double s_b1 {0};
-    double s_b2 {0};
-    double s_w {0};
     double b_sb[2251] {0};
     double db_sb[2251] {0};
     double ddb_sb[2251] {0};
@@ -118,7 +115,9 @@ private:
     double dds_backward_body[2251] {0};
 
     double timeArray_body[2251] {0};
+    double Tstep {1};
 
+    double s_w[901][6] {0};
     double pb_sw[901] {0};
     double vb_sw[901] {0};
     double ab_sw[901] {0};
