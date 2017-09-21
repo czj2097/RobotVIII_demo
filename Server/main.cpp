@@ -101,15 +101,17 @@ int main(int argc, char *argv[])
     //FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
     TimeOptimalGait optimalgait;
+    //optimalgait.GetStanceOptimalDsByMinorIteration();
+    //optimalgait.GetOptimalGait2s();
+    //optimalgait.GetOptimalGait2t();
     optimalgait.GetOptimalDs();
-    optimalgait.GetOptimalGait2s();
-    optimalgait.GetOptimalGait2t();
     optimalgait.OutputData();
 
-    FastWalk::JointSpaceWalk jointspacewalker;
-	FastWalk::FastWalkPY pyfastwalker;
-    ForceTask::ForceWalk forcewalker;
-	NormalGait::StartRecordData();
+    //FastWalk::JointSpaceWalk jointspacewalker;
+    //FastWalk::FastWalkPY pyfastwalker;
+    //ForceTask::ForceWalk forcewalker;
+    //NormalGait::StartRecordData();
+
 	std::string xml_address;
 
 	if (argc <= 1)
@@ -149,9 +151,9 @@ int main(int argc, char *argv[])
     rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
     rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
-    rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
-    rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
-    rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);
+    //rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
+    //rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
+    //rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);
 
 	rs.open();
 
