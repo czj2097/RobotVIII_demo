@@ -153,8 +153,8 @@ private:
 
     double real_ds[901][6] {{0}};
     double real_dds[901][6] {{0}};
-    double real_ddsMax[901][6] {{0}};
-    double real_ddsMin[901][6] {{0}};
+//    double real_ddsMax[901][6] {{0}};
+//    double real_ddsMin[901][6] {{0}};
     double real_ds_tmp[901][6] {{0}};
 
     double timeArray[901][6] {{0}};
@@ -165,10 +165,10 @@ private:
     int maxTotalCount_last {1};
     int maxTimeID {0};
 
-    double output_Pee[901][18] {{0}};
-    double output_Pin[901][18] {{0}};
-    double output_Vin[901][18] {{0}};
-    double output_Ain[901][18] {{0}};
+//    double output_Pee[901][18] {{0}};
+//    double output_Pin[901][18] {{0}};
+//    double output_Vin[901][18] {{0}};
+//    double output_Ain[901][18] {{0}};
 };
 
 #endif
