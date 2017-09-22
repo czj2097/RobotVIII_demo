@@ -11,14 +11,14 @@ public:
     TimeOptimalGait();
     ~TimeOptimalGait();
 
-    void GetStanceLegParam(int count, int legID);
+    void GetStanceLegParam(int count, int legID, double s);
     void GetStanceDsBound(int count);
     void GetStanceSwitchPoint();
     void GetStanceOptimalDsBySwitchPoint();
     void GetStanceOptimalDsByDirectNI();
     void GetStanceOptimalDsByMinorIteration();
 
-    void GetSwingLegParam(int count, int legID);
+    void GetSwingLegParam(int count, int legID, double s);
     void GetSwingDsBound(int count, int legID);
     void GetSwingSwitchPoint(int legID);
     void GetSwingOptimalDsBySwitchPoint(int legID);
@@ -88,6 +88,7 @@ private:
     double slopedsBound_body[2251] {0};
     double slopeDelta_body[2251] {0};
     double paramdds0Point_body[2251][18] {{0}};
+    int isParamddsExact0_body[2251][18] {{0}};
     double tangentPoint_body[2251] {0};
     double switchPoint_body[2251] {0};
     int paramdds0Count_body[18] {0};
@@ -129,6 +130,7 @@ private:
     double slopedsBound[901][6] {{0}};
     double slopeDelta[901][6] {{0}};
     double paramdds0Point[901][18] {{0}};
+    int isParamddsExact0[901][18] {{0}};
     double tangentPoint[901][6] {{0}};
     double switchPoint[901][6] {{0}};
     int paramdds0Count[18] {0};

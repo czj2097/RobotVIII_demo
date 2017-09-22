@@ -3,7 +3,7 @@
 TimeOptimalGait::TimeOptimalGait(){}
 TimeOptimalGait::~TimeOptimalGait(){}
 
-void TimeOptimalGait::GetStanceLegParam(int count, int legID)
+void TimeOptimalGait::GetStanceLegParam(int count, int legID, double s)
 {
     double pEB[6] {0};
     double pEE[18] {0};
@@ -22,7 +22,7 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
     double param_a0L[18] {0};
     double param_a0H[18] {0};
 
-    b_sb[count]=-stepD*s_b[count];
+    b_sb[count]=-stepD*s;
     db_sb[count]=-stepD;
     ddb_sb[count]=0;
 
@@ -84,6 +84,7 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
         }
         else
         {
+            isParamddsExact0_body[count][3*legID+k]=1;
             printf("WARNING!!! param_dds equals zero!!! StanceLeg : %d \n",count);
         }
     }
@@ -98,80 +99,76 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
 double TimeOptimalGait::GetStanceMaxDec(int count, double ds)
 {
     double dec[18] {0};
+    std::fill_n(dec,18,-1e6);
     double max_dec {0};
-    if(count<901)
+
+    for (int j=0;j<6;j++)
     {
-        for (int j=0;j<3;j++)
+        for (int k=0;k<3;k++)
         {
-            for (int k=0;k<3;k++)
+            if(isParamddsExact0_body[count][3*j+k]==0)
             {
-                dec[3*j+k]=output_a2[count][3*(2*j+1)+k]*ds*ds+output_a0L[count][3*(2*j+1)+k];
-            }
-        }
-        max_dec=*std::max_element(dec,dec+9);
-    }
-    else if(count<1351)
-    {
-        for (int j=0;j<6;j++)
-        {
-            for (int k=0;k<3;k++)
-            {
-                dec[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0L[count][3*j+k];
+                if(count<901)
+                {
+                    if(j%2==1)//135
+                    {
+                        dec[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0L[count][3*j+k];
+                    }
+                }
+                else if(count<1351)
+                {
+                    dec[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0L[count][3*j+k];
+                }
+                else
+                {
+                    if(j%2==0)//024
+                    {
+                        dec[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0L[count][3*j+k];
+                    }
+                }
             }
         }
         max_dec=*std::max_element(dec,dec+18);
     }
-    else
-    {
-        for (int j=0;j<3;j++)
-        {
-            for (int k=0;k<3;k++)
-            {
-                dec[3*j+k]=output_a2[count][3*(2*j)+k]*ds*ds+output_a0L[count][3*(2*j)+k];
-            }
-        }
-        max_dec=*std::max_element(dec,dec+9);
-    }
+
     return max_dec;
 }
 
 double TimeOptimalGait::GetStanceMinAcc(int count, double ds)
 {
-    double acc[18]{0};
+    double acc[18] {0};
     double min_acc {0};
-    if(count<901)
+    std::fill_n(acc,18,1e6);
+
+    for (int j=0;j<6;j++)
     {
-        for (int j=0;j<3;j++)
+        for (int k=0;k<3;k++)
         {
-            for (int k=0;k<3;k++)
+            if(isParamddsExact0_body[count][3*j+k]==0)
             {
-                acc[3*j+k]=output_a2[count][3*(2*j+1)+k]*ds*ds+output_a0H[count][3*(2*j+1)+k];
-            }
-        }
-        min_acc=*std::min_element(acc,acc+9);
-    }
-    else if(count<1351)
-    {
-        for (int j=0;j<6;j++)
-        {
-            for (int k=0;k<3;k++)
-            {
-                acc[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0H[count][3*j+k];
+                if(count<901)
+                {
+                    if(j%2==1)
+                    {
+                        acc[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0H[count][3*j+k];
+                    }
+                }
+                else if(count<1351)
+                {
+                    acc[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0H[count][3*j+k];
+                }
+                else
+                {
+                    if(j%2==0)
+                    {
+                        acc[3*j+k]=output_a2[count][3*j+k]*ds*ds+output_a0H[count][3*j+k];
+                    }
+                }
             }
         }
         min_acc=*std::min_element(acc,acc+18);
     }
-    else
-    {
-        for (int j=0;j<3;j++)
-        {
-            for (int k=0;k<3;k++)
-            {
-                acc[3*j+k]=output_a2[count][3*(2*j)+k]*ds*ds+output_a0H[count][3*(2*j)+k];
-            }
-        }
-        min_acc=*std::min_element(acc,acc+9);
-    }
+
     return min_acc;
 }
 
@@ -380,7 +377,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
             dds_backward_body[k_st]=GetStanceMaxDec(k_st,ds_backward_body[k_st]);
             ds_backward_body[k_st-1]=sqrt(ds_backward_body[k_st]*ds_backward_body[k_st]-2*dds_backward_body[k_st]*(s_b[k_st]-s_b[k_st-1]));
 
-            if(ds_backward[k_st-1][stanceLegID[0]]>ds_upBound[k_st-1][stanceLegID[0]])
+            if(ds_backward_body[k_st-1]>ds_upBound_body[k_st-1])
             {
                 stopFlag=true;
                 quitSwitchPoint=true;
@@ -626,6 +623,8 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
         }
 
         Tstep=0;
+        std::fill_n(*isParamddsExact0_body,2251*18,0);
+
         for (int i=0;i<2251;i++)
         {
             std::fill_n(abs_param_dds,18,0);
@@ -634,7 +633,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
                 s_b[i]=s_b1/900*i;
                 for(int j=0;j<3;j++)
                 {
-                    GetStanceLegParam(i,2*j+1);//135
+                    GetStanceLegParam(i,2*j+1,s_b[i]);//135
                 }
             }
             else if(i<1351)
@@ -642,7 +641,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
                 s_b[i]=s_b1+(s_b2-s_b1)/450*(i-900);
                 for(int j=0;j<6;j++)
                 {
-                    GetStanceLegParam(i,j);
+                    GetStanceLegParam(i,j,s_b[i]);
                 }
             }
             else
@@ -650,7 +649,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
                 s_b[i]=s_b2+(1-s_b2)/900*(i-1350);
                 for(int j=0;j<3;j++)
                 {
-                    GetStanceLegParam(i,2*j);//024
+                    GetStanceLegParam(i,2*j,s_b[i]);//024
                 }
             }
 
@@ -678,7 +677,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
 
 }
 
-void TimeOptimalGait::GetSwingLegParam(int count, int legID)
+void TimeOptimalGait::GetSwingLegParam(int count, int legID, double s)
 {
     double pEB[6] {0};
     double pEE[18] {0};
@@ -705,14 +704,14 @@ void TimeOptimalGait::GetSwingLegParam(int count, int legID)
     double param_a0H[18] {0};
 
     f_sw[0]=0;
-    f_sw[1]=stepH*sin(s_w[swCount][legID]);
-    f_sw[2]=stepD/2*cos(s_w[swCount][legID]);
+    f_sw[1]=stepH*sin(s);
+    f_sw[2]=stepD/2*cos(s);
     df_sw[0]=0;
-    df_sw[1]=stepH*cos(s_w[swCount][legID]);
-    df_sw[2]=-stepD/2*sin(s_w[swCount][legID]);
+    df_sw[1]=stepH*cos(s);
+    df_sw[2]=-stepD/2*sin(s);
     ddf_sw[0]=0;
-    ddf_sw[1]=-stepH*sin(s_w[swCount][legID]);
-    ddf_sw[2]=-stepD/2*cos(s_w[swCount][legID]);
+    ddf_sw[1]=-stepH*sin(s);
+    ddf_sw[2]=-stepD/2*cos(s);
 
     pEB[2]=initPeb[2]+pb_sw_tmp[count];
     if(legID%2==1)//135
@@ -791,6 +790,7 @@ void TimeOptimalGait::GetSwingLegParam(int count, int legID)
         }
         else
         {
+            isParamddsExact0[swCount][legID]=1;
             printf("WARNING!!! param_dds equals zero!!! SwingLeg : %d \n",count);
         }
     }
@@ -809,11 +809,15 @@ void TimeOptimalGait::GetSwingLegParam(int count, int legID)
 
 double TimeOptimalGait::GetSwingMaxDec(int count, double ds, int legID)
 {
-    double dec[3]{0};
+    double dec[3] {0};
     double max_dec {0};
+    std::fill_n(dec,3,-1e6);
     for (int k=0;k<3;k++)
     {
-        dec[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0L[count][3*legID+k];
+        if(isParamddsExact0[swCount][3*legID+k]==0)
+        {
+            dec[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0L[count][3*legID+k];
+        }
     }
     max_dec=*std::max_element(dec,dec+3);
 
@@ -822,16 +826,17 @@ double TimeOptimalGait::GetSwingMaxDec(int count, double ds, int legID)
 
 double TimeOptimalGait::GetSwingMinAcc(int count, double ds, int legID)
 {
-    double acc[3]{0};
+    double acc[3] {0};
     double min_acc {0};
-    for (int j=0;j<3;j++)
+    std::fill_n(acc,3,1e6);
+    for (int k=0;k<3;k++)
     {
-        for (int k=0;k<3;k++)
+        if(isParamddsExact0[swCount][3*legID+k]==0)
         {
             acc[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0H[count][3*legID+k];
         }
     }
-    min_acc=*std::min_element(acc,acc+9);
+    min_acc=*std::min_element(acc,acc+3);
 
     return min_acc;
 }
@@ -1412,8 +1417,8 @@ void TimeOptimalGait::GetOptimalDs()
             swCount=i;
             for (int j=0;j<3;j++)
             {
-                s_w[i][2*j]=PI/s_b1*s_b[i];
-                GetSwingLegParam(i,2*j);
+                s_w[swCount][2*j]=PI/s_b1*s_b[i];
+                GetSwingLegParam(i,2*j,s_w[swCount][2*j]);
                 GetSwingDsBound(i,2*j);
             }
         }
@@ -1423,7 +1428,7 @@ void TimeOptimalGait::GetOptimalDs()
             for (int j=0;j<3;j++)
             {
                 s_w[swCount][2*j+1]=PI/(1-s_b2)*(s_b[i]-s_b2);
-                GetSwingLegParam(i,2*j+1);
+                GetSwingLegParam(i,2*j+1,s_w[swCount][2*j]);
                 GetSwingDsBound(i,2*j+1);
             }
         }
