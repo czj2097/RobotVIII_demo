@@ -31,8 +31,10 @@ public:
     void OutputData();
 
 private:
-    double GetMaxDec(int count, double ds);
-    double GetMinAcc(int count, double ds);
+    double GetStanceMaxDec(int count, double ds);
+    double GetStanceMinAcc(int count, double ds);
+    double GetSwingMaxDec(int count, double ds, int legID);
+    double GetSwingMinAcc(int count, double ds, int legID);
     Robots::RobotTypeI rbt;
 
     const double vLmt {0.9};
@@ -63,34 +65,19 @@ private:
     double ddb_sb[2251] {0};
 
     double Jvi[9] {0};
-    double dJvi_x[9] {0};
-    double dJvi_y[9] {0};
-    double dJvi_z[9] {0};
-    double dJvi[9] {0};//used in stanceLeg
-    double dJvi_dot_f[9] {0};//used in swingLeg
-    double dJvi_dot_vb[9] {0};//used in swingLeg
-
-    double param_dsds[18] {0};
-    double param_dds[18] {0};
-    double param_ds[18] {0};//for aLmt of swingLeg
-    double param_const[18] {0};//for aLmt of swingLeg
-    double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
-    double param_a1[18] {0};//coefficient of ds, param_ds divided by param_dds
-    double param_a0L[18] {0};
-    double param_a0H[18] {0};
-
     double abs_param_dds[18] {0};//for vLmt of stanceLeg
 
     double output_PeeB[2251][18] {{0}};
     double output_dsds[2251][18] {{0}};
     double output_ds[2251][18] {{0}};
     double output_const[2251][18] {{0}};
+    double output_const1[2251][18] {{0}};
+    double output_const2[2251][18] {{0}};
     double output_dds[2251][18] {{0}};
     double output_a2[2251][18] {{0}};
     double output_a1[2251][18] {{0}};
     double output_a0L[2251][18] {{0}};
     double output_a0H[2251][18] {{0}};
-    double output_absdds[2251][18] {{0}};
 
     double ds_upBound_aLmt_body[2251] {0};
     double ds_upBound_vLmt_body[2251] {0};
@@ -116,14 +103,17 @@ private:
 
     double timeArray_body[2251] {0};
     double Tstep {1};
+    double s_b1 {0};
+    double s_b2 {0};
+    double pb_sw[2251] {0};
+    double vb_sw[2251] {0};
+    double ab_sw[2251] {0};
+    double pb_sw_tmp[2251] {0};
+    double vb_sw_tmp[2251] {0};
+    double ab_sw_tmp[2251] {0};
 
-    double s_w[901][6] {0};
-    double pb_sw[901] {0};
-    double vb_sw[901] {0};
-    double ab_sw[901] {0};
-    double pb_sw_tmp[901] {0};
-    double vb_sw_tmp[901] {0};
-    double ab_sw_tmp[901] {0};
+    int swCount {0};
+    double s_w[901][6] {{0}};
     double f_sw[3] {0};
     double df_sw[3] {0};
     double ddf_sw[3] {0};

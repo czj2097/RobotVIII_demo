@@ -7,8 +7,20 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
 {
     double pEB[6] {0};
     double pEE[18] {0};
+
+    double dJvi_x[9] {0};
+    double dJvi_y[9] {0};
+    double dJvi_z[9] {0};
+    double dJvi[9] {0};//used in stanceLeg
+
     double param_dsds1[18] {0};
     double param_dsds2[18] {0};
+    double param_dsds[18] {0};
+    double param_dds[18] {0};
+    double param_const[18] {0};//for aLmt of swingLeg
+    double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
+    double param_a0L[18] {0};
+    double param_a0H[18] {0};
 
     b_sb[count]=-stepD*s_b[count];
     db_sb[count]=-stepD;
@@ -81,12 +93,11 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID)
     memcpy(   *output_a2+18*count+3*legID,    param_a2+3*legID, 3*sizeof(double));
     memcpy(  *output_a0L+18*count+3*legID,   param_a0L+3*legID, 3*sizeof(double));
     memcpy(  *output_a0H+18*count+3*legID,   param_a0H+3*legID, 3*sizeof(double));
-    memcpy(  *output_absdds+18*count+3*legID, abs_param_dds+3*legID, 3*sizeof(double));
 }
 
-double TimeOptimalGait::GetMaxDec(int count, double ds)
+double TimeOptimalGait::GetStanceMaxDec(int count, double ds)
 {
-    double dec[18]{0};
+    double dec[18] {0};
     double max_dec {0};
     if(count<901)
     {
@@ -124,7 +135,7 @@ double TimeOptimalGait::GetMaxDec(int count, double ds)
     return max_dec;
 }
 
-double TimeOptimalGait::GetMinAcc(int count, double ds)
+double TimeOptimalGait::GetStanceMinAcc(int count, double ds)
 {
     double acc[18]{0};
     double min_acc {0};
@@ -172,8 +183,8 @@ void TimeOptimalGait::GetStanceDsBound(int count)
     while (dsBoundFlag_st==false)
     {
         double ds=0.001*k_st;
-        double max_dec=GetMaxDec(count,ds);
-        double min_acc=GetMinAcc(count,ds);
+        double max_dec=GetStanceMaxDec(count,ds);
+        double min_acc=GetStanceMinAcc(count,ds);
 
         k_st++;
         if(k_st==kstCount)
@@ -192,8 +203,8 @@ void TimeOptimalGait::GetStanceDsBound(int count)
                 for(int k_st2=0;k_st2<1000;k_st2++)
                 {
                     ds=ds_upBound_aLmt_body[count]+0.001*0.001*k_st2;
-                    max_dec=GetMaxDec(count,ds);
-                    min_acc=GetMinAcc(count,ds);
+                    max_dec=GetStanceMaxDec(count,ds);
+                    min_acc=GetStanceMinAcc(count,ds);
                     if(min_acc>=max_dec)
                     {
                         dds_lowBound_body[count]=max_dec;
@@ -239,7 +250,8 @@ void TimeOptimalGait::GetStanceSwitchPoint()
     slopedsBound_body[0]=(ds_upBound_body[1]-ds_upBound_body[0])/(s_b[1]-s_b[0]);
     for(int i=1;i<2250;i++)
     {
-        slopedsBound_body[i]=0.5*((ds_upBound_body[i+1]-ds_upBound_body[i])/(s_b[i+1]-s_b[i])+(ds_upBound_body[i]-ds_upBound_body[i-1])/(s_b[i]-s_b[i-1]));
+        slopedsBound_body[i]=( (ds_upBound_body[i+1]-ds_upBound_body[i])/(s_b[i+1]-s_b[i])
+                              +(ds_upBound_body[i]-ds_upBound_body[i-1])/(s_b[i]-s_b[i-1]) )/2;
     }
     slopedsBound_body[2250]=(ds_upBound_body[2250]-ds_upBound_body[2249])/(s_b[2250]-s_b[2249]);
     for(int i=0;i<2251;i++)
@@ -365,7 +377,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
 
         while(stopFlag==false && (int)switchPoint_body[m]!=0)
         {
-            dds_backward_body[k_st]=GetMaxDec(k_st,ds_backward_body[k_st]);
+            dds_backward_body[k_st]=GetStanceMaxDec(k_st,ds_backward_body[k_st]);
             ds_backward_body[k_st-1]=sqrt(ds_backward_body[k_st]*ds_backward_body[k_st]-2*dds_backward_body[k_st]*(s_b[k_st]-s_b[k_st-1]));
 
             if(ds_backward[k_st-1][stanceLegID[0]]>ds_upBound[k_st-1][stanceLegID[0]])
@@ -376,7 +388,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
             }
             else if(k_st==1)
             {
-                dds_backward_body[k_st-1]=GetMaxDec(k_st-1,ds_backward_body[k_st-1]);
+                dds_backward_body[k_st-1]=GetStanceMaxDec(k_st-1,ds_backward_body[k_st-1]);
                 for(int i=k_st-1;i<switchPoint_body[m]+1;i++)
                 {
                     real_ds_body[i]=ds_backward_body[i];
@@ -387,7 +399,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
             }
             else if(ds_backward_body[k_st-1]>=real_ds_body[k_st-1])
             {
-                dds_backward_body[k_st-1]=GetMaxDec(k_st-1,ds_backward_body[k_st-1]);
+                dds_backward_body[k_st-1]=GetStanceMaxDec(k_st-1,ds_backward_body[k_st-1]);
                 for(int i=k_st-1;i<switchPoint_body[m]+1;i++)
                 {
                     real_ds_body[i]=ds_backward_body[i];
@@ -433,7 +445,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
         ds_forward_body[k_st]=ds_upBound_body[k_st];
         while(stopFlag==false)
         {
-            dds_forward_body[k_st]=GetMinAcc(k_st,ds_forward_body[k_st]);
+            dds_forward_body[k_st]=GetStanceMinAcc(k_st,ds_forward_body[k_st]);
             ds_forward_body[k_st+1]=sqrt(ds_forward_body[k_st]*ds_forward_body[k_st]+2*dds_forward_body[k_st]*(s_b[k_st+1]-s_b[k_st]));
 
             if(ds_forward_body[k_st+1]>ds_upBound_body[k_st+1] || k_st==2249)
@@ -472,7 +484,7 @@ void TimeOptimalGait::GetStanceOptimalDsByDirectNI()
     ds_backward_body[ki_back]=ds_upBound_body[ki_back];
     while (stopFlag==false && ki_back>=0)
     {
-        dds_backward_body[ki_back]=GetMaxDec(ki_back,ds_backward_body[ki_back]);
+        dds_backward_body[ki_back]=GetStanceMaxDec(ki_back,ds_backward_body[ki_back]);
         ds_backward_body[ki_back-1]=sqrt(ds_backward_body[ki_back]*ds_backward_body[ki_back]-2*dds_backward_body[ki_back]*(s_b[ki_back]-s_b[ki_back-1]));
 
         if (ds_backward_body[ki_back-1]>ds_upBound_body[ki_back-1])
@@ -500,7 +512,7 @@ void TimeOptimalGait::GetStanceOptimalDsByDirectNI()
     {
         if (accFlag==true)
         {
-            dds_forward_body[ki_for]=GetMinAcc(ki_for,ds_forward_body[ki_for]);
+            dds_forward_body[ki_for]=GetStanceMinAcc(ki_for,ds_forward_body[ki_for]);
             ds_forward_body[ki_for+1]=sqrt(ds_forward_body[ki_for]*ds_forward_body[ki_for]+2*dds_forward_body[ki_for]*(s_b[ki_for+1]-s_b[ki_for]));
             //printf("acc,sqrt:%.4f\n",ds_forward[ki_for][0]*ds_forward[ki_for][0]+2*dds_forward[ki_for][0]*(s_b[ki_for+1]-s_b[ki_for]));
 
@@ -517,7 +529,7 @@ void TimeOptimalGait::GetStanceOptimalDsByDirectNI()
         }
         else
         {
-            dds_forward_body[ki_for]=GetMaxDec(ki_for,ds_forward_body[ki_for]);
+            dds_forward_body[ki_for]=GetStanceMaxDec(ki_for,ds_forward_body[ki_for]);
             ds_forward_body[ki_for+1]=sqrt(ds_forward_body[ki_for]*ds_forward_body[ki_for]+2*dds_forward_body[ki_for]*(s_b[ki_for+1]-s_b[ki_for]));
 
             if (ds_forward_body[ki_for+1]>ds_upBound_body[ki_for+1])
@@ -594,8 +606,8 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
 {
     double Tsb1 {0};
     double Tsb2 {0};
-    double s_b1 {1-dutyCycle};
-    double s_b2 {dutyCycle};
+    s_b1=1-dutyCycle;
+    s_b2=dutyCycle;
 
     int k=0;
 
@@ -670,22 +682,37 @@ void TimeOptimalGait::GetSwingLegParam(int count, int legID)
 {
     double pEB[6] {0};
     double pEE[18] {0};
+
+    double dJvi_x[9] {0};
+    double dJvi_y[9] {0};
+    double dJvi_z[9] {0};
+    double dJvi_dot_f[9] {0};//used in swingLeg
+    double dJvi_dot_vb[9] {0};//used in swingLeg
+
     double param_dsds1[18] {0};
     double param_dsds2[18] {0};
     double param_ds1[18] {0};
     double param_ds2[18] {0};
     double param_const1[18] {0};
     double param_const2[18] {0};
+    double param_dsds[18] {0};
+    double param_dds[18] {0};
+    double param_ds[18] {0};//for aLmt of swingLeg
+    double param_const[18] {0};//for aLmt of swingLeg
+    double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
+    double param_a1[18] {0};//coefficient of ds, param_ds divided by param_dds
+    double param_a0L[18] {0};
+    double param_a0H[18] {0};
 
     f_sw[0]=0;
-    f_sw[1]=stepH*sin(s_w[count][legID]);
-    f_sw[2]=stepD/2*cos(s_w[count][legID]);
+    f_sw[1]=stepH*sin(s_w[swCount][legID]);
+    f_sw[2]=stepD/2*cos(s_w[swCount][legID]);
     df_sw[0]=0;
-    df_sw[1]=stepH*cos(s_w[count][legID]);
-    df_sw[2]=-stepD/2*sin(s_w[count][legID]);
+    df_sw[1]=stepH*cos(s_w[swCount][legID]);
+    df_sw[2]=-stepD/2*sin(s_w[swCount][legID]);
     ddf_sw[0]=0;
-    ddf_sw[1]=-stepH*sin(s_w[count][legID]);
-    ddf_sw[2]=-stepD/2*cos(s_w[count][legID]);
+    ddf_sw[1]=-stepH*sin(s_w[swCount][legID]);
+    ddf_sw[2]=-stepD/2*cos(s_w[swCount][legID]);
 
     pEB[2]=initPeb[2]+pb_sw_tmp[count];
     if(legID%2==1)//135
@@ -771,11 +798,42 @@ void TimeOptimalGait::GetSwingLegParam(int count, int legID)
     memcpy(*output_dsds+18*count+3*legID,  param_dsds+3*legID,  3*sizeof(double));
     memcpy(*output_ds+18*count+3*legID,  param_ds+3*legID,  3*sizeof(double));
     memcpy(*output_const+18*count+3*legID,  param_const+3*legID,  3*sizeof(double));
+    memcpy(*output_const1+18*count+3*legID,  param_const1+3*legID,  3*sizeof(double));
+    memcpy(*output_const2+18*count+3*legID,  param_const2+3*legID,  3*sizeof(double));
     memcpy(*output_dds+18*count+3*legID, param_dds+3*legID, 3*sizeof(double));
     memcpy(*output_a2+18*count+3*legID,  param_a2+3*legID,  3*sizeof(double));
     memcpy(*output_a1+18*count+3*legID,  param_a1+3*legID,  3*sizeof(double));
     memcpy(*output_a0L+18*count+3*legID, param_a0L+3*legID, 3*sizeof(double));
     memcpy(*output_a0H+18*count+3*legID, param_a0H+3*legID, 3*sizeof(double));
+}
+
+double TimeOptimalGait::GetSwingMaxDec(int count, double ds, int legID)
+{
+    double dec[3]{0};
+    double max_dec {0};
+    for (int k=0;k<3;k++)
+    {
+        dec[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0L[count][3*legID+k];
+    }
+    max_dec=*std::max_element(dec,dec+3);
+
+    return max_dec;
+}
+
+double TimeOptimalGait::GetSwingMinAcc(int count, double ds, int legID)
+{
+    double acc[3]{0};
+    double min_acc {0};
+    for (int j=0;j<3;j++)
+    {
+        for (int k=0;k<3;k++)
+        {
+            acc[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0H[count][3*legID+k];
+        }
+    }
+    min_acc=*std::min_element(acc,acc+9);
+
+    return min_acc;
 }
 
 void TimeOptimalGait::GetSwingDsBound(int count, int legID)
@@ -787,17 +845,8 @@ void TimeOptimalGait::GetSwingDsBound(int count, int legID)
     while (ds_upBoundFlag_sw==false)
     {
         double ds=0.001*k_sw;
-        double dec[3] {0};
-        double acc[3] {0};
-        double max_dec {0};
-        double min_acc {0};
-        for (int k=0;k<3;k++)
-        {
-            dec[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0L[3*legID+k];
-            acc[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0H[3*legID+k];
-        }
-        max_dec=*std::max_element(dec,dec+3);
-        min_acc=*std::min_element(acc,acc+3);
+        double max_dec=GetSwingMaxDec(count,ds,legID);
+        double min_acc=GetSwingMinAcc(count,ds,legID);
 
         k_sw++;
         if(k_sw==kswCount)
@@ -809,69 +858,56 @@ void TimeOptimalGait::GetSwingDsBound(int count, int legID)
         {
             if(ds_lowBoundFlag_sw==false && ds_upBoundFlag_sw==false && min_acc>max_dec)
             {
-                ds_lowBound_aLmt[count][legID]=ds;
+                ds_lowBound_aLmt[swCount][legID]=ds;
 
                 if(k_sw==1)
                 {
-                    //printf("swing ds_lowBound_aLmt=%.6f\n",ds_lowBound_aLmt[i][j+1]);
                     ds_lowBoundFlag_sw=true;
                 }
                 else
                 {
-                    for(int k_sw2=0;k_sw2<10000;k_sw2++)
+                    for(int k_sw2=0;k_sw2<1000;k_sw2++)
                     {
-                        ds=ds_lowBound_aLmt[count][legID]-0.001*0.0001*k_sw2;
-                        for (int k=0;k<3;k++)
-                        {
-                            dec[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0L[3*legID+k];
-                            acc[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0H[3*legID+k];
-                        }
-                        max_dec=*std::max_element(dec,dec+3);
-                        min_acc=*std::min_element(acc,acc+3);
+                        ds=ds_lowBound_aLmt[swCount][legID]-0.001*0.001*k_sw2;
+                        max_dec=GetSwingMaxDec(count,ds,legID);
+                        min_acc=GetSwingMinAcc(count,ds,legID);
 
                         if(min_acc<max_dec)
                         {
-                            //printf("swing ds_lowBound_aLmt=%.6f\n",ds_lowBound_aLmt[i][j+1]);
                             ds_lowBoundFlag_sw=true;
                             break;
                         }
                         else
                         {
-                            ds_lowBound_aLmt[count][legID]=ds;
+                            ds_lowBound_aLmt[swCount][legID]=ds;
                         }
                     }
                 }
             }
             else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_acc>=max_dec)
             {
-                dds_lowBound[count][legID]=max_dec;
-                dds_upBound[count][legID]=min_acc;
-                ds_upBound_aLmt[count][legID]=ds;
+                dds_lowBound[swCount][legID]=max_dec;
+                dds_upBound[swCount][legID]=min_acc;
+                ds_upBound_aLmt[swCount][legID]=ds;
             }
             else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_acc<max_dec)
             {
-                for(int k_sw2=0;k_sw2<10000;k_sw2++)
+                for(int k_sw2=0;k_sw2<1000;k_sw2++)
                 {
-                    ds=ds_upBound_aLmt[count][legID]+0.001*0.0001*k_sw2;
-                    for (int k=0;k<3;k++)
-                    {
-                        dec[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0L[3*legID+k];
-                        acc[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0H[3*legID+k];
-                    }
-                    max_dec=*std::max_element(dec,dec+3);
-                    min_acc=*std::min_element(acc,acc+3);
+                    ds=ds_upBound_aLmt[swCount][legID]+0.001*0.001*k_sw2;
+                    max_dec=GetSwingMaxDec(count,ds,legID);
+                    min_acc=GetSwingMinAcc(count,ds,legID);
 
                     if(min_acc<max_dec)
                     {
-                        //printf("swing ds_upBound_aLmt=%.6f,i=%d,j=%d\n",ds_upBound_aLmt[i][j+1],i,j);
                         ds_upBoundFlag_sw=true;
                         break;
                     }
                     else
                     {
-                        dds_lowBound[count][legID]=max_dec;
-                        dds_upBound[count][legID]=min_acc;
-                        ds_upBound_aLmt[count][legID]=ds;
+                        dds_lowBound[swCount][legID]=max_dec;
+                        dds_upBound[swCount][legID]=min_acc;
+                        ds_upBound_aLmt[swCount][legID]=ds;
                     }
                 }
             }
@@ -885,13 +921,13 @@ void TimeOptimalGait::GetSwingDsBound(int count, int legID)
     aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
     for (int k=0;k<3;k++)
     {
-        if(param_dds[3*legID+k]>0)
+        if(output_dds[count][3*legID+k]>0)
         {
-            vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/param_dds[3*legID+k];
+            vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/output_dds[count][3*legID+k];
         }
-        else if(param_dds[3*legID+k]<0)
+        else if(output_dds[count][3*legID+k]<0)
         {
-            vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/param_dds[3*legID+k];
+            vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/output_dds[count][3*legID+k];
         }
         else
         {
@@ -899,9 +935,9 @@ void TimeOptimalGait::GetSwingDsBound(int count, int legID)
         }
 
     }
-    ds_upBound_vLmt[count][legID]=*std::max_element(vLmt_value,vLmt_value+3);
-    ds_upBound[count][legID]=std::min(ds_upBound_aLmt[count][legID],ds_upBound_vLmt[count][legID]);
-    ds_lowBound[count][legID]=ds_lowBound_aLmt[count][legID];
+    ds_upBound_vLmt[swCount][legID]=*std::max_element(vLmt_value,vLmt_value+3);
+    ds_upBound[swCount][legID]=std::min(ds_upBound_aLmt[swCount][legID],ds_upBound_vLmt[swCount][legID]);
+    ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
 }
 
 void TimeOptimalGait::GetSwingSwitchPoint(int legID)
@@ -923,12 +959,13 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
         }
     }
 
-    slopedsBound[0][legID]=(ds_upBound[1][legID]-ds_upBound[0][legID])/delta_s;
+    slopedsBound[0][legID]=(ds_upBound[1][legID]-ds_upBound[0][legID])/(s_w[1][legID]-s_w[0][legID]);
     for(int i=1;i<900;i++)
     {
-        slopedsBound[i][legID]=(ds_upBound[i+1][legID]-ds_upBound[i-1][legID])/2/delta_s;
+        slopedsBound[i][legID]=( (ds_upBound[i+1][legID]-ds_upBound[i][legID])/(s_w[i+1][legID]-s_w[i][legID])
+                                +(ds_upBound[i][legID]-ds_upBound[i-1][legID])/(s_w[i][legID]-s_w[i-1][legID]) )/2;
     }
-    slopedsBound[900][legID]=(ds_upBound[900][legID]-ds_upBound[899][legID])/delta_s;
+    slopedsBound[900][legID]=(ds_upBound[900][legID]-ds_upBound[899][legID])/(s_w[900][legID]-s_w[899][legID]);
 
     for(int i=0;i<901;i++)
     {
@@ -939,11 +976,21 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
     {
         if(ds_upBound_vLmt[i][legID]>ds_upBound_aLmt[i][legID])
         {
+            int count;
+            if(legID%2==0)//024
+            {
+                count=i;
+            }
+            else
+            {
+                count=i+1350;
+            }
             for(int k=0;k<3;k++)
             {
-                if(output_dds[i+1][3*legID+k]*output_dds[i][3*legID+k]<0 || output_dds[i][3*legID+k]==0)
+                if(output_dds[count+1][3*legID+k]*output_dds[count][3*legID+k]<0 || output_dds[count][3*legID+k]==0)
                 {
-                    paramdds0Point[paramdds0Count[3*legID+k]][3*legID+k]=i+fabs(output_dds[i][3*legID+k])/(fabs(output_dds[i][3*legID+k])+fabs(output_dds[i+1][3*legID+k]));;
+                    paramdds0Point[paramdds0Count[3*legID+k]][3*legID+k]=i
+                            +fabs(output_dds[i][3*legID+k])/(fabs(output_dds[i][3*legID+k])+fabs(output_dds[i+1][3*legID+k]));
                     paramdds0Count[3*legID+k]++;
                 }
             }
@@ -951,10 +998,32 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
 
         if(slopeDelta[i+1][legID]*slopeDelta[i][legID]<0 || slopeDelta[i][legID]==0)
         {
-            tangentPoint[tangentCount[legID]][legID]=i+fabs(slopeDelta[i][legID])/(fabs(slopeDelta[i][legID])+fabs(slopeDelta[i+1][legID]));
+            tangentPoint[tangentCount[legID]][legID]=i
+                    +fabs(slopeDelta[i][legID])/(fabs(slopeDelta[i][legID])+fabs(slopeDelta[i+1][legID]));
             tangentCount[legID]++;
+            if((fabs(slopeDelta[i][legID])+fabs(slopeDelta[i+1][legID]))==0)
+            {
+                printf("WARNING! tangentPoint!!!\n");
+            }
         }
     }
+
+    printf("SwingLeg %d Tangent Switch Point:",legID);
+    for(int i=0;i<tangentCount[legID]+1;i++)
+    {
+        printf("%.1f,",tangentPoint[i][legID]);
+    }
+    printf("\n");
+
+    printf("SwingLeg %d ZeroInertia Switch Point:",legID);
+    for(int k=0;k<3;k++)
+    {
+        for(int i=0;i<paramdds0Count[3*legID+k]+1;i++)
+        {
+            printf("%.1f,",paramdds0Point[i][3*legID+k]);
+        }
+    }
+    printf("\n");
 
     //merge tangentPoint & paramdds0Point into switchPoint
     switchPoint[0][legID]=0;
@@ -995,15 +1064,13 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
         }
     }
 
-    printf("SwingLeg Switch Point:");
+    printf("SwingLeg %d Switch Point:",legID);
     for(int i=0;i<switchCount[legID]+1;i++)
     {
         printf("%.1f,",switchPoint[i][legID]);
     }
     printf("\n");
 }
-
-
 
 void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
 {
@@ -1342,21 +1409,28 @@ void TimeOptimalGait::GetOptimalDs()
         //generate the traj & calculate the bound of ds
         for (int i=0;i<901;i++)//024
         {
+            swCount=i;
             for (int j=0;j<3;j++)
             {
-                s_w[i][2*j]=s_b[i];
+                s_w[i][2*j]=PI/s_b1*s_b[i];
                 GetSwingLegParam(i,2*j);
-            }
-
-            for (int j=0;j<3;j++)
-            {
                 GetSwingDsBound(i,2*j);
             }
         }
-
-        for(int j=0;j<3;j++)
+        for(int i=1350;i<2251;i++)//135
         {
-            GetSwingSwitchPoint(2*j);
+            swCount=i-1350;
+            for (int j=0;j<3;j++)
+            {
+                s_w[swCount][2*j+1]=PI/(1-s_b2)*(s_b[i]-s_b2);
+                GetSwingLegParam(i,2*j+1);
+                GetSwingDsBound(i,2*j+1);
+            }
+        }
+
+        for(int j=0;j<6;j++)
+        {
+            GetSwingSwitchPoint(j);
         }
 
 //        for(int j=0;j<3;j++)
@@ -1428,128 +1502,128 @@ void TimeOptimalGait::GetOptimalDs()
 
 void TimeOptimalGait::GetOptimalGait2s()
 {
-    double pEB[6] {0};
-    double pEE[18] {0};
-    double vEB[6] {0};
-    double vEE[18] {0};
-    double aEB[6] {0};
-    double aEE[18] {0};
+//    double pEB[6] {0};
+//    double pEE[18] {0};
+//    double vEB[6] {0};
+//    double vEE[18] {0};
+//    double aEB[6] {0};
+//    double aEE[18] {0};
 
-    for (int i=0;i<901;i++)
-    {
-        s_w=0.1*i*PI/180;//degree to rad
+//    for (int i=0;i<901;i++)
+//    {
+//        s_w=0.1*i*PI/180;//degree to rad
 
-        f_sw[0]=0;
-        f_sw[1]=stepH*sin(s_w);
-        f_sw[2]=stepD/2*cos(s_w);
-        df_sw[0]=0;
-        df_sw[1]=stepH*cos(s_w);
-        df_sw[2]=-stepD/2*sin(s_w);
-        ddf_sw[0]=0;
-        ddf_sw[1]=-stepH*sin(s_w);
-        ddf_sw[2]=-stepD/2*cos(s_w);
+//        f_sw[0]=0;
+//        f_sw[1]=stepH*sin(s_w);
+//        f_sw[2]=stepD/2*cos(s_w);
+//        df_sw[0]=0;
+//        df_sw[1]=stepH*cos(s_w);
+//        df_sw[2]=-stepD/2*sin(s_w);
+//        ddf_sw[0]=0;
+//        ddf_sw[1]=-stepH*sin(s_w);
+//        ddf_sw[2]=-stepD/2*cos(s_w);
 
-        pEB[2]=initPeb[2]+pb_sw_tmp[i];
-        vEB[2]=vb_sw_tmp[i];
-        aEB[2]=ab_sw_tmp[i];
-        for(int j=0;j<3;j++)
-        {
-            //stanceLeg
-            pEE[6*j+3]=initPee[6*j+3];
-            pEE[6*j+4]=initPee[6*j+4];
-            pEE[6*j+5]=initPee[6*j+5];
+//        pEB[2]=initPeb[2]+pb_sw_tmp[i];
+//        vEB[2]=vb_sw_tmp[i];
+//        aEB[2]=ab_sw_tmp[i];
+//        for(int j=0;j<3;j++)
+//        {
+//            //stanceLeg
+//            pEE[6*j+3]=initPee[6*j+3];
+//            pEE[6*j+4]=initPee[6*j+4];
+//            pEE[6*j+5]=initPee[6*j+5];
 
-            //swingLeg
-            pEE[6*j]=initPee[6*j]+f_sw[0];
-            pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
-            pEE[6*j+2]=initPee[6*j+2]+f_sw[2];
+//            //swingLeg
+//            pEE[6*j]=initPee[6*j]+f_sw[0];
+//            pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
+//            pEE[6*j+2]=initPee[6*j+2]+f_sw[2];
 
-            vEE[6*j]=df_sw[0]*real_ds[i][2*j];
-            vEE[6*j+1]=df_sw[1]*real_ds[i][2*j];
-            vEE[6*j+2]=df_sw[2]*real_ds[i][2*j];
+//            vEE[6*j]=df_sw[0]*real_ds[i][2*j];
+//            vEE[6*j+1]=df_sw[1]*real_ds[i][2*j];
+//            vEE[6*j+2]=df_sw[2]*real_ds[i][2*j];
 
-            aEE[6*j]=ddf_sw[0]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[0]*real_dds[i][2*j];
-            aEE[6*j+1]=ddf_sw[1]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[1]*real_dds[i][2*j];
-            aEE[6*j+2]=ddf_sw[2]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[2]*real_dds[i][2*j];
-        }
+//            aEE[6*j]=ddf_sw[0]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[0]*real_dds[i][2*j];
+//            aEE[6*j+1]=ddf_sw[1]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[1]*real_dds[i][2*j];
+//            aEE[6*j+2]=ddf_sw[2]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[2]*real_dds[i][2*j];
+//        }
 
-        rbt.SetPeb(pEB);
-        rbt.SetVb(vEB);
-        rbt.SetAb(aEB);
-        rbt.SetPee(pEE);
-        rbt.SetVee(vEE);
-        rbt.SetAee(aEE);
+//        rbt.SetPeb(pEB);
+//        rbt.SetVb(vEB);
+//        rbt.SetAb(aEB);
+//        rbt.SetPee(pEE);
+//        rbt.SetVee(vEE);
+//        rbt.SetAee(aEE);
 
-        rbt.GetPee(*output_Pee+18*i,rbt.body());
-        rbt.GetPin(*output_Pin+18*i);
-        rbt.GetVin(*output_Vin+18*i);
-        rbt.GetAin(*output_Ain+18*i);
+//        rbt.GetPee(*output_Pee+18*i,rbt.body());
+//        rbt.GetPin(*output_Pin+18*i);
+//        rbt.GetVin(*output_Vin+18*i);
+//        rbt.GetAin(*output_Ain+18*i);
 
-        //printf("output:Pee=%.4f,Pin=%.4f,Vin=%.4f,Ain=%.4f\n",output_Pee[i][0],output_Pin[i][0],output_Vin[i][0],output_Ain[i][0]);
-    }
+//        //printf("output:Pee=%.4f,Pin=%.4f,Vin=%.4f,Ain=%.4f\n",output_Pee[i][0],output_Pin[i][0],output_Vin[i][0],output_Ain[i][0]);
+//    }
 }
 
 void TimeOptimalGait::GetOptimalGait2t()
 {
-    double * real_s=new double [6*maxTotalCount];
-    double * real_Pee=new double [18*maxTotalCount];
-    double * real_Pin=new double [18*maxTotalCount];
+//    double * real_s=new double [6*maxTotalCount];
+//    double * real_Pee=new double [18*maxTotalCount];
+//    double * real_Pin=new double [18*maxTotalCount];
 
-    for(int j=0;j<6;j++)
-    {
-        real_s[j]=0;
-        for(int i=0;i<901;i++)
-        {
-            real_ds_tmp[i][j]=real_ds[i][j]*totalTime[j]/maxTime;
-        }
-    }
+//    for(int j=0;j<6;j++)
+//    {
+//        real_s[j]=0;
+//        for(int i=0;i<901;i++)
+//        {
+//            real_ds_tmp[i][j]=real_ds[i][j]*totalTime[j]/maxTime;
+//        }
+//    }
 
-    for (int i=1;i<maxTotalCount;i++)
-    {
-        double ds[6];
-        for(int j=0;j<6;j++)
-        {
-            ds[j]=0.5*(real_ds_tmp[(int)(real_s[6*(i-1)+j]/(PI/900))][j]+real_ds_tmp[(int)(real_s[6*(i-1)+j]/(PI/900))+1][j]);
-            real_s[6*i+j]=real_s[6*(i-1)+j]+ds[j]*0.001;
-        }
-    }
+//    for (int i=1;i<maxTotalCount;i++)
+//    {
+//        double ds[6];
+//        for(int j=0;j<6;j++)
+//        {
+//            ds[j]=0.5*(real_ds_tmp[(int)(real_s[6*(i-1)+j]/(PI/900))][j]+real_ds_tmp[(int)(real_s[6*(i-1)+j]/(PI/900))+1][j]);
+//            real_s[6*i+j]=real_s[6*(i-1)+j]+ds[j]*0.001;
+//        }
+//    }
 
-    for (int i=0;i<maxTotalCount;i++)
-    {
-        double pEB[6];
-        memcpy(pEB,initPeb,6*sizeof(double));
-        double pEE[18];
-        double b_s=stepD/4-stepD/2*(real_s[6*i+stanceLegID[0]]/PI);
-        pEB[2]=initPeb[2]+b_s;
-        for(int j=0;j<3;j++)
-        {
-            //stanceLeg
-            pEE[6*j+3]=initPee[6*j+3];
-            pEE[6*j+4]=initPee[6*j+4];
-            pEE[6*j+5]=initPee[6*j+5];
+//    for (int i=0;i<maxTotalCount;i++)
+//    {
+//        double pEB[6];
+//        memcpy(pEB,initPeb,6*sizeof(double));
+//        double pEE[18];
+//        double b_s=stepD/4-stepD/2*(real_s[6*i+stanceLegID[0]]/PI);
+//        pEB[2]=initPeb[2]+b_s;
+//        for(int j=0;j<3;j++)
+//        {
+//            //stanceLeg
+//            pEE[6*j+3]=initPee[6*j+3];
+//            pEE[6*j+4]=initPee[6*j+4];
+//            pEE[6*j+5]=initPee[6*j+5];
 
-            //swingLeg
-            double f_s[3];
-            f_s[0]=0;
-            f_s[1]=stepH*sin(real_s[6*i+2*j]);
-            f_s[2]=stepD/2*cos(real_s[6*i+2*j]);
-            pEE[6*j]=initPee[6*j]+f_s[0];
-            pEE[6*j+1]=initPee[6*j+1]+f_s[1];
-            pEE[6*j+2]=initPee[6*j+2]+f_s[2];
-        }
-        rbt.SetPeb(pEB);
-        rbt.SetPee(pEE);
+//            //swingLeg
+//            double f_s[3];
+//            f_s[0]=0;
+//            f_s[1]=stepH*sin(real_s[6*i+2*j]);
+//            f_s[2]=stepD/2*cos(real_s[6*i+2*j]);
+//            pEE[6*j]=initPee[6*j]+f_s[0];
+//            pEE[6*j+1]=initPee[6*j+1]+f_s[1];
+//            pEE[6*j+2]=initPee[6*j+2]+f_s[2];
+//        }
+//        rbt.SetPeb(pEB);
+//        rbt.SetPee(pEE);
 
-        rbt.GetPee(real_Pee+18*i,rbt.body());
-        rbt.GetPin(real_Pin+18*i);
-    }
+//        rbt.GetPee(real_Pee+18*i,rbt.body());
+//        rbt.GetPin(real_Pin+18*i);
+//    }
 
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,maxTotalCount,6);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,maxTotalCount,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,maxTotalCount,18);
-    delete [] real_s;
-    delete [] real_Pee;
-    delete [] real_Pin;
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,maxTotalCount,6);
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,maxTotalCount,18);
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,maxTotalCount,18);
+//    delete [] real_s;
+//    delete [] real_Pee;
+//    delete [] real_Pin;
 }
 
 void TimeOptimalGait::OutputData()
@@ -1568,21 +1642,22 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, 2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, 2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const.txt", *output_const, 2251,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt", *output_const1, 2251,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt", *output_const2, 2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,2251,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_absdds.txt",*output_absdds,2251,18);
 
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a1.txt",*output_a1,2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0L.txt",*output_a0L,2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0H.txt",*output_a0H,2251,18);
 
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*dds_lowBound,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*dds_upBound,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_bound_vLmt.txt",*ds_upBound_vLmt,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound.txt",*ds_lowBound,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound.txt",*ds_upBound,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/max_ValueL.txt",*dds_lowBound,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/min_ValueH.txt",*dds_upBound,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_vLmt.txt",*ds_upBound_vLmt,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound.txt",*ds_lowBound,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound.txt",*ds_upBound,901,6);
 //    //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",*real_ddsMax,901,6);
 //    //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",*real_ddsMin,901,6);
 //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",*ds_forward,901,6);
