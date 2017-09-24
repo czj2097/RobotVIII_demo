@@ -31,10 +31,18 @@ public:
     void OutputData();
 
 private:
+    double GetStanceSwitchMaxDec(int switchID, double ds);
+    double GetStanceSwitchMinAcc(int switchID, double ds);
+    double GetStanceSwitchDsBound(int switchID);
+    void GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint);
+
     double GetStanceMaxDec(int count, double ds);
     double GetStanceMinAcc(int count, double ds);
+
+
     double GetSwingMaxDec(int count, double ds, int legID);
     double GetSwingMinAcc(int count, double ds, int legID);
+
     Robots::RobotTypeI rbt;
 
     const double vLmt {0.9};
@@ -66,6 +74,9 @@ private:
 
     double Jvi[9] {0};
     double abs_param_dds[18] {0};//for vLmt of stanceLeg
+    double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
+    double param_a0L[18] {0};
+    double param_a0H[18] {0};
 
     double output_PeeB[2251][18] {{0}};
     double output_dsds[2251][18] {{0}};
@@ -85,14 +96,17 @@ private:
     double dds_lowBound_body[2251] {0};
     double ds_upBound_body[2251] {0};
 
-    double slopedsBound_body[2251] {0};
+//    double slopedsBound_body[2251] {0};
+//    double paramdds0Point_body[2251][18] {{0}};
+//    double tangentPoint_body[2251] {0};
+//    int paramdds0Count_body[18] {0};
+//    int tangentCount_body {0};
+
     double slopeDelta_body[2251] {0};
-    double paramdds0Point_body[2251][18] {{0}};
     int isParamddsExact0_body[2251][18] {{0}};
-    double tangentPoint_body[2251] {0};
     double switchPoint_body[2251] {0};
-    int paramdds0Count_body[18] {0};
-    int tangentCount_body {0};
+    char switchPointType_body[2251] {0};
+    int switchScrewID_body[2251] {0};
     int switchCount_body {0};
 
     double real_ds_body[2251] {0};
@@ -127,14 +141,15 @@ private:
     double dds_lowBound[901][6] {{0}};
     double dds_upBound[901][6] {{0}};
 
-    double slopedsBound[901][6] {{0}};
+//    double slopedsBound[901][6] {{0}};
+//    double paramdds0Point[901][18] {{0}};
+//    double tangentPoint[901][6] {{0}};
+//    int paramdds0Count[18] {0};
+//    int tangentCount[6] {0};
+
     double slopeDelta[901][6] {{0}};
-    double paramdds0Point[901][18] {{0}};
     int isParamddsExact0[901][18] {{0}};
-    double tangentPoint[901][6] {{0}};
     double switchPoint[901][6] {{0}};
-    int paramdds0Count[18] {0};
-    int tangentCount[6] {0};
     int switchCount[6] {0};
 
     bool quitSwitchPoint {false};
@@ -146,11 +161,11 @@ private:
     int stop_back {0};
     int ki_back {0};
     int ki_for {0};
+
     double ds_forward[901][6] {{0}};
     double ds_backward[901][6] {{0}};
     double dds_forward[901][6] {{0}};
     double dds_backward[901][6] {{0}};
-
     double real_ds[901][6] {{0}};
     double real_dds[901][6] {{0}};
 //    double real_ddsMax[901][6] {{0}};
