@@ -75,6 +75,7 @@ private:
     double Jvi[9] {0};
     double abs_param_dds[18] {0};//for vLmt of stanceLeg
     double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
+    double param_a1[18] {0};//coefficient of ds, param_ds divided by param_dds
     double param_a0L[18] {0};
     double param_a0H[18] {0};
 
@@ -126,6 +127,7 @@ private:
     double pb_sw_tmp[2251] {0};
     double vb_sw_tmp[2251] {0};
     double ab_sw_tmp[2251] {0};
+    double pva_b[2251][3] {{0}};
 
     int swCount {0};
     double s_w[901][6] {{0}};
