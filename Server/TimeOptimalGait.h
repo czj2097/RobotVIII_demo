@@ -18,11 +18,11 @@ public:
     void GetStanceOptimalDsByDirectNI();
     void GetStanceOptimalDsByMinorIteration();
 
-    void GetSwingLegParam(int count, int legID, double s);
+    void GetSwingLegParam(int count, int legID, double sw, double *pva_body);
     void GetSwingDsBound(int count, int legID);
     void GetSwingSwitchPoint(int legID);
     void GetSwingOptimalDsBySwitchPoint(int legID);
-    void GetSwingOptimalDsByIteration(int legID);
+    void GetSwingOptimalDsByDirectNI(int legID);
 
     void GetOptimalDs();
     void GetOptimalGait2s();
@@ -35,11 +35,13 @@ private:
     double GetStanceSwitchMinAcc(int switchID, double ds);
     double GetStanceSwitchDsBound(int switchID);
     void GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint);
-
     double GetStanceMaxDec(int count, double ds);
     double GetStanceMinAcc(int count, double ds);
 
-
+    double GetSwingSwitchMaxDec(int switchID, double ds, int legID);
+    double GetSwingSwitchMinAcc(int switchID, double ds, int legID);
+    double GetSwingSwitchDsBound(int switchID, int legID, double *pva_body);
+    void GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint);
     double GetSwingMaxDec(int count, double ds, int legID);
     double GetSwingMinAcc(int count, double ds, int legID);
 
@@ -47,7 +49,6 @@ private:
 
     const double vLmt {0.9};
     const double aLmt {3.2};
-    const double delta_s {PI/900};
     double stepH {0.1};
     double stepD {0.8};
     double dutyCycle {0.6};
@@ -74,6 +75,7 @@ private:
 
     double Jvi[9] {0};
     double abs_param_dds[18] {0};//for vLmt of stanceLeg
+    double param_dds[18] {0};
     double param_a2[18] {0};//coefficient of ds*ds, param_dsds divided by param_dds
     double param_a1[18] {0};//coefficient of ds, param_ds divided by param_dds
     double param_a0L[18] {0};
@@ -106,7 +108,6 @@ private:
     double slopeDelta_body[2251] {0};
     int isParamddsExact0_body[2251][18] {{0}};
     double switchPoint_body[2251] {0};
-    char switchPointType_body[2251] {0};
     int switchScrewID_body[2251] {0};
     int switchCount_body {0};
 
@@ -127,6 +128,7 @@ private:
     double pb_sw_tmp[2251] {0};
     double vb_sw_tmp[2251] {0};
     double ab_sw_tmp[2251] {0};
+    double pva_b_tmp[2251][3] {{0}};
     double pva_b[2251][3] {{0}};
 
     int swCount {0};
@@ -152,17 +154,8 @@ private:
     double slopeDelta[901][6] {{0}};
     int isParamddsExact0[901][18] {{0}};
     double switchPoint[901][6] {{0}};
+    int switchScrewID[901][6] {{0}};
     int switchCount[6] {0};
-
-    bool quitSwitchPoint {false};
-    bool stopFlag {false};
-    bool accFlag {true};//true acc, false dec
-    int dec_start {0};
-    int dec_end {0};
-    unsigned int cycleCount {0};//used to limit the cycleCount of forward integration
-    int stop_back {0};
-    int ki_back {0};
-    int ki_for {0};
 
     double ds_forward[901][6] {{0}};
     double ds_backward[901][6] {{0}};
