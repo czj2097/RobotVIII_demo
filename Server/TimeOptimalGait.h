@@ -65,7 +65,7 @@ private:
                           0.30, -0.58, -0.52,
                           0.60, -0.58,  0,
                           0.30, -0.58,  0.52 };
-    const int stanceLegID[3] {1,3,5};
+//    const int stanceLegID[3] {1,3,5};
 
 
     double s_b[2251] {0};
@@ -122,13 +122,14 @@ private:
     double Tstep {1};
     double s_b1 {0};
     double s_b2 {0};
-    double pb_sw[2251] {0};
-    double vb_sw[2251] {0};
-    double ab_sw[2251] {0};
-    double pb_sw_tmp[2251] {0};
-    double vb_sw_tmp[2251] {0};
-    double ab_sw_tmp[2251] {0};
-    double pva_b_tmp[2251][3] {{0}};
+
+//    double pb_sw[2251] {0};
+//    double vb_sw[2251] {0};
+//    double ab_sw[2251] {0};
+//    double pb_sw_tmp[2251] {0};
+//    double vb_sw_tmp[2251] {0};
+//    double ab_sw_tmp[2251] {0};
+    double output_init_pva_b[2251][3] {{0}};
     double pva_b[2251][3] {{0}};
 
     int swCount {0};
@@ -172,8 +173,8 @@ private:
     double totalTime[6] {0};
     double maxTime {0};
     int maxTotalCount {0};
-    int maxTotalCount_last {1};
-    int maxTimeID {0};
+//    int maxTotalCount_last {1};
+//    int maxTimeID {0};
 
 //    double output_Pee[901][18] {{0}};
 //    double output_Pin[901][18] {{0}};

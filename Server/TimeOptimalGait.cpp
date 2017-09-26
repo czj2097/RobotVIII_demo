@@ -481,70 +481,47 @@ void TimeOptimalGait::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoin
 
     for(int i=1;i<switchCount_body-1;i++)
     {
-        double s;
-        if(switchPoint_body[i]<901)
-        {
-            s=s_b1/900*switchPoint_body[i];
-            for(int j=0;j<3;j++)
-            {
-                GetStanceLegParam(-1,2*j+1,s);//135
-            }
-        }
-        else if(switchPoint_body[i]<1351)
-        {
-            s=s_b1+(s_b2-s_b1)/450*(switchPoint_body[i]-900);
-            for(int j=0;j<6;j++)
-            {
-                GetStanceLegParam(-1,j,s);
-            }
-        }
-        else
-        {
-            s=s_b2+(1-s_b2)/900*(switchPoint_body[i]-1350);
-            for(int j=0;j<3;j++)
-            {
-                GetStanceLegParam(-1,2*j,s);//024
-            }
-        }
-        double ds=GetStanceSwitchDsBound(i);
-        double dds_back=GetStanceSwitchMaxDec(i,ds);
-        double dds_for=GetStanceSwitchMinAcc(i,ds);
-
+//        double s;
+//        if(switchPoint_body[i]<901)
+//        {
+//            s=s_b1/900*switchPoint_body[i];
+//            for(int j=0;j<3;j++)
+//            {
+//                GetStanceLegParam(-1,2*j+1,s);//135
+//            }
+//        }
+//        else if(switchPoint_body[i]<1351)
+//        {
+//            s=s_b1+(s_b2-s_b1)/450*(switchPoint_body[i]-900);
+//            for(int j=0;j<6;j++)
+//            {
+//                GetStanceLegParam(-1,j,s);
+//            }
+//        }
+//        else
+//        {
+//            s=s_b2+(1-s_b2)/900*(switchPoint_body[i]-1350);
+//            for(int j=0;j<3;j++)
+//            {
+//                GetStanceLegParam(-1,2*j,s);//024
+//            }
+//        }
+//        double ds=GetStanceSwitchDsBound(i);
+//        double dds_back=GetStanceSwitchMaxDec(i,ds);
+//        double dds_for=GetStanceSwitchMinAcc(i,ds);
         int num=round(switchPoint_body[i]);
-/*        bool isInt {false};
-        for(int j=0;j<18;j++)
-        {
-            if(isParamddsExact0_body[num][j]==1)
-            {
-                isInt=true;
-            }
-        }
-        if(isInt==true)
-        {
-            lowPoint[i]=sqrt(ds*ds-2*dds_back*(s_b[num]-s_b[num-1]));
-            upPoint[i]=sqrt(ds*ds+2*dds_for*(s_b[num+1]-s_b[num]));
-        }
-        else */
+//        int num=(int)switchPoint_body[i];
         if(slopeDelta_body[num]==0)
         {
             printf("Amazing!!! double equals 0\n");
-            lowPoint[i]=ds;
-            upPoint[i]=ds;
+            upPoint[i]=lowPoint[i]=ds_upBound_body[num];
         }
         else
         {
-            lowPoint[i]=std::min(ds_upBound_body[num-1],sqrt(ds*ds-2*dds_back*(switchPoint_body[i]+1-num)*(s_b[num]-s_b[num-1])));
-            upPoint[i]=std::min(ds_upBound_body[num+1],sqrt(ds*ds+2*dds_for*(num+1-switchPoint_body[i])*(s_b[num+1]-s_b[num])));
-//            if(num>=switchPoint_body[i])
-//            {
-//                lowPoint[i]=sqrt(ds*ds-2*dds_back*(switchPoint_body[i]+1-num)*(s_b[num]-s_b[num-1]));
-//                upPoint[i]=sqrt(ds_upBound_body[num]*ds_upBound_body[num]+(dds_upBound_body[num]+dds_lowBound_body[num])*(s_b[num+1]-s_b[num]));
-//            }
-//            else
-//            {
-//                lowPoint[i]=sqrt(ds_upBound_body[num]*ds_upBound_body[num]-(dds_upBound_body[num]+dds_lowBound_body[num])*(s_b[num]-s_b[num-1]));
-//                upPoint[i]=sqrt(ds*ds+2*dds_for*(num+1-switchPoint_body[i])*(s_b[num+1]-s_b[num]));
-//            }
+//            lowPoint[i]=std::min(ds_upBound_body[num-1],sqrt(ds*ds-2*dds_back*(switchPoint_body[i]+1-num)*(s_b[num]-s_b[num-1])));
+//            upPoint[i]=std::min(ds_upBound_body[num+1],sqrt(ds*ds+2*dds_for*(num+1-switchPoint_body[i])*(s_b[num+1]-s_b[num])));
+            auto tmp=std::min(ds_upBound_body[num-1],ds_upBound_body[num]);
+            upPoint[i]=lowPoint[i]=std::min(tmp,ds_upBound_body[num+1]);//std::min(ds_upBound_body[num],ds_upBound_body[num+1]);
         }
     }
 }
@@ -578,6 +555,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
     for(int m=0;m<switchCount_body;m++)
     {
         int k_st=round(switchPoint_body[m]);
+        real_dds_body[k_st]=0;
 
         //start of backward
         if(ds_upBound_body[k_st]>real_ds_body[k_st] && k_st!=2250)
@@ -1152,7 +1130,7 @@ void TimeOptimalGait::GetSwingDsBound(int count, int legID)
     double vLmt_value[3] {0};
     double Jvi_dot_vb[3] {0};
     double vb_sw3[3] {0};
-    vb_sw3[2]=vb_sw_tmp[count];
+    vb_sw3[2]=pva_b[count][1];
     aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
     for (int k=0;k<3;k++)
     {
@@ -1430,70 +1408,47 @@ void TimeOptimalGait::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, doub
     for(int i=1;i<switchCount[legID]-1;i++)
     {
         int num=round(switchPoint[i][legID]);
-        int swCount=(int)switchPoint[i][legID];
-        int count = legID%2==0 ? swCount : (swCount+1350);
-        double alpha=switchPoint[i][legID]-swCount;
-        double sb = s_b[count]+alpha*(s_b[count+1]-s_b[count]);
-        double sw = s_w[swCount][legID]+alpha*(s_w[swCount+1][legID]-s_w[swCount][legID]);
-        double pva_b_switch[3];
-        for(int k=0;k<3;k++)
-        {
-            pva_b_switch[k]=pva_b_tmp[count][k]+alpha*(pva_b_tmp[count+1][k]-pva_b_tmp[count][k]);
-        }
-
-        GetSwingLegParam(-1,legID,sw,pva_b_switch);
-
-        double ds1=GetSwingSwitchDsBound(i,legID,pva_b_switch);
-        double ds_tmp=std::min(ds_upBound[num-1][legID],ds_upBound[num][legID]);
-        double ds2=std::min(ds_tmp,ds_upBound[num+1][legID]);
-
-        double dds_back=GetSwingMaxDec(i,ds2,legID);
-        double dds_for=GetSwingMinAcc(i,ds2,legID);
-        if(dds_for<dds_back)
-        {
-            printf("\nWARNING!!!dds_for < dds_back at switchPoint=%.1f,dds_back=%.1f,dds_for=%.1f,ds1=%.8f,ds2=%.8f\n",switchPoint[i][legID],dds_back,dds_for,ds1,ds2);
-            for(int k=0;k<3;k++)
-            {
-                printf("param_dds=%.4f,param_a2=%.4f,param_a1=%.4f,param_a0L=%.4f,param_a0H=%.4f\n\n",param_dds[3*legID+k],param_a2[3*legID+k],param_a1[3*legID+k],param_a0L[3*legID+k],param_a0H[3*legID+k]);
-            }
-        }
-
-
-//        if(slopeDelta[num][legID]==0)
+//        int swCount=(int)switchPoint[i][legID];
+//        int count = legID%2==0 ? swCount : (swCount+1350);
+//        double alpha=switchPoint[i][legID]-swCount;
+//        double sb = s_b[count]+alpha*(s_b[count+1]-s_b[count]);
+//        double sw = s_w[swCount][legID]+alpha*(s_w[swCount+1][legID]-s_w[swCount][legID]);
+//        double pva_b_switch[3];
+//        for(int k=0;k<3;k++)
 //        {
-//            printf("Amazing!!! double equals 0\n");
-//            lowPoint[i]=ds;
-//            upPoint[i]=ds;
+//            pva_b_switch[k]=pva_b[count][k]+alpha*(pva_b[count+1][k]-pva_b[count][k]);
 //        }
-//        else
-//        {
 
+//        GetSwingLegParam(-1,legID,sw,pva_b_switch);
+
+//        double ds1=GetSwingSwitchDsBound(i,legID,pva_b_switch);
+//        double ds_tmp=std::min(ds_upBound[num-1][legID],ds_upBound[num][legID]);
+//        double ds2=std::min(ds_tmp,ds_upBound[num+1][legID]);
+
+//        double dds_back=GetSwingMaxDec(i,ds2,legID);
+//        double dds_for=GetSwingMinAcc(i,ds2,legID);
+//        if(dds_for<dds_back)
+//        {
+//            printf("\nWARNING!!!dds_for < dds_back at switchPoint=%.1f,dds_back=%.1f,dds_for=%.1f,ds1=%.8f,ds2=%.8f\n",switchPoint[i][legID],dds_back,dds_for,ds1,ds2);
+//            for(int k=0;k<3;k++)
+//            {
+//                printf("param_dds=%.4f,param_a2=%.4f,param_a1=%.4f,param_a0L=%.4f,param_a0H=%.4f\n\n",param_dds[3*legID+k],param_a2[3*legID+k],param_a1[3*legID+k],param_a0L[3*legID+k],param_a0H[3*legID+k]);
+//            }
+//        }
+
+//        int num=(int)switchPoint[i][legID];
+        if(slopeDelta[num][legID]==0)
+        {
+            printf("Amazing!!! double equals 0\n");
+            upPoint[i]=lowPoint[i]=ds_upBound[num][legID];
+        }
+        else
+        {
 //            lowPoint[i]=std::min(ds_upBound[num-1][legID],sqrt(ds*ds-2*dds_back*(switchPoint[i][legID]+1-num)*(s_w[num][legID]-s_w[num-1][legID])));
 //            upPoint[i]=std::min(ds_upBound[num+1][legID],sqrt(ds*ds+2*dds_for*(num+1-switchPoint[i][legID])*(s_w[num+1][legID]-s_w[num][legID])));
-
-//            lowPoint[i]=sqrt(ds*ds-2*dds_back*(switchPoint[i][legID]+1-num)*(s_w[num][legID]-s_w[num-1][legID]));
-//            upPoint[i]=sqrt(ds*ds+2*dds_for*(num+1-switchPoint[i][legID])*(s_w[num+1][legID]-s_w[num][legID]));
-
-//            if(ds*ds-2*dds_back*(switchPoint[i][legID]+1-num)*(s_w[num][legID]-s_w[num-1][legID])<0)
-//            {
-//                printf("lowPoint unsolvable, ds=%.1f\n",ds);
-//            }
-//            if(ds*ds+2*dds_for*(num+1-switchPoint[i][legID])*(s_w[num+1][legID]-s_w[num][legID])<0)
-//            {
-//                printf("upPoint unsolvable, ds=%.1f\n",ds);
-//            }
-
-//            if(num>=switchPoint[i][legID])
-//            {
-//                lowPoint[i]=sqrt(ds*ds-2*dds_back*(switchPoint[i][legID]+1-num)*(s_w[num][legID]-s_w[num-1][legID]));
-//                upPoint[i]=sqrt(ds_upBound[num][legID]*ds_upBound[num][legID]+(dds_upBound[num][legID]+dds_lowBound[num][legID])*(s_w[num+1][legID]-s_w[num][legID]));
-//            }
-//            else
-//            {
-//                lowPoint[i]=sqrt(ds_upBound[num][legID]*ds_upBound[num][legID]-(dds_upBound[num][legID]+dds_lowBound[num][legID])*(s_w[num][legID]-s_w[num-1][legID]));
-//                upPoint[i]=sqrt(ds*ds+2*dds_for*(num+1-switchPoint[i][legID])*(s_w[num+1][legID]-s_w[num][legID]));
-//            }
-//        }
+            auto tmp=std::min(ds_upBound[num-1][legID],ds_upBound[num][legID]);
+            upPoint[i]=lowPoint[i]=std::min(tmp,ds_upBound[num+1][legID]);//std::min(ds_upBound[num][legID],ds_upBound[num+1][legID]);
+        }
     }
 }
 
@@ -1526,6 +1481,8 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
     for(int m=0;m<switchCount[legID];m++)
     {
         int k_sw=round(switchPoint[m][legID]);
+        real_dds[k_sw][legID]=0;
+
         if(ds_upBound[k_sw][legID]>real_ds[k_sw][legID] && k_sw!=900)//start of backward
         {
             printf("SwingLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
@@ -1583,24 +1540,6 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
             }
         }
 
-//        bool isEqual0Point {false};
-//        for(int k=0;k<3;k++)
-//        {
-//            if(output_dds[(int)switchPoint[m][legID]][3*legID+k]==0
-//                    || slopeDelta[(int)switchPoint[m][legID]][legID]==0)
-//            {
-//                printf("switchPoint integral\n\n");
-//                isEqual0Point=true;
-//            }
-//        }
-//        if(isEqual0Point==false && switchPoint[m][legID]!=0)
-//        {
-//            k_sw=switchPoint[m][legID]+1;
-//        }
-//        else
-//        {
-//            k_sw=switchPoint[m][legID];
-//        }
         k_sw=round(switchPoint[m][legID]);
         if(k_sw!=0)
         {
@@ -1805,9 +1744,9 @@ void TimeOptimalGait::GetOptimalDs()
     //pva_b & s_w initialized here, and need to be updated during major iteration
     for (int i=0;i<2251;i++)
     {
-        pva_b_tmp[i][0]=pva_b[i][0]=b_sb[i];
-        pva_b_tmp[i][1]=pva_b[i][1]=db_sb[i]*real_ds_body[i];
-        pva_b_tmp[i][2]=pva_b[i][2]=ddb_sb[i]*real_ds_body[i]*real_ds_body[i]+db_sb[i]*real_dds_body[i];
+        output_init_pva_b[i][0]=pva_b[i][0]=b_sb[i];
+        output_init_pva_b[i][1]=pva_b[i][1]=db_sb[i]*real_ds_body[i];
+        output_init_pva_b[i][2]=pva_b[i][2]=ddb_sb[i]*real_ds_body[i]*real_ds_body[i]+db_sb[i]*real_dds_body[i];
 
         for(int j=0;j<3;j++)
         {
@@ -1823,21 +1762,22 @@ void TimeOptimalGait::GetOptimalDs()
     }
 
 
-//    /******************************* SwingLeg & Iteration ************************************/
-//    int iterCount {0};
-//    while(maxTotalCount!=maxTotalCount_last)
-//    {
-//        printf("\n");
-//        for(int i=0;i<901;i++)
-//        {
-//            for(int j=0;j<3;j++)
-//            {
-//                ds_backward[i][2*j]=0;
-//                ds_forward[i][2*j]=0;
-//            }
-//        }
-//        iterCount++;
-//        maxTotalCount_last=maxTotalCount;
+    /******************************* SwingLeg & Iteration ************************************/
+    int iterCount {0};
+    bool stopFlag {false};
+    double Tstep_tmp {Tstep};
+    while(stopFlag==false && iterCount<=1)
+    {
+        printf("\n");
+        for(int i=0;i<901;i++)
+        {
+            for(int j=0;j<6;j++)
+            {
+                ds_backward[i][j]=0;
+                ds_forward[i][j]=0;
+            }
+        }
+        iterCount++;
 
         //generate the traj & calculate the bound of ds
         std::fill_n(totalTime,6,0);
@@ -1851,7 +1791,7 @@ void TimeOptimalGait::GetOptimalDs()
             for (int i=0;i<901;i++)//024
             {
                 int count = (j%2==0) ? i : (i+1350);
-                GetSwingLegParam(count,j,s_w[i][j],*pva_b_tmp+3*count);
+                GetSwingLegParam(count,j,s_w[i][j],*pva_b+3*count);
                 GetSwingDsBound(count,j);
             }
 
@@ -1859,62 +1799,96 @@ void TimeOptimalGait::GetOptimalDs()
             GetSwingOptimalDsBySwitchPoint(j);
             //GetSwingOptimalDsByIteration(j);
 
-
             for (int i=1;i<901;i++)
             {
                 totalTime[j]+=2*(s_w[i][j]-s_w[i-1][j])/(real_ds[i-1][j]+real_ds[i][j]);
                 timeArray[i][j]=totalTime[j];
             }
         }
-//        maxTime=*std::max_element(totalTime,totalTime+6);
-//        maxTotalCount=(int)(maxTime*1000)+1;
-//        maxTime=0.001*maxTotalCount;
-//        maxTimeID=std::max_element(totalTime,totalTime+6)-totalTime;
-//        printf("totalTime: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f; maxTime:%.4f\n",totalTime[0],totalTime[1],totalTime[2],totalTime[3],totalTime[4],totalTime[5],maxTime);
+        maxTime=*std::max_element(totalTime,totalTime+6);
+        maxTotalCount=(int)(maxTime*1000)+1;
+        maxTime=0.001*maxTotalCount;
+        printf("totalTime: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f; maxTime:%.4f\n",
+               totalTime[0],totalTime[1],totalTime[2],totalTime[3],totalTime[4],totalTime[5],maxTime);
+
+        for(int i=0;i<6;i++)
+        {
+            if(totalTime[i]-(1-dutyCycle)*Tstep_tmp<1e-4)
+            {
+                stopFlag=true;
+            }
+        }
 
         //update pva_b & s_w here
-//        for(int i=0;i<901;i++)
-//        {
-//            memcpy(*timeArray_tmp+6*i,*timeArray+6*i,6*sizeof(double));
-//            for(int j=0;j<6;j++)
-//            {
-//                if(totalTime[j]!=0)
-//                {
-//                    timeArray_tmp[i][j]*=maxTime/totalTime[j];
-//                }
-//            }
-//        }
-//        int j_start {0};
-//        for(int i=0;i<900;i++)
-//        {
-//            //if(i%100==99)
-//                //printf("j_start=%d, ",j_start);
-//            for(int j=j_start;j<900;j++)
-//            {
-//                if(timeArray_tmp[i][maxTimeID]>=timeArray_tmp[j][stanceLegID[0]] && timeArray_tmp[i][maxTimeID]<timeArray_tmp[j+1][stanceLegID[0]])
-//                {
-//                    j_start=j;
-//                    pb_sw_tmp[i]=(pb_sw[j+1]-pb_sw[j])/(timeArray_tmp[j+1][stanceLegID[0]]-timeArray_tmp[j][stanceLegID[0]])*(timeArray_tmp[i][maxTimeID]-timeArray_tmp[j][stanceLegID[0]])+pb_sw[j];
-//                    vb_sw_tmp[i]=(vb_sw[j+1]-vb_sw[j])/(timeArray_tmp[j+1][stanceLegID[0]]-timeArray_tmp[j][stanceLegID[0]])*(timeArray_tmp[i][maxTimeID]-timeArray_tmp[j][stanceLegID[0]])+vb_sw[j];
-//                    vb_sw_tmp[i]*=totalTime[stanceLegID[0]]/maxTime;
-//                    ab_sw_tmp[i]=(ab_sw[j+1]-ab_sw[j])/(timeArray_tmp[j+1][stanceLegID[0]]-timeArray_tmp[j][stanceLegID[0]])*(timeArray_tmp[i][maxTimeID]-timeArray_tmp[j][stanceLegID[0]])+ab_sw[j];
-//                    ab_sw_tmp[i]*=totalTime[stanceLegID[0]]/maxTime*totalTime[stanceLegID[0]]/maxTime;
-//                    break;
-//                }
-//            }
-//            //if(i%100==99)
-//                //printf("j_end=%d\n",j_start);
-//        }
-//        pb_sw_tmp[900]=pb_sw[900];
-//        vb_sw_tmp[900]=vb_sw[900]*totalTime[stanceLegID[0]]/maxTime;
-//        ab_sw_tmp[900]=ab_sw[900]*totalTime[stanceLegID[0]]/maxTime*totalTime[stanceLegID[0]]/maxTime;
+        double timeArray_body_tmp[2251] {0};
+        double timeArray_tmp[901][6] {0};
+        double pva_b_tmp[2251][3] {0};
+        for(int i=0;i<2251;i++)
+        {
+            timeArray_body_tmp[i]=timeArray_body[i]*maxTime/((1-dutyCycle)*Tstep);
+            pva_b_tmp[i][0]=pva_b[i][0];
+            pva_b_tmp[i][1]=pva_b[i][1]*(1-dutyCycle)*Tstep/maxTime;
+            pva_b_tmp[i][2]=pva_b[i][2]*(1-dutyCycle)*Tstep/maxTime*(1-dutyCycle)*Tstep/maxTime;
+        }
+        Tstep_tmp=timeArray_body_tmp[2250];
 
-//        //memcpy(pb_sw,pb_sw_tmp,(901)*sizeof(double));
-//        //memcpy(vb_sw,vb_sw_tmp,(901)*sizeof(double));
-//        //memcpy(ab_sw,ab_sw_tmp,(901)*sizeof(double));
-//    }
+        for(int i=0;i<901;i++)
+        {
+            for(int j=0;j<6;j++)
+            {
+                if(totalTime[j]!=0)
+                {
+                    timeArray_tmp[i][j]=timeArray[i][j]*maxTime/totalTime[j];
+                }
+            }
+        }
 
-//    printf("Iteration finished, iterCount=%d, maxTime=%.4f, timeArray:%.4f,%.4f\n\n",iterCount,maxTime,timeArray[0][stanceLegID[0]],timeArray[1][stanceLegID[0]]);
+        int k_start {0};
+        double s_w_tmp[901][6] {0};
+        for(int i=0;i<900;i++)
+        {
+            for(int j=0;j<3;j++)
+            {
+                for(int k=k_start;k<900;k++)
+                {
+                    if(timeArray_tmp[k][2*j]<=timeArray_body_tmp[i] && timeArray_tmp[k+1][2*j]>timeArray_body_tmp[i])
+                    {
+                        k_start=k;
+                        s_w_tmp[i][2*j]=s_w[k][2*j]+(s_w[k+1][2*j]-s_w[k][2*j])
+                                *(timeArray_body_tmp[i]-timeArray_tmp[k][2*j])/(timeArray_tmp[k+1][2*j]-timeArray_tmp[k][2*j]);
+                        break;
+                    }
+                }
+            }
+        }
+        k_start=0;
+        for(int i=1350;i<2250;i++)
+        {
+            for(int j=0;j<3;j++)
+            {
+                for(int k=k_start;k<900;k++)
+                {
+                    if(timeArray_tmp[k][2*j+1]<=(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp)
+                            && timeArray_tmp[k+1][2*j+1]>(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp))
+                    {
+                        k_start=k;
+                        s_w_tmp[i-1350][2*j+1]=s_w[k][2*j+1]+(s_w[k+1][2*j+1]-s_w[k][2*j+1])
+                                *(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp-timeArray_tmp[k][2*j+1])/(timeArray_tmp[k+1][2*j+1]-timeArray_tmp[k][2*j+1]);
+                        break;
+                    }
+                }
+            }
+        }
+        for(int i=0;i<6;i++)
+        {
+            s_w_tmp[900][i]=PI;
+        }
+
+        memcpy(*s_w,*s_w_tmp,901*6*sizeof(double));
+        memcpy(*pva_b,*pva_b_tmp,2251*3*sizeof(double));
+    }
+
+    printf("Iteration finished, iterCount=%d, maxTime=%.4f, timeArray:%.4f,%.4f\n\n",iterCount,maxTime,timeArray_body[0],timeArray_body[1]);
 
     gettimeofday(&tpend,NULL);
     tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
@@ -2088,6 +2062,8 @@ void TimeOptimalGait::OutputData()
 
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds_body.txt",real_ds_body,2251,1);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds_body.txt",real_dds_body,2251,1);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds.txt",*real_ds,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds.txt",*real_dds,901,6);
 
 //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray.txt",*timeArray_tmp,901,6);
 //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pb_sw.txt",pb_sw_tmp,901,1);
