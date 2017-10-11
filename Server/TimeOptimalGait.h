@@ -108,6 +108,7 @@ private:
     double slopeDelta_body[2251] {0};
     int isParamddsExact0_body[2251][18] {{0}};
     double switchPoint_body[2251] {0};
+    char switchType_body[2251] {0};
     int switchScrewID_body[2251] {0};
     int switchCount_body {0};
 
@@ -155,6 +156,7 @@ private:
     double slopeDelta[901][6] {{0}};
     int isParamddsExact0[901][18] {{0}};
     double switchPoint[901][6] {{0}};
+    char switchType[901][6] {{0}};
     int switchScrewID[901][6] {{0}};
     int switchCount[6] {0};
 
