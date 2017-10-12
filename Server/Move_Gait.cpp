@@ -2427,7 +2427,7 @@ namespace FastWalk
         param.beta=0;
         param.d=0.8;
         param.h=0.1;
-        param.totalCount=1335;//Ain reach the limit when t=1335, d=0.8, h=0.1
+        param.totalCount=1335;//Ain reach the limit when t=1335, d=0.8, h=0.1 for RobotVIII
         param.n=3;
 
         double pEE[2*param.n*param.totalCount][18];

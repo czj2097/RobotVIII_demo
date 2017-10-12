@@ -24,7 +24,7 @@ public:
     void GetSwingOptimalDsBySwitchPoint(int legID);
     void GetSwingOptimalDsByDirectNI(int legID);
 
-    void GetOptimalDs();
+    void GetOptimalDsByMajorIteration();
     void GetOptimalGait2s();
     void GetOptimalGait2t();
 
@@ -168,19 +168,21 @@ private:
     double real_dds[901][6] {{0}};
 //    double real_ddsMax[901][6] {{0}};
 //    double real_ddsMin[901][6] {{0}};
-    double real_ds_tmp[901][6] {{0}};
+    double real_ds_scale[901][6] {{0}};
+    double real_dds_scale[901][6] {{0}};
 
     double timeArray[901][6] {{0}};
-    double timeArray_tmp[901][6] {{0}};
     double maxTime {0};
     int maxTotalCount {0};
+    double timeArray_tmp[901][6] {{0}};
+    double timeArray_body_tmp[2251] {0};
 //    int maxTotalCount_last {1};
 //    int maxTimeID {0};
 
-//    double output_Pee[901][18] {{0}};
-//    double output_Pin[901][18] {{0}};
-//    double output_Vin[901][18] {{0}};
-//    double output_Ain[901][18] {{0}};
+    double output_Pee[2251][18] {{0}};
+    double output_Pin[2251][18] {{0}};
+    double output_Vin[2251][18] {{0}};
+    double output_Ain[2251][18] {{0}};
 };
 
 #endif

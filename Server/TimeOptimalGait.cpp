@@ -1777,14 +1777,7 @@ void TimeOptimalGait::GetSwingOptimalDsByDirectNI(int legID)
     }
 }
 
-//void TimeOptimalGait::GetPvabAndSw(int i)
-//{
-//    pva_b[i][0]=b_sb[i];
-//    pva_b[i][1]=db_sb[i]*real_ds_body[i];
-//    pva_b[i][2]=ddb_sb[i]*real_ds_body[i]*real_ds_body[i]+db_sb[i]*real_dds_body[i];
-//}
-
-void TimeOptimalGait::GetOptimalDs()
+void TimeOptimalGait::GetOptimalDsByMajorIteration()
 {
     rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
 
@@ -1814,14 +1807,13 @@ void TimeOptimalGait::GetOptimalDs()
         }
     }
 
-
     /******************************* SwingLeg & Iteration ************************************/
     int iterCount {0};
     bool stopFlag {false};
     double Tstep_tmp {Tstep};
     double totalTime[6] {0};
     double totalTime_last[6] {0};
-    while(stopFlag==false && iterCount<=100)
+    while(stopFlag==false && iterCount<=50)
     {
         printf("\n");
         for(int i=0;i<901;i++)
@@ -1862,8 +1854,8 @@ void TimeOptimalGait::GetOptimalDs()
             }
         }
         maxTime=*std::max_element(totalTime,totalTime+6);
-        maxTotalCount=(int)(maxTime*1000)+1;
-        maxTime=0.001*maxTotalCount;
+        maxTotalCount=(int)(maxTime*500)+1;
+        maxTime=0.001*maxTotalCount*2;
         printf("totalTime: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f; maxTime:%.4f\n",
                totalTime[0],totalTime[1],totalTime[2],totalTime[3],totalTime[4],totalTime[5],maxTime);
 
@@ -1874,19 +1866,20 @@ void TimeOptimalGait::GetOptimalDs()
             if(fabs(totalTime_last[i]-totalTime[i])>1e-4)
             {
                 stopFlag=false;
+                printf("totalTime_last=%.5f,totalTime=%.5f\n",totalTime_last[i],totalTime[i]);
             }
         }
 
         //update pva_b & s_w here
-        double timeArray_body_tmp[2251] {0};
-        double timeArray_tmp[901][6] {0};
+//        double timeArray_body_tmp[2251] {0};
+//        double timeArray_tmp[901][6] {0};
         double pva_b_tmp[2251][3] {0};
         for(int i=0;i<2251;i++)
         {
             timeArray_body_tmp[i]=timeArray_body[i]*maxTime/((1-dutyCycle)*Tstep);
-            pva_b_tmp[i][0]=pva_b[i][0];
-            pva_b_tmp[i][1]=pva_b[i][1]*(1-dutyCycle)*Tstep/maxTime;
-            pva_b_tmp[i][2]=pva_b[i][2]*(1-dutyCycle)*Tstep/maxTime*(1-dutyCycle)*Tstep/maxTime;
+            pva_b_tmp[i][0]=output_init_pva_b[i][0];
+            pva_b_tmp[i][1]=output_init_pva_b[i][1]*(1-dutyCycle)*Tstep/maxTime;
+            pva_b_tmp[i][2]=output_init_pva_b[i][2]*(1-dutyCycle)*Tstep/maxTime*(1-dutyCycle)*Tstep/maxTime;
         }
         Tstep_tmp=timeArray_body_tmp[2250];
 
@@ -1913,8 +1906,11 @@ void TimeOptimalGait::GetOptimalDs()
                     if(timeArray_tmp[k][2*j]<=timeArray_body_tmp[i] && timeArray_tmp[k+1][2*j]>timeArray_body_tmp[i])
                     {
                         k_start=k;
-                        s_w_tmp[i][2*j]=s_w[k][2*j]+(s_w[k+1][2*j]-s_w[k][2*j])
-                                *(timeArray_body_tmp[i]-timeArray_tmp[k][2*j])/(timeArray_tmp[k+1][2*j]-timeArray_tmp[k][2*j]);
+                        s_w_tmp[i][2*j]=s_w[k][2*j]+(s_w[k+1][2*j]-s_w[k][2*j])*(timeArray_body_tmp[i]-timeArray_tmp[k][2*j])/(timeArray_tmp[k+1][2*j]-timeArray_tmp[k][2*j]);
+                        real_ds_scale[i][2*j]=(real_ds[k][2*j]+(real_ds[k+1][2*j]-real_ds[k][2*j])*(timeArray_body_tmp[i]-timeArray_tmp[k][2*j])/(timeArray_tmp[k+1][2*j]-timeArray_tmp[k][2*j]))
+                                *totalTime[2*j]/maxTime;
+                        real_dds_scale[i][2*j]=(real_dds[k][2*j]+(real_dds[k+1][2*j]-real_dds[k][2*j])*(timeArray_body_tmp[i]-timeArray_tmp[k][2*j])/(timeArray_tmp[k+1][2*j]-timeArray_tmp[k][2*j]))
+                                *totalTime[2*j]/maxTime*totalTime[2*j]/maxTime;
                         break;
                     }
                 }
@@ -1931,8 +1927,11 @@ void TimeOptimalGait::GetOptimalDs()
                             && timeArray_tmp[k+1][2*j+1]>(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp))
                     {
                         k_start=k;
-                        s_w_tmp[i-1350][2*j+1]=s_w[k][2*j+1]+(s_w[k+1][2*j+1]-s_w[k][2*j+1])
-                                *(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp-timeArray_tmp[k][2*j+1])/(timeArray_tmp[k+1][2*j+1]-timeArray_tmp[k][2*j+1]);
+                        s_w_tmp[i-1350][2*j+1]=s_w[k][2*j+1]+(s_w[k+1][2*j+1]-s_w[k][2*j+1])*(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp-timeArray_tmp[k][2*j+1])/(timeArray_tmp[k+1][2*j+1]-timeArray_tmp[k][2*j+1]);
+                        real_ds_scale[i-1350][2*j+1]=(real_ds[k][2*j+1]+(real_ds[k+1][2*j+1]-real_ds[k][2*j+1])*(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp-timeArray_tmp[k][2*j+1])/(timeArray_tmp[k+1][2*j+1]-timeArray_tmp[k][2*j+1]))
+                                *totalTime[2*j+1]/maxTime;
+                        real_dds_scale[i-1350][2*j+1]=(real_dds[k][2*j+1]+(real_dds[k+1][2*j+1]-real_dds[k][2*j+1])*(timeArray_body_tmp[i]-dutyCycle*Tstep_tmp-timeArray_tmp[k][2*j+1])/(timeArray_tmp[k+1][2*j+1]-timeArray_tmp[k][2*j+1]))
+                                *totalTime[2*j+1]/maxTime*totalTime[2*j+1]/maxTime;
                         break;
                     }
                 }
@@ -1941,6 +1940,8 @@ void TimeOptimalGait::GetOptimalDs()
         for(int i=0;i<6;i++)
         {
             s_w_tmp[900][i]=PI;
+            real_ds_scale[900][i]=real_ds[900][i]*totalTime[i]/maxTime;
+            real_dds_scale[900][i]=real_dds[900][i]*totalTime[i]/maxTime*totalTime[i]/maxTime;
         }
 
         memcpy(*s_w,*s_w_tmp,901*6*sizeof(double));
@@ -1957,128 +1958,268 @@ void TimeOptimalGait::GetOptimalDs()
 
 void TimeOptimalGait::GetOptimalGait2s()
 {
-//    double pEB[6] {0};
-//    double pEE[18] {0};
-//    double vEB[6] {0};
-//    double vEE[18] {0};
-//    double aEB[6] {0};
-//    double aEE[18] {0};
+    double pEB[6] {0};
+    double pEE[18] {0};
+    double vEB[6] {0};
+    double vEE[18] {0};
+    double aEB[6] {0};
+    double aEE[18] {0};
 
-//    for (int i=0;i<901;i++)
-//    {
-//        s_w=0.1*i*PI/180;//degree to rad
+    for (int i=0;i<901;i++)
+    {
+        pEB[2]=initPeb[2]+pva_b[i][0];
+        vEB[2]=pva_b[i][1];
+        aEB[2]=pva_b[i][2];
+        for(int j=0;j<3;j++)
+        {
+            f_sw[0]=0;
+            f_sw[1]=stepH*sin(s_w[i][2*j]);
+            f_sw[2]=stepD/2*cos(s_w[i][2*j]);
+            df_sw[0]=0;
+            df_sw[1]=stepH*cos(s_w[i][2*j]);
+            df_sw[2]=-stepD/2*sin(s_w[i][2*j]);
+            ddf_sw[0]=0;
+            ddf_sw[1]=-stepH*sin(s_w[i][2*j]);
+            ddf_sw[2]=-stepD/2*cos(s_w[i][2*j]);
 
-//        f_sw[0]=0;
-//        f_sw[1]=stepH*sin(s_w);
-//        f_sw[2]=stepD/2*cos(s_w);
-//        df_sw[0]=0;
-//        df_sw[1]=stepH*cos(s_w);
-//        df_sw[2]=-stepD/2*sin(s_w);
-//        ddf_sw[0]=0;
-//        ddf_sw[1]=-stepH*sin(s_w);
-//        ddf_sw[2]=-stepD/2*cos(s_w);
+            pEE[6*j+3]=initPee[6*j+3];
+            pEE[6*j+4]=initPee[6*j+4];
+            pEE[6*j+5]=initPee[6*j+5]-stepD/4;
 
-//        pEB[2]=initPeb[2]+pb_sw_tmp[i];
-//        vEB[2]=vb_sw_tmp[i];
-//        aEB[2]=ab_sw_tmp[i];
-//        for(int j=0;j<3;j++)
-//        {
-//            //stanceLeg
-//            pEE[6*j+3]=initPee[6*j+3];
-//            pEE[6*j+4]=initPee[6*j+4];
-//            pEE[6*j+5]=initPee[6*j+5];
+            pEE[6*j]=initPee[6*j]+f_sw[0];
+            pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
+            pEE[6*j+2]=initPee[6*j+2]+stepD/4+f_sw[2]-stepD/2;
 
-//            //swingLeg
-//            pEE[6*j]=initPee[6*j]+f_sw[0];
-//            pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
-//            pEE[6*j+2]=initPee[6*j+2]+f_sw[2];
+            vEE[6*j]=df_sw[0]*real_ds_scale[i][2*j];
+            vEE[6*j+1]=df_sw[1]*real_ds_scale[i][2*j];
+            vEE[6*j+2]=df_sw[2]*real_ds_scale[i][2*j];
 
-//            vEE[6*j]=df_sw[0]*real_ds[i][2*j];
-//            vEE[6*j+1]=df_sw[1]*real_ds[i][2*j];
-//            vEE[6*j+2]=df_sw[2]*real_ds[i][2*j];
+            aEE[6*j]=ddf_sw[0]*real_ds_scale[i][2*j]*real_ds_scale[i][2*j]+df_sw[0]*real_dds_scale[i][2*j];
+            aEE[6*j+1]=ddf_sw[1]*real_ds_scale[i][2*j]*real_ds_scale[i][2*j]+df_sw[1]*real_dds_scale[i][2*j];
+            aEE[6*j+2]=ddf_sw[2]*real_ds_scale[i][2*j]*real_ds_scale[i][2*j]+df_sw[2]*real_dds_scale[i][2*j];
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetVb(vEB);
+        rbt.SetAb(aEB);
+        rbt.SetPee(pEE);
+        rbt.SetVee(vEE);
+        rbt.SetAee(aEE);
 
-//            aEE[6*j]=ddf_sw[0]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[0]*real_dds[i][2*j];
-//            aEE[6*j+1]=ddf_sw[1]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[1]*real_dds[i][2*j];
-//            aEE[6*j+2]=ddf_sw[2]*real_ds[i][2*j]*real_ds[i][2*j]+df_sw[2]*real_dds[i][2*j];
-//        }
+        rbt.GetPee(*output_Pee+18*i,rbt.body());
+        rbt.GetPin(*output_Pin+18*i);
+        rbt.GetVin(*output_Vin+18*i);
+        rbt.GetAin(*output_Ain+18*i);
+    }
 
-//        rbt.SetPeb(pEB);
-//        rbt.SetVb(vEB);
-//        rbt.SetAb(aEB);
-//        rbt.SetPee(pEE);
-//        rbt.SetVee(vEE);
-//        rbt.SetAee(aEE);
+    std::fill_n(vEE,18,0);
+    std::fill_n(aEE,18,0);
+    for(int i=901;i<1351;i++)
+    {
+        pEB[2]=initPeb[2]+pva_b[i][0];
+        vEB[2]=pva_b[i][1];
+        aEB[2]=pva_b[i][2];
+        for(int j=0;j<3;j++)
+        {
+            pEE[6*j]=initPee[6*j];
+            pEE[6*j+1]=initPee[6*j+1];
+            pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
 
-//        rbt.GetPee(*output_Pee+18*i,rbt.body());
-//        rbt.GetPin(*output_Pin+18*i);
-//        rbt.GetVin(*output_Vin+18*i);
-//        rbt.GetAin(*output_Ain+18*i);
+            pEE[6*j+3]=initPee[6*j+3];
+            pEE[6*j+4]=initPee[6*j+4];
+            pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetVb(vEB);
+        rbt.SetAb(aEB);
+        rbt.SetPee(pEE);
+        rbt.SetVee(vEE);
+        rbt.SetAee(aEE);
 
-//        //printf("output:Pee=%.4f,Pin=%.4f,Vin=%.4f,Ain=%.4f\n",output_Pee[i][0],output_Pin[i][0],output_Vin[i][0],output_Ain[i][0]);
-//    }
+        rbt.GetPee(*output_Pee+18*i,rbt.body());
+        rbt.GetPin(*output_Pin+18*i);
+        rbt.GetVin(*output_Vin+18*i);
+        rbt.GetAin(*output_Ain+18*i);
+    }
+
+    std::fill_n(vEE,18,0);
+    std::fill_n(aEE,18,0);
+    for(int i=1351;i<2251;i++)
+    {
+        pEB[2]=initPeb[2]+pva_b[i][0];
+        vEB[2]=pva_b[i][1];
+        aEB[2]=pva_b[i][2];
+        for(int j=0;j<3;j++)
+        {
+            f_sw[0]=0;
+            f_sw[1]=stepH*sin(s_w[i-1350][2*j+1]);
+            f_sw[2]=stepD/2*cos(s_w[i-1350][2*j+1]);
+            df_sw[0]=0;
+            df_sw[1]=stepH*cos(s_w[i-1350][2*j+1]);
+            df_sw[2]=-stepD/2*sin(s_w[i-1350][2*j+1]);
+            ddf_sw[0]=0;
+            ddf_sw[1]=-stepH*sin(s_w[i-1350][2*j+1]);
+            ddf_sw[2]=-stepD/2*cos(s_w[i-1350][2*j+1]);
+
+            pEE[6*j]=initPee[6*j];
+            pEE[6*j+1]=initPee[6*j+1];
+            pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+
+            pEE[6*j+3]=initPee[6*j+3]+f_sw[0];
+            pEE[6*j+4]=initPee[6*j+4]+f_sw[1];
+            pEE[6*j+5]=initPee[6*j+5]-stepD/4+f_sw[2]-stepD/2;
+
+            vEE[6*j+3]=df_sw[0]*real_ds_scale[i-1350][2*j+1];
+            vEE[6*j+4]=df_sw[1]*real_ds_scale[i-1350][2*j+1];
+            vEE[6*j+5]=df_sw[2]*real_ds_scale[i-1350][2*j+1];
+
+            aEE[6*j+3]=ddf_sw[0]*real_ds_scale[i-1350][2*j+1]*real_ds_scale[i-1350][2*j+1]+df_sw[0]*real_dds_scale[i-1350][2*j+1];
+            aEE[6*j+4]=ddf_sw[1]*real_ds_scale[i-1350][2*j+1]*real_ds_scale[i-1350][2*j+1]+df_sw[1]*real_dds_scale[i-1350][2*j+1];
+            aEE[6*j+5]=ddf_sw[2]*real_ds_scale[i-1350][2*j+1]*real_ds_scale[i-1350][2*j+1]+df_sw[2]*real_dds_scale[i-1350][2*j+1];
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetVb(vEB);
+        rbt.SetAb(aEB);
+        rbt.SetPee(pEE);
+        rbt.SetVee(vEE);
+        rbt.SetAee(aEE);
+
+        rbt.GetPee(*output_Pee+18*i,rbt.body());
+        rbt.GetPin(*output_Pin+18*i);
+        rbt.GetVin(*output_Vin+18*i);
+        rbt.GetAin(*output_Ain+18*i);
+    }
 }
 
 void TimeOptimalGait::GetOptimalGait2t()
 {
-//    double * real_s=new double [6*maxTotalCount];
-//    double * real_Pee=new double [18*maxTotalCount];
-//    double * real_Pin=new double [18*maxTotalCount];
+    double * pva_b_t=new double [3*5*maxTotalCount];
+    double * s_w_t=new double [6*2*maxTotalCount];
+    double * real_Pee=new double [18*5*maxTotalCount];
+    double * real_Pin=new double [18*5*maxTotalCount];
 
-//    for(int j=0;j<6;j++)
-//    {
-//        real_s[j]=0;
-//        for(int i=0;i<901;i++)
-//        {
-//            real_ds_tmp[i][j]=real_ds[i][j]*totalTime[j]/maxTime;
-//        }
-//    }
+    int k_start {0};
+    for(int i=0;i<5*maxTotalCount;i++)
+    {
+        for(int k=k_start;k<2251;k++)
+        {
+            if(0.001*i>=timeArray_body_tmp[k] && 0.001*i<timeArray_body_tmp[k+1])
+            {
+                k_start=k;
+                for(int j=0;j<3;j++)
+                {
+                    *(pva_b_t+3*i+j)=pva_b[k][j]+(pva_b[k+1][j]-pva_b[k][j])
+                            *(0.001*i-timeArray_body_tmp[k])/(timeArray_body_tmp[k+1]-timeArray_body_tmp[k]);
+                }
+                break;
+            }
+        }
+    }
+    for(int j=0;j<6;j++)
+    {
+        k_start=0;
+        for(int i=0;i<2*maxTotalCount;i++)
+        {
+            for(int k=k_start;k<901;k++)
+            {
+                if(0.001*i>=timeArray_tmp[k][j] && 0.001*i<timeArray_tmp[k+1][j])
+                {
+                    k_start=k;
+                    *(s_w_t+6*i+j)=s_w[k][j]+(s_w[k+1][j]-s_w[k][j])
+                            *(0.001*i-timeArray_tmp[k][j])/(timeArray_tmp[k+1][j]-timeArray_tmp[k][j]);
+                    break;
+                }
+            }
+        }
+    }
 
-//    for (int i=1;i<maxTotalCount;i++)
-//    {
-//        double ds[6];
-//        for(int j=0;j<6;j++)
-//        {
-//            ds[j]=0.5*(real_ds_tmp[(int)(real_s[6*(i-1)+j]/(PI/900))][j]+real_ds_tmp[(int)(real_s[6*(i-1)+j]/(PI/900))+1][j]);
-//            real_s[6*i+j]=real_s[6*(i-1)+j]+ds[j]*0.001;
-//        }
-//    }
+    double pEB[6] {0};
+    double pEE[18] {0};
+    double vEB[6] {0};
+    double vEE[18] {0};
+    double aEB[6] {0};
+    double aEE[18] {0};
 
-//    for (int i=0;i<maxTotalCount;i++)
-//    {
-//        double pEB[6];
-//        memcpy(pEB,initPeb,6*sizeof(double));
-//        double pEE[18];
-//        double b_s=stepD/4-stepD/2*(real_s[6*i+stanceLegID[0]]/PI);
-//        pEB[2]=initPeb[2]+b_s;
-//        for(int j=0;j<3;j++)
-//        {
-//            //stanceLeg
-//            pEE[6*j+3]=initPee[6*j+3];
-//            pEE[6*j+4]=initPee[6*j+4];
-//            pEE[6*j+5]=initPee[6*j+5];
+    for (int i=0;i<2*maxTotalCount;i++)
+    {
+        pEB[2]=initPeb[2]+*(pva_b_t+3*i);
+        vEB[2]=*(pva_b_t+3*i+1);
+        aEB[2]=*(pva_b_t+3*i+2);
+        for(int j=0;j<3;j++)
+        {
+            f_sw[0]=0;
+            f_sw[1]=stepH*sin(*(s_w_t+6*i+2*j));
+            f_sw[2]=stepD/2*cos(*(s_w_t+6*i+2*j));
 
-//            //swingLeg
-//            double f_s[3];
-//            f_s[0]=0;
-//            f_s[1]=stepH*sin(real_s[6*i+2*j]);
-//            f_s[2]=stepD/2*cos(real_s[6*i+2*j]);
-//            pEE[6*j]=initPee[6*j]+f_s[0];
-//            pEE[6*j+1]=initPee[6*j+1]+f_s[1];
-//            pEE[6*j+2]=initPee[6*j+2]+f_s[2];
-//        }
-//        rbt.SetPeb(pEB);
-//        rbt.SetPee(pEE);
+            pEE[6*j+3]=initPee[6*j+3];
+            pEE[6*j+4]=initPee[6*j+4];
+            pEE[6*j+5]=initPee[6*j+5]-stepD/4;
 
-//        rbt.GetPee(real_Pee+18*i,rbt.body());
-//        rbt.GetPin(real_Pin+18*i);
-//    }
+            pEE[6*j]=initPee[6*j]+f_sw[0];
+            pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
+            pEE[6*j+2]=initPee[6*j+2]+stepD/4+f_sw[2]-stepD/2;
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetPee(pEE);
 
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_s.txt",real_s,maxTotalCount,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,maxTotalCount,18);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,maxTotalCount,18);
-//    delete [] real_s;
-//    delete [] real_Pee;
-//    delete [] real_Pin;
+        rbt.GetPee(real_Pee+18*i,rbt.body());
+        rbt.GetPin(real_Pin+18*i);
+    }
+
+    for(int i=2*maxTotalCount;i<3*maxTotalCount;i++)
+    {
+        pEB[2]=initPeb[2]+*(pva_b_t+3*i);
+        vEB[2]=*(pva_b_t+3*i+1);
+        aEB[2]=*(pva_b_t+3*i+2);
+        for(int j=0;j<3;j++)
+        {
+            pEE[6*j]=initPee[6*j];
+            pEE[6*j+1]=initPee[6*j+1];
+            pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+
+            pEE[6*j+3]=initPee[6*j+3];
+            pEE[6*j+4]=initPee[6*j+4];
+            pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetPee(pEE);
+
+        rbt.GetPee(real_Pee+18*i,rbt.body());
+        rbt.GetPin(real_Pin+18*i);
+    }
+
+    for(int i=3*maxTotalCount;i<5*maxTotalCount+1;i++)
+    {
+        pEB[2]=initPeb[2]+*(pva_b_t+3*i);
+        vEB[2]=*(pva_b_t+3*i+1);
+        aEB[2]=*(pva_b_t+3*i+2);
+        for(int j=0;j<3;j++)
+        {
+            f_sw[0]=0;
+            f_sw[1]=stepH*sin(*(s_w_t+6*(i-3*maxTotalCount)+2*j+1));
+            f_sw[2]=stepD/2*cos(*(s_w_t+6*(i-3*maxTotalCount)+2*j+1));
+
+            pEE[6*j]=initPee[6*j];
+            pEE[6*j+1]=initPee[6*j+1];
+            pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+
+            pEE[6*j+3]=initPee[6*j+3]+f_sw[0];
+            pEE[6*j+4]=initPee[6*j+4]+f_sw[1];
+            pEE[6*j+5]=initPee[6*j+5]-stepD/4+f_sw[2]-stepD/2;
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetPee(pEE);
+
+        rbt.GetPee(real_Pee+18*i,rbt.body());
+        rbt.GetPin(real_Pin+18*i);
+    }
+
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,5*maxTotalCount,18);
+
+    delete [] pva_b_t;
+    delete [] s_w_t;
+    delete [] real_Pee;
+    delete [] real_Pin;
 }
 
 void TimeOptimalGait::OutputData()
@@ -2097,8 +2238,8 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, 2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, 2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const.txt", *output_const, 2251,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt", *output_const1, 2251,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt", *output_const2, 2251,18);
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt", *output_const1, 2251,18);
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt", *output_const2, 2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,2251,18);
 
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,2251,18);
@@ -2125,17 +2266,12 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds.txt",*real_ds,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds.txt",*real_dds,901,6);
 
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w.txt",*s_w,901,6);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2251,3);
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w.txt",*s_w,901,6);
+//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2251,3);
 
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray.txt",*timeArray_tmp,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pb_sw.txt",pb_sw_tmp,901,1);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/vb_sw.txt",vb_sw_tmp,901,1);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ab_sw.txt",ab_sw_tmp,901,1);
-
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,901,18);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,901,18);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,901,18);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,901,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,2251,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,2251,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,2251,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,2251,18);
     printf("Finish output data\n");
 }
