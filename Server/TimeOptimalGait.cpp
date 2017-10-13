@@ -661,11 +661,6 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
                     real_ds_body[i]=ds_forward_body[i];
                     real_dds_body[i]=dds_forward_body[i];
                 }
-//                if(round(switchPoint_body[m])==0)
-//                {
-//                    real_ds_body[0]=ds_forward_body[0];
-//                    real_dds_body[0]=dds_forward_body[0];
-//                }
                 if(k_st==2249)
                 {
                     if(ds_forward_body[k_st+1]>ds_upBound_body[k_st+1])
@@ -687,6 +682,12 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
                 k_st++;
             }
         }
+    }
+
+    for(int i=0;i<2251;i++)
+    {
+        real_ddsMax_body[i]=GetStanceMinAcc(i,real_ds_body[i]);
+        real_ddsMin_body[i]=GetStanceMaxDec(i,real_ds_body[i]);
     }
 
     delete [] lowPoint;
@@ -1628,7 +1629,7 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
                     else
                     {
                         real_ds[900][legID]=ds_forward[900][legID];
-                        real_dds[900][legID]=GetSwingMinAcc(900,ds_forward[900][legID],legID);
+                        real_dds[900][legID]=GetSwingMinAcc(count+1,ds_forward[900][legID],legID);
                     }
                 }
                 stopFlag=true;
@@ -1640,6 +1641,14 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
             }
         }
     }
+
+    for(int i=0;i<901;i++)
+    {
+        int count=(legID%2==0) ? i : (i+1350);
+        real_ddsMax[i][legID]=GetSwingMinAcc(count,real_ds[i][legID],legID);
+        real_ddsMin[i][legID]=GetSwingMaxDec(count,real_ds[i][legID],legID);
+    }
+
     delete [] lowPoint;
     delete [] upPoint;
 }
@@ -2254,8 +2263,6 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_vLmt.txt",*ds_upBound_vLmt,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_lowBound.txt",*ds_lowBound,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound.txt",*ds_upBound,901,6);
-    //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_max.txt",*real_ddsMax,901,6);
-    //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_min.txt",*real_ddsMin,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward.txt",*ds_forward,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward.txt",*ds_backward,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",*dds_forward,901,6);
@@ -2263,8 +2270,12 @@ void TimeOptimalGait::OutputData()
 
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds_body.txt",real_ds_body,2251,1);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds_body.txt",real_dds_body,2251,1);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax_body.txt",real_ddsMax_body,2251,1);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin_body.txt",real_ddsMin_body,2251,1);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds.txt",*real_ds,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds.txt",*real_dds,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax.txt",*real_ddsMax,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin.txt",*real_ddsMin,901,6);
 
 //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w.txt",*s_w,901,6);
 //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2251,3);
@@ -2274,4 +2285,124 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,2251,18);
     printf("Finish output data\n");
+}
+
+
+void TimeOptimalGait::GetNormalGait()
+{
+    double pEB[6] {0};
+    double pEE[18] {0};
+    int TotalCount=maxTotalCount;
+    double maxAin {0};
+    int k {0};
+    bool stopFlag {false};
+
+    while(stopFlag==false)
+    {
+        double * normalPee = new double [(5*TotalCount+1)*18];
+        double * normalPin = new double [(5*TotalCount+1)*18];
+        double * normalVin = new double [5*TotalCount*18];
+        double * normalAin = new double [(5*TotalCount-1)*18];
+
+        for (int i=0;i<2*TotalCount;i++)
+        {
+            pEB[2]=initPeb[2]-stepD*i/(5*TotalCount);
+            for(int j=0;j<3;j++)
+            {
+                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+4]=initPee[6*j+4];
+                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+
+                pEE[6*j]=initPee[6*j];
+                pEE[6*j+1]=initPee[6*j+1]-stepH/2*(cos(PI*i/TotalCount)-1);
+                pEE[6*j+2]=initPee[6*j+2]+stepD/4+stepD/2*cos(PI/2*i/TotalCount)-stepD/2;
+            }
+            rbt.SetPeb(pEB);
+            rbt.SetPee(pEE);
+
+            rbt.GetPee(normalPee+18*i,rbt.body());
+            rbt.GetPin(normalPin+18*i);
+        }
+
+        for(int i=2*TotalCount;i<3*TotalCount;i++)
+        {
+            pEB[2]=initPeb[2]-stepD*i/(5*TotalCount);
+            for(int j=0;j<3;j++)
+            {
+                pEE[6*j]=initPee[6*j];
+                pEE[6*j+1]=initPee[6*j+1];
+                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+
+                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+4]=initPee[6*j+4];
+                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+            }
+            rbt.SetPeb(pEB);
+            rbt.SetPee(pEE);
+
+            rbt.GetPee(normalPee+18*i,rbt.body());
+            rbt.GetPin(normalPin+18*i);
+        }
+
+        for(int i=3*TotalCount;i<5*TotalCount+1;i++)
+        {
+            pEB[2]=initPeb[2]-stepD*i/(5*TotalCount);
+            for(int j=0;j<3;j++)
+            {
+                pEE[6*j]=initPee[6*j];
+                pEE[6*j+1]=initPee[6*j+1];
+                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+
+                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+4]=initPee[6*j+4]-stepH/2*(cos(PI*(i-3*TotalCount)/TotalCount)-1);
+                pEE[6*j+5]=initPee[6*j+5]-stepD/4+stepD/2*cos(PI/2*(i-3*TotalCount)/TotalCount)-stepD/2;
+            }
+            rbt.SetPeb(pEB);
+            rbt.SetPee(pEE);
+
+            rbt.GetPee(normalPee+18*i,rbt.body());
+            rbt.GetPin(normalPin+18*i);
+        }
+
+        for(int i=0;i<5*TotalCount;i++)
+        {
+            for(int j=0;j<18;j++)
+            {
+                *(normalVin+18*i+j)=(*(normalPin+18*i+18+j)-*(normalPin+18*i+j))*1000;
+            }
+        }
+        for(int i=0;i<5*TotalCount-1;i++)
+        {
+            for(int j=0;j<18;j++)
+            {
+                *(normalAin+18*i+j)=fabs(*(normalVin+18*i+18+j)-*(normalVin+18*i+j))*1000;
+            }
+        }
+        maxAin=*std::max_element(normalAin,normalAin+18*(5*TotalCount-1));
+
+        if(maxAin<aLmt)
+        {
+            if(k==0)
+            {
+                printf("How impossible! NormalGait is faster than OptimalGait!\n");
+            }
+            else
+            {
+                stopFlag=true;
+                printf("Ain reach the maximum at %d-th iteration\n",k);
+                aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPee.txt",normalPee,5*TotalCount+1,18);
+                aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPin.txt",normalPin,5*TotalCount+1,18);
+            }
+        }
+        else
+        {
+            TotalCount++;
+            k++;
+        }
+
+        delete [] normalPee;
+        delete [] normalPin;
+        delete [] normalVin;
+        delete [] normalAin;
+    }
 }

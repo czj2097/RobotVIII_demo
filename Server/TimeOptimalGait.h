@@ -30,6 +30,8 @@ public:
 
     void OutputData();
 
+    void GetNormalGait();
+
 private:
     double GetStanceSwitchMaxDec(int switchID, double ds);
     double GetStanceSwitchMinAcc(int switchID, double ds);
@@ -114,6 +116,8 @@ private:
 
     double real_ds_body[2251] {0};
     double real_dds_body[2251] {0};
+    double real_ddsMax_body[2251] {0};
+    double real_ddsMin_body[2251] {0};
     double ds_forward_body[2251] {0};
     double ds_backward_body[2251] {0};
     double dds_forward_body[2251] {0};
@@ -166,8 +170,8 @@ private:
     double dds_backward[901][6] {{0}};
     double real_ds[901][6] {{0}};
     double real_dds[901][6] {{0}};
-//    double real_ddsMax[901][6] {{0}};
-//    double real_ddsMin[901][6] {{0}};
+    double real_ddsMax[901][6] {{0}};
+    double real_ddsMin[901][6] {{0}};
     double real_ds_scale[901][6] {{0}};
     double real_dds_scale[901][6] {{0}};
 
