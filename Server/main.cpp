@@ -99,13 +99,13 @@ int main(int argc, char *argv[])
     */
 
     //FastWalk::TimeOptimalGait1by1();
-    FastWalk::WalkPYAnalyse();
-//    TimeOptimalGait optimalgait;
-//    optimalgait.GetOptimalDsByMajorIteration();
-//    optimalgait.GetOptimalGait2s();
-//    optimalgait.GetOptimalGait2t();
-//    optimalgait.OutputData();
-    //optimalgait.GetNormalGait();
+//    FastWalk::WalkPYAnalyse();
+    TimeOptimalGait optimalgait;
+    optimalgait.GetOptimalDsByMajorIteration();
+    optimalgait.GetOptimalGait2s();
+    optimalgait.GetOptimalGait2t();
+    optimalgait.OutputData();
+    optimalgait.GetNormalGait();
 
     //FastWalk::JointSpaceWalk jointspacewalker;
     //FastWalk::FastWalkPY pyfastwalker;

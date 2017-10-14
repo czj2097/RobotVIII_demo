@@ -544,6 +544,8 @@ void TimeOptimalGait::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoin
 void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
 {
     bool stopFlag {false};
+    int forwardEnd_s {-1};
+    double forwardEnd_ds {0};
     double *lowPoint=new double [switchCount_body];
     double *upPoint=new double [switchCount_body];
     GetStanceTwoPointAtSwitch(lowPoint,upPoint);
@@ -568,27 +570,42 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
     }
     for(int m=0;m<switchCount_body;m++)
     {
+        //start of backward
+        bool ignoreBackward {false};
         int k_st=(int)switchPoint_body[m];
         int k_st_start=k_st;
-
-        //start of backward
-        if(lowPoint[m]>real_ds_body[k_st])
-        {
-            printf("StanceLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
-            continue;
-        }
-        stopFlag=false;
-
         if(switchType_body[m]=='z')
         {
-            k_st=round(switchPoint_body[m]);
-            real_dds_body[k_st]=0;
-            real_ds_body[k_st]=lowPoint[m];
-            k_st--;
-            k_st_start=k_st;
+            k_st_start=k_st=round(switchPoint_body[m])-1;
         }
-        if(k_st!=0)
+
+        if(k_st_start==0)
         {
+            ignoreBackward=true;
+        }
+        else if(k_st_start<forwardEnd_s)
+        {
+            ignoreBackward=true;
+            printf("StanceLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
+        }
+        else if(k_st_start==forwardEnd_s && lowPoint[m]>forwardEnd_ds)
+        {
+            ignoreBackward=true;
+            if(switchType_body[m]=='z')
+            {
+                real_dds_body[k_st_start+1]=0;
+                real_ds_body[k_st_start+1]=lowPoint[m];
+            }
+        }
+
+        if(ignoreBackward==false)
+        {
+            if(switchType_body[m]=='z')
+            {
+                real_dds_body[k_st_start+1]=0;
+                real_ds_body[k_st_start+1]=lowPoint[m];
+            }
+            stopFlag=false;
             ds_backward_body[k_st]=lowPoint[m];
             while(stopFlag==false)
             {
@@ -633,53 +650,76 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
                     k_st--;
                 }
             }
-            //if(ds_backward_body[k_st-1]>ds_upBound_body[k_st-1] || round(switchPoint_body[m])==2250)//end of backward
-            if(k_st_start==2250)
-            {
-                continue;
-            }
+//            //if(ds_backward_body[k_st-1]>ds_upBound_body[k_st-1] || round(switchPoint_body[m])==2250)//end of backward
+//            if(k_st_start==2250)
+//            {
+//                continue;
+//            }
         }
 
         //start of forward
+        bool ignoreForward {false};
         k_st_start=k_st=(int)switchPoint_body[m]+1;
         if(switchType_body[m]=='z')
         {
             k_st_start=k_st=round(switchPoint_body[m])+1;
         }
 
-        stopFlag=false;
-        ds_forward_body[k_st]=upPoint[m];
-        while(stopFlag==false)
+        if(k_st_start==2251 || k_st_start==2250)
         {
-            dds_forward_body[k_st]=GetStanceMinAcc(k_st,ds_forward_body[k_st]);
-            ds_forward_body[k_st+1]=sqrt(ds_forward_body[k_st]*ds_forward_body[k_st]+2*dds_forward_body[k_st]*(s_b[k_st+1]-s_b[k_st]));
-
-            if(ds_forward_body[k_st+1]>ds_upBound_body[k_st+1] || k_st==2249)
+            ignoreForward=true;
+        }
+        else if(k_st_start<forwardEnd_s)
+        {
+            ignoreForward=true;
+            printf("StanceLeg forward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
+        }
+        else if(k_st_start==forwardEnd_s)
+        {
+            if(upPoint[m]>forwardEnd_ds)
             {
-                for(int i=k_st_start;i<k_st+1;i++)
-                {
-                    real_ds_body[i]=ds_forward_body[i];
-                    real_dds_body[i]=dds_forward_body[i];
-                }
-                if(k_st==2249)
-                {
-                    if(ds_forward_body[k_st+1]>ds_upBound_body[k_st+1])
-                    {
-                        real_ds_body[2250]=ds_upBound_body[2250];
-                        real_dds_body[2250]=dds_upBound_body[2250];
-                    }
-                    else
-                    {
-                        real_ds_body[2250]=ds_forward_body[2250];
-                        real_dds_body[2250]=GetStanceMinAcc(2250,ds_forward_body[2250]);
-                    }
-                }
-                stopFlag=true;
-                printf("StanceLeg forward touching upBound at %d, from switchPoint %.4f\n",k_st,switchPoint_body[m]);
+                printf("How possible! StanceLeg forward curve should not stop here!\n");
             }
-            else
+        }
+
+        if(ignoreForward==false)
+        {
+            stopFlag=false;
+            ds_forward_body[k_st]=upPoint[m];
+            while(stopFlag==false)
             {
-                k_st++;
+                dds_forward_body[k_st]=GetStanceMinAcc(k_st,ds_forward_body[k_st]);
+                ds_forward_body[k_st+1]=sqrt(ds_forward_body[k_st]*ds_forward_body[k_st]+2*dds_forward_body[k_st]*(s_b[k_st+1]-s_b[k_st]));
+
+                if(ds_forward_body[k_st+1]>ds_upBound_body[k_st+1] || k_st==2249)
+                {
+                    for(int i=k_st_start;i<k_st+1;i++)
+                    {
+                        real_ds_body[i]=ds_forward_body[i];
+                        real_dds_body[i]=dds_forward_body[i];
+                    }
+                    if(k_st==2249)
+                    {
+                        if(ds_forward_body[k_st+1]>ds_upBound_body[k_st+1])
+                        {
+                            real_ds_body[2250]=ds_upBound_body[2250];
+                            real_dds_body[2250]=dds_upBound_body[2250];
+                        }
+                        else
+                        {
+                            real_ds_body[2250]=ds_forward_body[2250];
+                            real_dds_body[2250]=GetStanceMinAcc(2250,ds_forward_body[2250]);
+                        }
+                    }
+                    stopFlag=true;
+                    forwardEnd_s=k_st;
+                    forwardEnd_ds=ds_forward_body[k_st];
+                    printf("StanceLeg forward touching upBound at %d, from switchPoint %.4f\n",k_st,switchPoint_body[m]);
+                }
+                else
+                {
+                    k_st++;
+                }
             }
         }
     }
@@ -835,7 +875,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
 
     int k=0;
 
-    //while((fabs(Tsb1-(1-dutyCycle)*Tstep)>1e-4 || fabs(Tsb2-dutyCycle*Tstep)>1e-4) && k<1000)
+    while((fabs(Tsb1-(1-dutyCycle)*Tstep)>1e-4 || fabs(Tsb2-dutyCycle*Tstep)>1e-4) && k<1000)
     {
         for(int i=0;i<2250;i++)
         {
@@ -1496,6 +1536,8 @@ void TimeOptimalGait::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, doub
 void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
 {
     bool stopFlag {false};
+    int forwardEnd_s {-1};
+    double forwardEnd_ds {0};
     double *lowPoint=new double [switchCount[legID]];
     double *upPoint=new double [switchCount[legID]];
     GetSwingTwoPointAtSwitch(legID,lowPoint,upPoint);
@@ -1521,26 +1563,41 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
     }
     for(int m=0;m<switchCount[legID];m++)
     {
+        bool ignoreBackward {false};
         int k_sw=(int)switchPoint[m][legID];
         int k_sw_start=k_sw;
-
-        if(lowPoint[m]>real_ds[k_sw][legID])//start of backward
-        {
-            printf("SwingLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
-            continue;
-        }
-        stopFlag=false;
-
         if(switchType[m][legID]=='z')
         {
-            k_sw=round(switchPoint[m][legID]);
-            real_dds[k_sw][legID]=0;
-            real_ds[k_sw][legID]=lowPoint[m];
-            k_sw--;
-            k_sw_start=k_sw;
+            k_sw_start=k_sw=round(switchPoint[m][legID])-1;
         }
-        if(k_sw!=0)
+
+        if(k_sw_start==0)
         {
+            ignoreBackward=true;
+        }
+        else if(k_sw_start<forwardEnd_s)
+        {
+            ignoreBackward=true;
+            printf("SwingLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
+        }
+        else if(k_sw_start==forwardEnd_s && lowPoint[m]>forwardEnd_ds)
+        {
+            ignoreBackward=true;
+            if(switchType[m][legID]=='z')
+            {
+                real_dds[k_sw_start+1][legID]=0;
+                real_ds[k_sw_start+1][legID]=lowPoint[m];
+            }
+        }
+
+        if(ignoreBackward==false)
+        {
+            if(switchType[m][legID]=='z')
+            {
+                real_dds[k_sw_start+1][legID]=0;
+                real_ds[k_sw_start+1][legID]=lowPoint[m];
+            }
+            stopFlag=false;
             ds_backward[k_sw][legID]=lowPoint[m];
             while(stopFlag==false)
             {
@@ -1586,58 +1643,78 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
                     k_sw--;
                 }
             }
-            //if(ds_backward[k_sw-1][legID]>ds_upBound[k_sw-1][legID] || round(switchPoint[m][legID])==900)
-            if(k_sw_start==900)
-            {
-                continue;
-            }
+//            //if(ds_backward[k_sw-1][legID]>ds_upBound[k_sw-1][legID] || round(switchPoint[m][legID])==900)
+//            if(k_sw_start==900)
+//            {
+//                continue;
+//            }
         }
 
-        k_sw_start=k_sw=(int)switchPoint[m][legID];
+        bool ignoreForward {false};
+        k_sw_start=k_sw=(int)switchPoint[m][legID]+1;
         if(switchType[m][legID]=='z')
         {
             k_sw_start=k_sw=round(switchPoint[m][legID])+1;
         }
 
-        stopFlag=false;
-        ds_forward[k_sw][legID]=upPoint[m];
-        while(stopFlag==false)
+        if(k_sw_start==901 || k_sw_start==900)
         {
-            int count=(legID%2==0) ? k_sw : (k_sw+1350);
-            dds_forward[k_sw][legID]=GetSwingMinAcc(count,ds_forward[k_sw][legID],legID);
-            ds_forward[k_sw+1][legID]=sqrt(ds_forward[k_sw][legID]*ds_forward[k_sw][legID]+2*dds_forward[k_sw][legID]*(s_w[k_sw+1][legID]-s_w[k_sw][legID]));
+            ignoreForward=true;
+        }
+        else if(k_sw_start<forwardEnd_s)
+        {
+            ignoreForward=true;
+            printf("SwingLeg forward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
+        }
+        else if(k_sw_start==forwardEnd_s && upPoint[m]>forwardEnd_ds)
+        {
+            printf("How possible! SwingLeg forward curve should not stop here!\n");
+        }
 
-            if(ds_forward[k_sw+1][legID]>ds_upBound[k_sw+1][legID] || k_sw==899)
+        if(ignoreForward==false)
+        {
+            stopFlag=false;
+            ds_forward[k_sw][legID]=upPoint[m];
+            while(stopFlag==false)
             {
-                for(int i=k_sw_start;i<k_sw+1;i++)
+                int count=(legID%2==0) ? k_sw : (k_sw+1350);
+                dds_forward[k_sw][legID]=GetSwingMinAcc(count,ds_forward[k_sw][legID],legID);
+                ds_forward[k_sw+1][legID]=sqrt(ds_forward[k_sw][legID]*ds_forward[k_sw][legID]+2*dds_forward[k_sw][legID]*(s_w[k_sw+1][legID]-s_w[k_sw][legID]));
+
+                if(ds_forward[k_sw+1][legID]>ds_upBound[k_sw+1][legID] || k_sw==899)
                 {
-                    real_ds[i][legID]=ds_forward[i][legID];
-                    real_dds[i][legID]=dds_forward[i][legID];
+                    for(int i=k_sw_start;i<k_sw+1;i++)
+                    {
+                        real_ds[i][legID]=ds_forward[i][legID];
+                        real_dds[i][legID]=dds_forward[i][legID];
+                    }
+    //                if(round(switchPoint[m][legID])==0)
+    //                {
+    //                    real_ds[0][legID]=ds_forward[0][legID];
+    //                    real_dds[0][legID]=dds_forward[0][legID];
+    //                }
+                    if(k_sw==899)
+                    {
+                        if(ds_forward[k_sw+1][legID]>ds_upBound[k_sw+1][legID])
+                        {
+                            real_ds[900][legID]=ds_upBound[900][legID];
+                            real_dds[900][legID]=dds_upBound[900][legID];
+                        }
+                        else
+                        {
+                            real_ds[900][legID]=ds_forward[900][legID];
+                            real_dds[900][legID]=GetSwingMinAcc(count+1,ds_forward[900][legID],legID);
+                        }
+                    }
+                    stopFlag=true;
+                    forwardEnd_s=k_sw;
+                    forwardEnd_ds=ds_forward[k_sw][legID];
+                    printf("SwingLeg forward touching upBound at %d, from switchPoint %.4f\n",k_sw,switchPoint[m][legID]);
                 }
-//                if(round(switchPoint[m][legID])==0)
-//                {
-//                    real_ds[0][legID]=ds_forward[0][legID];
-//                    real_dds[0][legID]=dds_forward[0][legID];
-//                }
-                if(k_sw==899)
+                else
                 {
-                    if(ds_forward[k_sw+1][legID]>ds_upBound[k_sw+1][legID])
-                    {
-                        real_ds[900][legID]=ds_upBound[900][legID];
-                        real_dds[900][legID]=dds_upBound[900][legID];
-                    }
-                    else
-                    {
-                        real_ds[900][legID]=ds_forward[900][legID];
-                        real_dds[900][legID]=GetSwingMinAcc(count+1,ds_forward[900][legID],legID);
-                    }
+                    k_sw++;
                 }
-                stopFlag=true;
-                printf("SwingLeg forward touching upBound at %d, from switchPoint %.4f\n",k_sw,switchPoint[m][legID]);
-            }
-            else
-            {
-                k_sw++;
             }
         }
     }
@@ -1788,7 +1865,7 @@ void TimeOptimalGait::GetSwingOptimalDsByDirectNI(int legID)
 
 void TimeOptimalGait::GetOptimalDsByMajorIteration()
 {
-    rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+    rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotEDU2.xml");
 
     timeval tpstart,tpend;
     float tused;
@@ -1822,7 +1899,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
     double Tstep_tmp {Tstep};
     double totalTime[6] {0};
     double totalTime_last[6] {0};
-    while(stopFlag==false && iterCount<=50)
+    while(stopFlag==false && iterCount<=30)
     {
         printf("\n");
         for(int i=0;i<901;i++)
@@ -1908,7 +1985,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
         for(int j=0;j<3;j++)
         {
             k_start=0;
-            for(int i=0;i<900;i++)
+            for(int i=0;i<901;i++)
             {
                 for(int k=k_start;k<900;k++)
                 {
@@ -1928,7 +2005,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
         for(int j=0;j<3;j++)
         {
             k_start=0;
-            for(int i=1350;i<2250;i++)
+            for(int i=1350;i<2251;i++)
             {
                 for(int k=k_start;k<900;k++)
                 {
@@ -1967,6 +2044,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
 
 void TimeOptimalGait::GetOptimalGait2s()
 {
+    printf("start GetOptimalGait2s\n");
     double pEB[6] {0};
     double pEE[18] {0};
     double vEB[6] {0};
@@ -2097,14 +2175,17 @@ void TimeOptimalGait::GetOptimalGait2s()
         rbt.GetVin(*output_Vin+18*i);
         rbt.GetAin(*output_Ain+18*i);
     }
+    printf("finish GetOptimalGait2s\n");
 }
 
 void TimeOptimalGait::GetOptimalGait2t()
 {
+    printf("start GetOptimalGait2t\n");
     double * pva_b_t=new double [3*5*maxTotalCount];
     double * s_w_t=new double [6*2*maxTotalCount];
     double * real_Pee=new double [18*5*maxTotalCount];
     double * real_Pin=new double [18*5*maxTotalCount];
+    printf("1\n");
 
     int k_start {0};
     for(int i=0;i<5*maxTotalCount;i++)
@@ -2140,7 +2221,7 @@ void TimeOptimalGait::GetOptimalGait2t()
             }
         }
     }
-
+    printf("2\n");
     double pEB[6] {0};
     double pEE[18] {0};
     double vEB[6] {0};
@@ -2196,7 +2277,7 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.GetPin(real_Pin+18*i);
     }
 
-    for(int i=3*maxTotalCount;i<5*maxTotalCount+1;i++)
+    for(int i=3*maxTotalCount;i<5*maxTotalCount;i++)
     {
         pEB[2]=initPeb[2]+*(pva_b_t+3*i);
         vEB[2]=*(pva_b_t+3*i+1);
@@ -2222,13 +2303,18 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.GetPin(real_Pin+18*i);
     }
 
+    printf("3\n");
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,5*maxTotalCount,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,5*maxTotalCount,18);
-
+    printf("4\n");
     delete [] pva_b_t;
+    printf("5\n");
     delete [] s_w_t;
+    printf("6\n");
     delete [] real_Pee;
+    printf("7\n");
     delete [] real_Pin;
+    printf("finish GetOptimalGait2t\n");
 }
 
 void TimeOptimalGait::OutputData()
@@ -2277,8 +2363,9 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax.txt",*real_ddsMax,901,6);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin.txt",*real_ddsMin,901,6);
 
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w.txt",*s_w,901,6);
-//    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2251,3);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w.txt",*s_w,901,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2251,3);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_body_tmp.txt",timeArray_body_tmp,2251,1);
 
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,2251,18);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,2251,18);

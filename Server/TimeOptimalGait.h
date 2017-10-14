@@ -49,10 +49,10 @@ private:
 
     Robots::RobotTypeI rbt;
 
-    const double vLmt {0.9};
-    const double aLmt {3.2};
-    double stepH {0.1};
-    double stepD {0.8};
+    const double vLmt {1.0};
+    const double aLmt {5.0};
+    double stepH {0.05};
+    double stepD {0.5};
     double dutyCycle {0.6};
     double initPeb[6] {0};
 //    double initPee[18] {  -0.3, -0.85, -0.65,
