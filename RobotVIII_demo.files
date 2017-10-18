@@ -6,3 +6,5 @@ Server/Move_Gait.cpp
 Server/Move_Gait.h
 Server/TimeOptimalGait.cpp
 Server/TimeOptimalGait.h
+resource/RobotEDU2.xml
+resource/Robot_III.xml
