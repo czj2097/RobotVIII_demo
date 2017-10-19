@@ -49,24 +49,24 @@ private:
 
     Robots::RobotTypeI rbt;
 
-    const double vLmt {0.9};
-    const double aLmt {3.2};
-    double stepH {0.1};
-    double stepD {0.8};
+    const double vLmt {1.0};
+    const double aLmt {5.0};
+    double stepH {0.05};
+    double stepD {0.5};
     double dutyCycle {0.6};
     double initPeb[6] {0};
-    double initPee[18] {  -0.3, -0.85, -0.65,
-                         -0.45, -0.85,     0,
-                          -0.3, -0.85,  0.65,
-                           0.3, -0.85, -0.65,
-                          0.45, -0.85,     0,
-                           0.3, -0.85,  0.65 };//024 swing, 135 stance
-//    double initPee[18] { -0.30, -0.58, -0.52,
-//                         -0.60, -0.58,  0,
-//                         -0.30, -0.58,  0.52,
-//                          0.30, -0.58, -0.52,
-//                          0.60, -0.58,  0,
-//                          0.30, -0.58,  0.52 };
+//    double initPee[18] {  -0.3, -0.85, -0.65,
+//                         -0.45, -0.85,     0,
+//                          -0.3, -0.85,  0.65,
+//                           0.3, -0.85, -0.65,
+//                          0.45, -0.85,     0,
+//                           0.3, -0.85,  0.65 };//024 swing, 135 stance
+    double initPee[18] { -0.30, -0.58, -0.52,
+                         -0.60, -0.58,  0,
+                         -0.30, -0.58,  0.52,
+                          0.30, -0.58, -0.52,
+                          0.60, -0.58,  0,
+                          0.30, -0.58,  0.52 };
 //    const int stanceLegID[3] {1,3,5};
 
     const int swingCount {900};

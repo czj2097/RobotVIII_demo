@@ -1971,7 +1971,7 @@ void TimeOptimalGait::GetSwingOptimalDsByDirectNI(int legID)
 
 void TimeOptimalGait::GetOptimalDsByMajorIteration()
 {
-    rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/Robot_VIII.xml");
+    rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotEDU2.xml");
 
     timeval tpstart,tpend;
     float tused;
@@ -2005,6 +2005,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
     double Tstep_tmp {Tstep};
     double totalTime[6] {0};
     double totalTime_last[6] {0};
+    double real_ds_scale_tmp[901][6] {0};
     while(stopFlag==false && iterCount<=30)
     {
         printf("\n");
@@ -2137,6 +2138,19 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
             real_dds_scale[swingCount][i]=real_dds[swingCount][i]*totalTime[i]/maxTime*totalTime[i]/maxTime;
         }
 
+        for(int i=0;i<swingCount+1;i++)
+        {
+            for(int j=0;j<6;j++)
+            {
+                if(fabs(s_w_tmp[i][j]-s_w[i][j])>1e-4 || fabs(real_ds_scale_tmp[i][j]-real_ds_scale[i][j])>1e-4)
+                {
+                    stopFlag=false;
+                    printf("s_w_tmp=%.5f,s_w=%.5f\n",s_w_tmp[i][j],s_w[i][j]);
+                }
+            }
+        }
+
+        memcpy(*real_ds_scale_tmp,*real_ds_scale,(swingCount+1)*6*sizeof(double));
         memcpy(*s_w,*s_w_tmp,(swingCount+1)*6*sizeof(double));
         memcpy(*pva_b,*pva_b_tmp,(count5+1)*3*sizeof(double));
         memcpy(totalTime_last,totalTime,6*sizeof(double));

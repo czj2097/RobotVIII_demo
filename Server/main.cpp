@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     optimalgait.GetOptimalGait2s();
     optimalgait.GetOptimalGait2t();
     optimalgait.OutputData();
-//    optimalgait.GetNormalGait();
+    optimalgait.GetNormalGait();
 
     //FastWalk::JointSpaceWalk jointspacewalker;
     //FastWalk::FastWalkPY pyfastwalker;
