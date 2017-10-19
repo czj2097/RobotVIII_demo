@@ -781,6 +781,61 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
     delete [] upPoint;
 }
 
+void TimeOptimalGait::ApplyExtraItegration()
+{
+    bool stopFlag {false};
+    int k_st {0};
+    int k_st_start {0};
+    double real_ds_body_tmp {0};
+    if(real_ds_body[0]>real_ds_body[count5])
+    {
+        //forward
+        real_ds_body[0]=real_ds_body[count5];
+        k_st_start=k_st=0;
+        stopFlag=false;
+        while(stopFlag==false)
+        {
+            real_dds_body[k_st]=GetStanceMinAcc(k_st,real_ds_body[k_st]);
+            real_ds_body_tmp=sqrt(real_ds_body[k_st]*real_ds_body[k_st]+2*real_dds_body[k_st]*(s_b[k_st+1]-s_b[k_st]));
+
+            if(real_ds_body_tmp>real_ds_body[k_st+1])
+            {
+                stopFlag=true;
+            }
+            else
+            {
+                k_st++;
+            }
+        }
+    }
+    else if(real_ds_body[0]<real_ds_body[count5])
+    {
+        //backward
+        real_ds_body[0]=real_ds_body[count5];
+        k_st_start=k_st=count5;
+        stopFlag=false;
+        while(stopFlag==false)
+        {
+            real_dds_body[k_st]=GetStanceMaxDec(k_st,real_ds_body[k_st]);
+            real_ds_body_tmp=sqrt(real_ds_body[k_st]*real_ds_body[k_st]-2*real_dds_body[k_st]*(s_b[k_st]-s_b[k_st-1]));
+
+            if(real_ds_body_tmp>real_ds_body[k_st-1])
+            {
+                stopFlag=true;
+            }
+            else
+            {
+                k_st--;
+            }
+        }
+    }
+    else
+    {
+        printf("Amazing!!!Ds[start] equal Ds[end].No need to apply extra itegration.\n");
+    }
+
+}
+
 void TimeOptimalGait::GetStanceOptimalDsByDirectNI()
 {
     bool stopFlag {false};
@@ -1031,6 +1086,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
 
         GetStanceSwitchPoint();
         GetStanceOptimalDsBySwitchPoint();
+        ApplyExtraItegration();
         //GetStanceOptimalDsByDirectNI();
 
         for(int i=0;i<count5+1;i++)
@@ -2059,7 +2115,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
             if(fabs(totalTime_last[i]-totalTime[i])>1e-4)
             {
                 stopFlag=false;
-                printf("totalTime_last=%.5f,totalTime=%.5f\n",totalTime_last[i],totalTime[i]);
+                //printf("totalTime_last=%.5f,totalTime=%.5f\n",totalTime_last[i],totalTime[i]);
             }
         }
 
@@ -2145,7 +2201,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
                 if(fabs(s_w_tmp[i][j]-s_w[i][j])>1e-4 || fabs(real_ds_scale_tmp[i][j]-real_ds_scale[i][j])>1e-4)
                 {
                     stopFlag=false;
-                    printf("s_w_tmp=%.5f,s_w=%.5f\n",s_w_tmp[i][j],s_w[i][j]);
+                    //printf("s_w_tmp=%.5f,s_w=%.5f\n",s_w_tmp[i][j],s_w[i][j]);
                 }
             }
         }
