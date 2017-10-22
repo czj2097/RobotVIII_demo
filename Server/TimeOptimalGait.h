@@ -69,7 +69,6 @@ private:
                           0.30, -0.58, -0.52,
                           0.60, -0.58,  0,
                           0.30, -0.58,  0.52 };
-//    const int stanceLegID[3] {1,3,5};
 
     const int swingCount {900};
     const int count1 {100};
@@ -110,12 +109,6 @@ private:
     double dds_lowBound_body[2201] {0};
     double ds_upBound_body[2201] {0};
 
-//    double slopedsBound_body[2201] {0};
-//    double paramdds0Point_body[2201][18] {{0}};
-//    double tangentPoint_body[2201] {0};
-//    int paramdds0Count_body[18] {0};
-//    int tangentCount_body {0};
-
     double slopeDelta_body[2201] {0};
     int isParamddsExact0_body[2201][18] {{0}};
     double switchPoint_body[2201] {0};
@@ -139,12 +132,6 @@ private:
     double s_b3 {0};
     double s_b4 {0};
 
-//    double pb_sw[2201] {0};
-//    double vb_sw[2201] {0};
-//    double ab_sw[2201] {0};
-//    double pb_sw_tmp[2201] {0};
-//    double vb_sw_tmp[2201] {0};
-//    double ab_sw_tmp[2201] {0};
     double output_init_pva_b[2201][3] {{0}};
     double pva_b[2201][3] {{0}};
 
@@ -161,12 +148,6 @@ private:
     double ds_lowBound[901][6] {{0}};
     double dds_lowBound[901][6] {{0}};
     double dds_upBound[901][6] {{0}};
-
-//    double slopedsBound[901][6] {{0}};
-//    double paramdds0Point[901][18] {{0}};
-//    double tangentPoint[901][6] {{0}};
-//    int paramdds0Count[18] {0};
-//    int tangentCount[6] {0};
 
     double slopeDelta[901][6] {{0}};
     int isParamddsExact0[901][18] {{0}};
@@ -191,8 +172,6 @@ private:
     int maxTotalCount {0};
     double timeArray_tmp[901][6] {{0}};
     double timeArray_body_tmp[2201] {0};
-//    int maxTotalCount_last {1};
-//    int maxTimeID {0};
 
     double output_Pee[2201][18] {{0}};
     double output_Pin[2201][18] {{0}};
