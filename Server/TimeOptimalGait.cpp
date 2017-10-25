@@ -709,6 +709,13 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
         {
             k_st_start=k_st=round(switchPoint_body[m])+1;
         }
+        else if(switchType_body[m]=='d')
+        {
+            if(ds_upBound_body[k_st_start]>ds_upBound_body[k_st_start-1])
+            {
+                k_st_start=k_st=(int)switchPoint_body[m]-1;
+            }
+        }
 
         if(k_st_start==count5+1 || k_st_start==count5)
         {
@@ -979,29 +986,6 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
     s_b2=0.75-0.5*dutyCycle;//(dutyCycle-0.5)/2+(1-dutyCycle);
     s_b3=0.5*dutyCycle+0.25;//(dutyCycle-0.5)/2+0.5;
     s_b4=1.25-0.5*dutyCycle;//1-(dutyCycle-0.5)/2;
-//    for (int i=0;i<count5+1;i++)
-//    {
-//        if(i<count1)
-//        {
-//            s_b[i]=s_b1/count1*i;
-//        }
-//        else if(i<count2)
-//        {
-//            s_b[i]=s_b1+(s_b2-s_b1)/(count2-count1)*(i-count1);
-//        }
-//        else if(i<count3)
-//        {
-//            s_b[i]=s_b2+(s_b3-s_b2)/(count3-count2)*(i-count2);
-//        }
-//        else if(i<count4)
-//        {
-//            s_b[i]=s_b3+(s_b4-s_b3)/(count4-count3)*(i-count3);
-//        }
-//        else
-//        {
-//            s_b[i]=s_b4+(1-s_b4)/(count5-count4)*(i-count4);
-//        }
-//    }
 
     while((fabs(Tsb1-(0.5*dutyCycle-0.25)*Tstep)>1e-4 || fabs(Tsb2-(0.75-0.5*dutyCycle)*Tstep)>1e-4 ||
            fabs(Tsb3-(0.5*dutyCycle+0.25)*Tstep)>1e-4 || fabs(Tsb4-(1.25-0.5*dutyCycle)*Tstep)>1e-4) && k<30)
@@ -1029,6 +1013,8 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
             }
         }
 
+        std::fill_n(ds_backward_body,count5+1,0);
+        std::fill_n(ds_forward_body,count5+1,0);
         Tstep=0;
         switchCount_body=0;
         std::fill_n(switchPoint_body,count5+1,-1);
@@ -2065,17 +2051,11 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
     while(stopFlag==false && iterCount<=30)
     {
         printf("\n");
-        for(int i=0;i<swingCount+1;i++)
-        {
-            for(int j=0;j<6;j++)
-            {
-                ds_backward[i][j]=0;
-                ds_forward[i][j]=0;
-            }
-        }
         iterCount++;
 
         //generate the traj & calculate the bound of ds
+        std::fill_n(*ds_backward,(swingCount+1)*6,0);
+        std::fill_n(*ds_forward,(swingCount+1)*6,0);
         std::fill_n(totalTime,6,0);
         std::fill_n(switchCount,6,0);
         std::fill_n(*switchPoint,(swingCount+1)*6,-1);
@@ -2120,8 +2100,6 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
         }
 
         //update pva_b & s_w here
-//        double timeArray_body_tmp[2201] {0};
-//        double timeArray_tmp[901][6] {0};
         double pva_b_tmp[2201][3] {0};
         for(int i=0;i<count5+1;i++)
         {
@@ -2253,10 +2231,10 @@ void TimeOptimalGait::GetOptimalGait2s()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(*output_Pee+18*i,rbt.body());
-        rbt.GetPin(*output_Pin+18*i);
-        rbt.GetVin(*output_Vin+18*i);
-        rbt.GetAin(*output_Ain+18*i);
+        rbt.GetPee(*Pee_s+18*i,rbt.body());
+        rbt.GetPin(*Pin_s+18*i);
+        rbt.GetVin(*Vin_s+18*i);
+        rbt.GetAin(*Ain_s+18*i);
     }
 
     std::fill_n(vEE,18,0);
@@ -2301,10 +2279,10 @@ void TimeOptimalGait::GetOptimalGait2s()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(*output_Pee+18*i,rbt.body());
-        rbt.GetPin(*output_Pin+18*i);
-        rbt.GetVin(*output_Vin+18*i);
-        rbt.GetAin(*output_Ain+18*i);
+        rbt.GetPee(*Pee_s+18*i,rbt.body());
+        rbt.GetPin(*Pin_s+18*i);
+        rbt.GetVin(*Vin_s+18*i);
+        rbt.GetAin(*Ain_s+18*i);
     }
 
     std::fill_n(vEE,18,0);
@@ -2331,10 +2309,10 @@ void TimeOptimalGait::GetOptimalGait2s()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(*output_Pee+18*i,rbt.body());
-        rbt.GetPin(*output_Pin+18*i);
-        rbt.GetVin(*output_Vin+18*i);
-        rbt.GetAin(*output_Ain+18*i);
+        rbt.GetPee(*Pee_s+18*i,rbt.body());
+        rbt.GetPin(*Pin_s+18*i);
+        rbt.GetVin(*Vin_s+18*i);
+        rbt.GetAin(*Ain_s+18*i);
     }
 
     std::fill_n(vEE,18,0);
@@ -2379,10 +2357,10 @@ void TimeOptimalGait::GetOptimalGait2s()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(*output_Pee+18*i,rbt.body());
-        rbt.GetPin(*output_Pin+18*i);
-        rbt.GetVin(*output_Vin+18*i);
-        rbt.GetAin(*output_Ain+18*i);
+        rbt.GetPee(*Pee_s+18*i,rbt.body());
+        rbt.GetPin(*Pin_s+18*i);
+        rbt.GetVin(*Vin_s+18*i);
+        rbt.GetAin(*Ain_s+18*i);
     }
 
     std::fill_n(vEE,18,0);
@@ -2410,10 +2388,10 @@ void TimeOptimalGait::GetOptimalGait2s()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(*output_Pee+18*i,rbt.body());
-        rbt.GetPin(*output_Pin+18*i);
-        rbt.GetVin(*output_Vin+18*i);
-        rbt.GetAin(*output_Ain+18*i);
+        rbt.GetPee(*Pee_s+18*i,rbt.body());
+        rbt.GetPin(*Pin_s+18*i);
+        rbt.GetVin(*Vin_s+18*i);
+        rbt.GetAin(*Ain_s+18*i);
     }
     printf("finish GetOptimalGait2s\n");
 }
@@ -2425,10 +2403,15 @@ void TimeOptimalGait::GetOptimalGait2t()
     double * s_w_t=new double [6*2*maxTotalCount];
     double * ds_w_t=new double [6*2*maxTotalCount];
     double * dds_w_t=new double [6*2*maxTotalCount];
-    double * real_Pee=new double [18*5*maxTotalCount];
-    double * real_Pin=new double [18*5*maxTotalCount];
-    double * real_Vin=new double [18*5*maxTotalCount];
-    double * real_Ain=new double [18*5*maxTotalCount];
+    double * Pee_t=new double [18*5*maxTotalCount];
+    double * Pin_t=new double [18*5*maxTotalCount];
+    double * Vin_t=new double [18*5*maxTotalCount];
+    double * Ain_t=new double [18*5*maxTotalCount];
+
+    double * VeeMinus_t=new double [18*5*maxTotalCount];
+    double * VeeB_t=new double [18*5*maxTotalCount];
+    double * AeeMinus_t=new double [18*5*maxTotalCount];
+    double * AeeB_t=new double [18*5*maxTotalCount];
 
 //    double output_dJvi_t[2201][9] {{0}};
 //    double output_dJvi_x[2201][9] {{0}};
@@ -2506,13 +2489,26 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(real_Pee+18*i,rbt.body());
-        rbt.GetPin(real_Pin+18*i);
-        rbt.GetVin(real_Vin+18*i);
-        rbt.GetAin(real_Ain+18*i);
+        for(int j=0;j<6;j++)
+        {
+            *(VeeMinus_t+18*i+3*j)=vEE[3*j];
+            *(VeeMinus_t+18*i+3*j+1)=vEE[3*j+1];
+            *(VeeMinus_t+18*i+3*j+2)=vEE[3*j+2]-vEB[2];
+            *(AeeMinus_t+18*i+3*j)=aEE[3*j];
+            *(AeeMinus_t+18*i+3*j+1)=aEE[3*j+1];
+            *(AeeMinus_t+18*i+3*j+2)=aEE[3*j+2]-aEB[2];
+        }
+        rbt.GetVee(VeeB_t+18*i,rbt.body());
+        rbt.GetAee(AeeB_t+18*i,rbt.body());
+
+        rbt.GetPee(Pee_t+18*i,rbt.body());
+        rbt.GetPin(Pin_t+18*i);
+        rbt.GetVin(Vin_t+18*i);
+        rbt.GetAin(Ain_t+18*i);
     }
 
     std::fill_n(vEE,18,0);
+    std::fill_n(aEE,18,0);
     for (int i=maxTotalCount/4;i<9*maxTotalCount/4;i++)
     {
         pEB[2]=initPeb[2]+*(pva_b_t+3*i);
@@ -2553,13 +2549,26 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(real_Pee+18*i,rbt.body());
-        rbt.GetPin(real_Pin+18*i);
-        rbt.GetVin(real_Vin+18*i);
-        rbt.GetAin(real_Ain+18*i);
+        for(int j=0;j<6;j++)
+        {
+            *(VeeMinus_t+18*i+3*j)=vEE[3*j];
+            *(VeeMinus_t+18*i+3*j+1)=vEE[3*j+1];
+            *(VeeMinus_t+18*i+3*j+2)=vEE[3*j+2]-vEB[2];
+            *(AeeMinus_t+18*i+3*j)=aEE[3*j];
+            *(AeeMinus_t+18*i+3*j+1)=aEE[3*j+1];
+            *(AeeMinus_t+18*i+3*j+2)=aEE[3*j+2]-aEB[2];
+        }
+        rbt.GetVee(VeeB_t+18*i,rbt.body());
+        rbt.GetAee(AeeB_t+18*i,rbt.body());
+
+        rbt.GetPee(Pee_t+18*i,rbt.body());
+        rbt.GetPin(Pin_t+18*i);
+        rbt.GetVin(Vin_t+18*i);
+        rbt.GetAin(Ain_t+18*i);
     }
 
     std::fill_n(vEE,18,0);
+    std::fill_n(aEE,18,0);
     for(int i=9*maxTotalCount/4;i<11*maxTotalCount/4;i++)
     {
         pEB[2]=initPeb[2]+*(pva_b_t+3*i);
@@ -2582,13 +2591,26 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(real_Pee+18*i,rbt.body());
-        rbt.GetPin(real_Pin+18*i);
-        rbt.GetVin(real_Vin+18*i);
-        rbt.GetAin(real_Ain+18*i);
+        for(int j=0;j<6;j++)
+        {
+            *(VeeMinus_t+18*i+3*j)=vEE[3*j];
+            *(VeeMinus_t+18*i+3*j+1)=vEE[3*j+1];
+            *(VeeMinus_t+18*i+3*j+2)=vEE[3*j+2]-vEB[2];
+            *(AeeMinus_t+18*i+3*j)=aEE[3*j];
+            *(AeeMinus_t+18*i+3*j+1)=aEE[3*j+1];
+            *(AeeMinus_t+18*i+3*j+2)=aEE[3*j+2]-aEB[2];
+        }
+        rbt.GetVee(VeeB_t+18*i,rbt.body());
+        rbt.GetAee(AeeB_t+18*i,rbt.body());
+
+        rbt.GetPee(Pee_t+18*i,rbt.body());
+        rbt.GetPin(Pin_t+18*i);
+        rbt.GetVin(Vin_t+18*i);
+        rbt.GetAin(Ain_t+18*i);
     }
 
     std::fill_n(vEE,18,0);
+    std::fill_n(aEE,18,0);
     for(int i=11*maxTotalCount/4;i<19*maxTotalCount/4;i++)
     {
         pEB[2]=initPeb[2]+*(pva_b_t+3*i);
@@ -2629,13 +2651,26 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(real_Pee+18*i,rbt.body());
-        rbt.GetPin(real_Pin+18*i);
-        rbt.GetVin(real_Vin+18*i);
-        rbt.GetAin(real_Ain+18*i);
+        for(int j=0;j<6;j++)
+        {
+            *(VeeMinus_t+18*i+3*j)=vEE[3*j];
+            *(VeeMinus_t+18*i+3*j+1)=vEE[3*j+1];
+            *(VeeMinus_t+18*i+3*j+2)=vEE[3*j+2]-vEB[2];
+            *(AeeMinus_t+18*i+3*j)=aEE[3*j];
+            *(AeeMinus_t+18*i+3*j+1)=aEE[3*j+1];
+            *(AeeMinus_t+18*i+3*j+2)=aEE[3*j+2]-aEB[2];
+        }
+        rbt.GetVee(VeeB_t+18*i,rbt.body());
+        rbt.GetAee(AeeB_t+18*i,rbt.body());
+
+        rbt.GetPee(Pee_t+18*i,rbt.body());
+        rbt.GetPin(Pin_t+18*i);
+        rbt.GetVin(Vin_t+18*i);
+        rbt.GetAin(Ain_t+18*i);
     }
 
     std::fill_n(vEE,18,0);
+    std::fill_n(aEE,18,0);
     for(int i=19*maxTotalCount/4;i<5*maxTotalCount;i++)
     {
         pEB[2]=initPeb[2]+*(pva_b_t+3*i);
@@ -2658,22 +2693,42 @@ void TimeOptimalGait::GetOptimalGait2t()
         rbt.SetVee(vEE);
         rbt.SetAee(aEE);
 
-        rbt.GetPee(real_Pee+18*i,rbt.body());
-        rbt.GetPin(real_Pin+18*i);
-        rbt.GetVin(real_Vin+18*i);
-        rbt.GetAin(real_Ain+18*i);
+        for(int j=0;j<6;j++)
+        {
+            *(VeeMinus_t+18*i+3*j)=vEE[3*j];
+            *(VeeMinus_t+18*i+3*j+1)=vEE[3*j+1];
+            *(VeeMinus_t+18*i+3*j+2)=vEE[3*j+2]-vEB[2];
+            *(AeeMinus_t+18*i+3*j)=aEE[3*j];
+            *(AeeMinus_t+18*i+3*j+1)=aEE[3*j+1];
+            *(AeeMinus_t+18*i+3*j+2)=aEE[3*j+2]-aEB[2];
+        }
+        rbt.GetVee(VeeB_t+18*i,rbt.body());
+        rbt.GetAee(AeeB_t+18*i,rbt.body());
+
+        rbt.GetPee(Pee_t+18*i,rbt.body());
+        rbt.GetPin(Pin_t+18*i);
+        rbt.GetVin(Vin_t+18*i);
+        rbt.GetAin(Ain_t+18*i);
     }
 
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pee.txt",real_Pee,5*maxTotalCount,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Pin.txt",real_Pin,5*maxTotalCount,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Vin.txt",real_Vin,5*maxTotalCount,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_Ain.txt",real_Ain,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee_t.txt",Pee_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin_t.txt",Pin_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin_t.txt",Vin_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain_t.txt",Ain_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/VeeB_t.txt",VeeB_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/VeeMinus_t.txt",VeeMinus_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/AeeB_t.txt",AeeB_t,5*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/AeeMinus_t.txt",AeeMinus_t,5*maxTotalCount,18);
     delete [] pva_b_t;
     delete [] s_w_t;
-    delete [] real_Pee;
-    delete [] real_Pin;
-    delete [] real_Vin;
-    delete [] real_Ain;
+    delete [] Pee_t;
+    delete [] Pin_t;
+    delete [] Vin_t;
+    delete [] Ain_t;
+    delete [] AeeB_t;
+    delete [] AeeMinus_t;
+    delete [] VeeB_t;
+    delete [] VeeMinus_t;
     printf("finish GetOptimalGait2t\n");
 }
 
@@ -2727,10 +2782,10 @@ void TimeOptimalGait::OutputData()
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2201,3);
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_body_tmp.txt",timeArray_body_tmp,2201,1);
 
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee.txt",*output_Pee,2201,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin.txt",*output_Pin,2201,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin.txt",*output_Vin,2201,18);
-    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain.txt",*output_Ain,2201,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee_s.txt",*Pee_s,2201,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin_s.txt",*Pin_s,2201,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Vin_s.txt",*Vin_s,2201,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Ain_s.txt",*Ain_s,2201,18);
     printf("Finish output data\n");
 }
 

@@ -51,10 +51,10 @@ private:
 
     Robots::RobotTypeI rbt;
 
-    const double vLmt {0.9};
+    const double vLmt {1.0};
     const double aLmt {3.2};
-    double stepH {0.1};
-    double stepD {0.8};
+    double stepH {0.05};
+    double stepD {0.5};
     double dutyCycle {0.6};
     double initPeb[6] {0};
 //    double initPee[18] {  -0.3, -0.85, -0.65,
@@ -173,10 +173,10 @@ private:
     double timeArray_tmp[901][6] {{0}};
     double timeArray_body_tmp[2201] {0};
 
-    double output_Pee[2201][18] {{0}};
-    double output_Pin[2201][18] {{0}};
-    double output_Vin[2201][18] {{0}};
-    double output_Ain[2201][18] {{0}};
+    double Pee_s[2201][18] {{0}};
+    double Pin_s[2201][18] {{0}};
+    double Vin_s[2201][18] {{0}};
+    double Ain_s[2201][18] {{0}};
 };
 
 #endif
