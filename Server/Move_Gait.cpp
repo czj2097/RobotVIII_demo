@@ -521,9 +521,9 @@ namespace FastWalk
 			//}
 		}
 
-        aris::dynamic::dlmwrite("../../build/bin/Jvi.txt",*outputJvi,2001,9);
-        aris::dynamic::dlmwrite("../../build/bin/dJvi_t.txt",*outputdJvi_t,2001,9);
-        aris::dynamic::dlmwrite("../../build/bin/dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
+        aris::dynamic::dlmwrite("./Jvi.txt",*outputJvi,2001,9);
+        aris::dynamic::dlmwrite("./dJvi_t.txt",*outputdJvi_t,2001,9);
+        aris::dynamic::dlmwrite("./dJvi_t_in.txt",*outputdJvi_t_in,2001,9);
 
 
 
@@ -1035,7 +1035,7 @@ namespace FastWalk
             ki_test++;
         }
 
-        aris::dynamic::dlmwrite("../../build/bin/test_ds_k.txt",output_ds_k,1800,1);
+        aris::dynamic::dlmwrite("./test_ds_k.txt",output_ds_k,1800,1);
 
 
         /**********calculate final trajectory**********/
@@ -1172,38 +1172,38 @@ namespace FastWalk
             }
         }
 
-        aris::dynamic::dlmwrite("../../build/bin/real_s.txt",real_s,totalCount,1);
-        aris::dynamic::dlmwrite("../../build/bin/real_Pee.txt",real_Pee,2*totalCount,9);
-        aris::dynamic::dlmwrite("../../build/bin/real_Pin.txt",real_Pin,2*totalCount,9);
+        aris::dynamic::dlmwrite("./real_s.txt",real_s,totalCount,1);
+        aris::dynamic::dlmwrite("./real_Pee.txt",real_Pee,2*totalCount,9);
+        aris::dynamic::dlmwrite("./real_Pin.txt",real_Pin,2*totalCount,9);
         delete [] real_s;
         delete [] real_Pee;
         delete [] real_Pin;
 
-        aris::dynamic::dlmwrite("../../build/bin/param_dsds1.txt",*output_dsds1,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dsds2.txt",*output_dsds2,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dsds.txt",*output_dsds,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dds.txt",*output_dds,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_fsB.txt",*output_fsB,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_Lmt.txt",*output_Lmt,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_ConstL.txt",*output_ConstL,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_ConstH.txt",*output_ConstH,1800,18);
-        aris::dynamic::dlmwrite("../../build/bin/max_ValueL.txt",*output_ValueL,1800,4);
-        aris::dynamic::dlmwrite("../../build/bin/min_ValueH.txt",*output_ValueH,1800,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_max_aLmt.txt",*ds_max_aLmt,1800,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_max_vLmt.txt",*ds_max_vLmt,1800,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_max.txt",*ds_max,1800,4);
+        aris::dynamic::dlmwrite("./param_dsds1.txt",*output_dsds1,1800,18);
+        aris::dynamic::dlmwrite("./param_dsds2.txt",*output_dsds2,1800,18);
+        aris::dynamic::dlmwrite("./param_dsds.txt",*output_dsds,1800,18);
+        aris::dynamic::dlmwrite("./param_dds.txt",*output_dds,1800,18);
+        aris::dynamic::dlmwrite("./param_fsB.txt",*output_fsB,1800,18);
+        aris::dynamic::dlmwrite("./param_Lmt.txt",*output_Lmt,1800,18);
+        aris::dynamic::dlmwrite("./param_ConstL.txt",*output_ConstL,1800,18);
+        aris::dynamic::dlmwrite("./param_ConstH.txt",*output_ConstH,1800,18);
+        aris::dynamic::dlmwrite("./max_ValueL.txt",*output_ValueL,1800,4);
+        aris::dynamic::dlmwrite("./min_ValueH.txt",*output_ValueH,1800,4);
+        aris::dynamic::dlmwrite("./ds_max_aLmt.txt",*ds_max_aLmt,1800,4);
+        aris::dynamic::dlmwrite("./ds_max_vLmt.txt",*ds_max_vLmt,1800,4);
+        aris::dynamic::dlmwrite("./ds_max.txt",*ds_max,1800,4);
 
-        aris::dynamic::dlmwrite("../../build/bin/dds_max.txt",real_ddsMax,1800,1);
-        aris::dynamic::dlmwrite("../../build/bin/dds_min.txt",real_ddsMin,1800,1);
-        aris::dynamic::dlmwrite("../../build/bin/ds_forward.txt",ds_forward,1800,1);
-        aris::dynamic::dlmwrite("../../build/bin/ds_backward.txt",ds_backward,1800,1);
-        aris::dynamic::dlmwrite("../../build/bin/dds_forward.txt",dds_forward,1800,1);
-        aris::dynamic::dlmwrite("../../build/bin/dds_backward.txt",dds_backward,1800,1);
+        aris::dynamic::dlmwrite("./dds_max.txt",real_ddsMax,1800,1);
+        aris::dynamic::dlmwrite("./dds_min.txt",real_ddsMin,1800,1);
+        aris::dynamic::dlmwrite("./ds_forward.txt",ds_forward,1800,1);
+        aris::dynamic::dlmwrite("./ds_backward.txt",ds_backward,1800,1);
+        aris::dynamic::dlmwrite("./dds_forward.txt",dds_forward,1800,1);
+        aris::dynamic::dlmwrite("./dds_backward.txt",dds_backward,1800,1);
 
-        aris::dynamic::dlmwrite("../../build/bin/Pee.txt",*output_Pee,1800,9);
-        aris::dynamic::dlmwrite("../../build/bin/Pin.txt",*output_Pin,1800,9);
-        aris::dynamic::dlmwrite("../../build/bin/Vin.txt",*output_Vin,1800,9);
-        aris::dynamic::dlmwrite("../../build/bin/Ain.txt",*output_Ain,1800,9);
+        aris::dynamic::dlmwrite("./Pee.txt",*output_Pee,1800,9);
+        aris::dynamic::dlmwrite("./Pin.txt",*output_Pin,1800,9);
+        aris::dynamic::dlmwrite("./Vin.txt",*output_Vin,1800,9);
+        aris::dynamic::dlmwrite("./Ain.txt",*output_Ain,1800,9);
 
 
         gettimeofday(&tpend,NULL);
@@ -2537,49 +2537,49 @@ namespace FastWalk
 
         printf("Iteration finished, iterCount=%d, maxTime=%.4f, timeArray:%.4f,%.4f\n\n",iterCount,maxTime,timeArray[0][0],timeArray[1][0]);
 
-        aris::dynamic::dlmwrite("../../build/bin/param_PeeB.txt",*output_PeeB,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dsds1.txt",*output_dsds1,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dsds2.txt",*output_dsds2,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dsds.txt", *output_dsds, sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_ds1.txt",*output_ds1,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_ds2.txt",*output_ds2,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_ds.txt", *output_ds, sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_const1.txt",*output_const1,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_const2.txt",*output_const2,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_const.txt", *output_const, sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_dds.txt",*output_dds,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_PeeB.txt",*output_PeeB,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_dsds1.txt",*output_dsds1,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_dsds2.txt",*output_dsds2,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_dsds.txt", *output_dsds, sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_ds1.txt",*output_ds1,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_ds2.txt",*output_ds2,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_ds.txt", *output_ds, sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_const1.txt",*output_const1,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_const2.txt",*output_const2,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_const.txt", *output_const, sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_dds.txt",*output_dds,sTotalCount,18);
 
-        aris::dynamic::dlmwrite("../../build/bin/param_a2.txt",*output_a2,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_a1.txt",*output_a1,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_a0L.txt",*output_a0L,sTotalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/param_a0H.txt",*output_a0H,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_a2.txt",*output_a2,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_a1.txt",*output_a1,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_a0L.txt",*output_a0L,sTotalCount,18);
+        aris::dynamic::dlmwrite("./param_a0H.txt",*output_a0H,sTotalCount,18);
 
-        aris::dynamic::dlmwrite("../../build/bin/max_ValueL.txt",*dds_lowBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/min_ValueH.txt",*dds_upBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_upBound_aLmt.txt",*ds_upBound_aLmt,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_bound_vLmt.txt",*ds_upBound_vLmt,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_lowBound.txt",*ds_lowBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_upBound.txt",*ds_upBound,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/dds_max.txt",*real_ddsMax,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/dds_min.txt",*real_ddsMin,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_forward.txt",*ds_forward,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/ds_backward.txt",*ds_backward,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/dds_forward.txt",*dds_forward,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/dds_backward.txt",*dds_backward,sTotalCount,4);
+        aris::dynamic::dlmwrite("./max_ValueL.txt",*dds_lowBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("./min_ValueH.txt",*dds_upBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_upBound_aLmt.txt",*ds_upBound_aLmt,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_lowBound_aLmt.txt",*ds_lowBound_aLmt,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_bound_vLmt.txt",*ds_upBound_vLmt,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_lowBound.txt",*ds_lowBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_upBound.txt",*ds_upBound,sTotalCount,4);
+        aris::dynamic::dlmwrite("./dds_max.txt",*real_ddsMax,sTotalCount,4);
+        aris::dynamic::dlmwrite("./dds_min.txt",*real_ddsMin,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_forward.txt",*ds_forward,sTotalCount,4);
+        aris::dynamic::dlmwrite("./ds_backward.txt",*ds_backward,sTotalCount,4);
+        aris::dynamic::dlmwrite("./dds_forward.txt",*dds_forward,sTotalCount,4);
+        aris::dynamic::dlmwrite("./dds_backward.txt",*dds_backward,sTotalCount,4);
 
-        aris::dynamic::dlmwrite("../../build/bin/real_ds.txt",*real_ds,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/real_dds.txt",*real_dds,sTotalCount,4);
+        aris::dynamic::dlmwrite("./real_ds.txt",*real_ds,sTotalCount,4);
+        aris::dynamic::dlmwrite("./real_dds.txt",*real_dds,sTotalCount,4);
 
-        aris::dynamic::dlmwrite("../../build/bin/timeArray.txt",*timeArray_tmp,sTotalCount,4);
-        aris::dynamic::dlmwrite("../../build/bin/pb_sw.txt",pb_sw,sTotalCount,1);
-        aris::dynamic::dlmwrite("../../build/bin/vb_sw.txt",vb_sw,sTotalCount,1);
-        aris::dynamic::dlmwrite("../../build/bin/ab_sw.txt",ab_sw,sTotalCount,1);
+        aris::dynamic::dlmwrite("./timeArray.txt",*timeArray_tmp,sTotalCount,4);
+        aris::dynamic::dlmwrite("./pb_sw.txt",pb_sw,sTotalCount,1);
+        aris::dynamic::dlmwrite("./vb_sw.txt",vb_sw,sTotalCount,1);
+        aris::dynamic::dlmwrite("./ab_sw.txt",ab_sw,sTotalCount,1);
 
-        //aris::dynamic::dlmwrite("../../build/bin/Pee.txt",*output_Pee,sTotalCount,9);
-        //aris::dynamic::dlmwrite("../../build/bin/Pin.txt",*output_Pin,sTotalCount,9);
-        //aris::dynamic::dlmwrite("../../build/bin/Vin.txt",*output_Vin,sTotalCount,9);
-        //aris::dynamic::dlmwrite("../../build/bin/Ain.txt",*output_Ain,sTotalCount,9);
+        //aris::dynamic::dlmwrite("./Pee.txt",*output_Pee,sTotalCount,9);
+        //aris::dynamic::dlmwrite("./Pin.txt",*output_Pin,sTotalCount,9);
+        //aris::dynamic::dlmwrite("./Vin.txt",*output_Vin,sTotalCount,9);
+        //aris::dynamic::dlmwrite("./Ain.txt",*output_Ain,sTotalCount,9);
 
 
         gettimeofday(&tpend,NULL);
@@ -2588,18 +2588,19 @@ namespace FastWalk
     }
 
 
-	double FastWalkPY::pIn_acc[900][18];
-	double FastWalkPY::pIn_const[1800][18];
-	double FastWalkPY::pIn_dec[900][18];
-	FastWalkPY::FastWalkPY()
+    double OfflineGait::pIn_acc[900][18];
+    double OfflineGait::pIn_const[1800][18];
+    double OfflineGait::pIn_dec[900][18];
+    double OfflineGait::pIn_entire[3258][18];
+    OfflineGait::OfflineGait()
 	{
 	}
-	FastWalkPY::~FastWalkPY()
+    OfflineGait::~OfflineGait()
 	{
 	}
-    void FastWalkPY::parseFastWalkByPY(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    void OfflineGait::parseFastWalkByPY(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
-		FastWalkByPYParam param;
+        OfflineGaitParam param;
 
 		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_acc.txt",*pIn_acc);
 		aris::dynamic::dlmread("/home/hex/Desktop/mygit/Robots/src/Robot_Type_I/resource/Robot_VIII/pIn_const.txt",*pIn_const);
@@ -2618,25 +2619,40 @@ namespace FastWalk
 		msg.copyStruct(param);
 		std::cout<<"finished parse"<<std::endl;
 	}
-	int FastWalkPY::fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    int OfflineGait::fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
-		auto &param = static_cast<const FastWalkByPYParam &>(param_in);
+        auto &param = static_cast<const OfflineGaitParam &>(param_in);
 
-		if (param.count<param.totalCount)
+        if (param.count<param.totalCountPY)
 		{
 			robot.SetPin(*pIn_acc+18*param.count);
 		}
-		else if(param.count<param.totalCount*(2*param.n-1))
+        else if(param.count<param.totalCountPY*(2*param.n-1))
 		{
-			robot.SetPin(*pIn_const+18*((param.count-param.totalCount)%(2*param.totalCount)));
+            robot.SetPin(*pIn_const+18*((param.count-param.totalCountPY)%(2*param.totalCountPY)));
 		}
 		else
 		{
-			robot.SetPin(*pIn_dec+18*(param.count-param.totalCount*(2*param.n-1)));
+            robot.SetPin(*pIn_dec+18*(param.count-param.totalCountPY*(2*param.n-1)));
 		}
-		return param.count-param.totalCount*2*param.n+1;
+        return param.count-param.totalCountPY*2*param.n+1;
 	}
+    void OfflineGait::parseFastWalkByCZJ(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    {
+        OfflineGaitParam param;
+        aris::dynamic::dlmread("./entirePin.txt",*pIn_entire);
+        msg.copyStruct(param);
+    }
+    int OfflineGait::fastWalkByCZJ(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const OfflineGaitParam &>(param_in);
+
+        robot.SetPin(*pIn_entire+18*param.count);
+
+        return param.count-param.totalCountCZJ+1;
+    }
 
     void FastWalkPYAnalyse()
 	{
@@ -2708,10 +2724,10 @@ namespace FastWalk
 			rbt.GetPin(*pIn+18*param.count);
 		}
 
-        aris::dynamic::dlmwrite("../../build/bin/wk_pEB.txt",*pEB,2*param.n*param.totalCount,6);
-        aris::dynamic::dlmwrite("../../build/bin/wk_pEE.txt",*pEE,2*param.n*param.totalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/wk_pEE_B.txt",*pEE_B,2*param.n*param.totalCount,18);
-        aris::dynamic::dlmwrite("../../build/bin/wk_pIn.txt",*pIn,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("./wk_pEB.txt",*pEB,2*param.n*param.totalCount,6);
+        aris::dynamic::dlmwrite("./wk_pEE.txt",*pEE,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("./wk_pEE_B.txt",*pEE_B,2*param.n*param.totalCount,18);
+        aris::dynamic::dlmwrite("./wk_pIn.txt",*pIn,2*param.n*param.totalCount,18);
 	}
 
 

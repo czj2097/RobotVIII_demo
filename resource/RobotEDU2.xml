@@ -602,14 +602,6 @@
                     <direction abbreviation="d" type="int" default="1"/>
                 </cwk_param>
             </cwk>
-            <lgw default="lgw_param">
-                <lgw_param type="group">
-                    <distance abbreviation="d" type="double" default="0.1"/>
-                    <totalCount abbreviation="t" type="int" default="1000"/>
-                    <h abbreviation="h" type="double" default="0.05"/>
-                    <beta abbreviation="b" type="int" default="1.57"/>
-                </lgw_param>
-            </lgw>
             <odb default="odb_param">
                 <odb_param type="group">
                     <u abbreviation="u" type="double" default="0"/>
@@ -635,6 +627,7 @@
                     <yaw abbreviation="y" type="int" default="0"/>
                 </odj_param>
             </odj>
+            <fwc/>
             <ro/>
         </Commands>
     </Server>

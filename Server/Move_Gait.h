@@ -302,23 +302,29 @@ namespace FastWalk
 
     void FastWalkPYAnalyse();
     void WalkPYAnalyse();
-	struct FastWalkByPYParam final:public aris::server::GaitParamBase
+    struct OfflineGaitParam final:public aris::server::GaitParamBase
 	{
-		std::int32_t n{2};
-		int totalCount{900};
+        std::int32_t n {2};
+        int totalCountPY {900};
+        int totalCountCZJ {3258};
 	};
-	class FastWalkPY
+    class OfflineGait
 	{
 	public:
-		FastWalkPY();
-		~FastWalkPY();
+        OfflineGait();
+        ~OfflineGait();
         static void parseFastWalkByPY(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 		static int fastWalkByPY(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+        static void parseFastWalkByCZJ(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+        static int fastWalkByCZJ(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	private:
 		static double pIn_acc[900][18];
 		static double pIn_const[1800][18];
 		static double pIn_dec[900][18];
+
+        static double pIn_entire[3258][18];
 	};
 
 

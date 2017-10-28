@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     NormalGait::testWorkSpace();
 
     FastWalk::JointSpaceWalk jointspacewalker;
-	FastWalk::FastWalkPY pyfastwalker;
+    FastWalk::OfflineGait fastwalker;
     ForceTask::ForceWalk forcewalker;
 	NormalGait::StartRecordData();
 	std::string xml_address;
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
     rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
-    rs.addCmd("fsw",pyfastwalker.parseFastWalkByPY,pyfastwalker.fastWalkByPY);
+    rs.addCmd("fwc",fastwalker.parseFastWalkByCZJ,fastwalker.fastWalkByCZJ);
     rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);
 
 	rs.open();
