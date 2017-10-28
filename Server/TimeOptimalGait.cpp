@@ -2793,6 +2793,7 @@ void TimeOptimalGait::OutputData()
 
 void TimeOptimalGait::GetNormalGait()
 {
+    printf("Start GetNormalGait\n");
     double pEB[6] {0};
     double pEE[18] {0};
     int TotalCount=maxTotalCount;
@@ -2910,4 +2911,92 @@ void TimeOptimalGait::GetNormalGait()
         delete [] normalVin;
         delete [] normalAin;
     }
+    printf("Finish GetNormalGait\n");
+}
+
+void TimeOptimalGait::GetEntireGait()
+{
+    printf("Start GetEntireGait\n");
+    double c3;
+    double c2;
+    double c1;
+    double c0;
+    double pEB[6];
+    double pEE[18];
+    memcpy(pEB,initPeb,6*sizeof(double));
+    memcpy(pEE,initPee,18*sizeof(double));
+
+    double * entirePeb=new double [6*9*maxTotalCount];
+    double * entirePee=new double [18*9*maxTotalCount];
+    double * entirePin=new double [18*9*maxTotalCount];
+    double * Pin_const=new double [18*5*maxTotalCount];
+    double * pva_b_const=new double [3*5*maxTotalCount];
+
+    //acc for 2*maxTotalCount
+    c3=(pva_b[0][1]+stepD/2/(2*maxTotalCount*0.001))/(2*maxTotalCount*0.001)/(2*maxTotalCount*0.001);
+    c2=(pva_b[0][1]-3*(pva_b[0][1]+stepD/2/(2*maxTotalCount*0.001)))/(4*maxTotalCount*0.001);
+    for(int i=0;i<2*maxTotalCount;i++)
+    {
+        pEB[2]=c3*1e-9*i*i*i+c2*1e-6*i*i;
+        for(int j=0;j<3;j++)
+        {
+            pEE[6*j+4]=initPee[6*j+4]-stepH/2*(cos(PI*i/maxTotalCount)-1);
+            pEE[6*j+5]=initPee[6*j+5]+stepD/4*(cos(PI/2*i/maxTotalCount)-1);
+        }
+
+        rbt.SetPeb(pEB);
+        rbt.SetPee(pEE);
+
+        memcpy(entirePeb+6*i,pEB,6*sizeof(double));
+        memcpy(entirePee+18*i,pEE,18*sizeof(double));
+        rbt.GetPin(entirePin+18*i);
+    }
+
+    //const for 5*maxTotalCount
+    aris::dynamic::dlmread("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin_t.txt",Pin_const);
+    aris::dynamic::dlmread("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_const);
+    for(int i=0;i<5*maxTotalCount;i++)
+    {
+        pEB[2]=-stepD/4+*(pva_b_const+3*i);
+        rbt.SetPeb(pEB);
+        rbt.SetPin(Pin_const+18*i);
+
+        memcpy(entirePeb+6*(i+2*maxTotalCount),pEB,6*sizeof(double));
+        rbt.GetPee(entirePee+18*(i+2*maxTotalCount));
+        memcpy(entirePin+18*(i+2*maxTotalCount),Pin_const+18*i,18*sizeof(double));
+    }
+
+    //dec for 2*maxTotalCount
+    c0=-stepD-stepD/4;
+    c1=pva_b[count5][1];
+    c2=(-3*stepD/4-2*c1*(2*maxTotalCount*0.001))/(2*maxTotalCount*0.001)/(2*maxTotalCount*0.001);
+    c3=(stepD/2+c1*(2*maxTotalCount*0.001))/(2*maxTotalCount*0.001)/(2*maxTotalCount*0.001)/(2*maxTotalCount*0.001);
+
+    for(int i=0;i<2*maxTotalCount;i++)
+    {
+        pEB[2]=c3*1e-9*i*i*i+c2*1e-6*i*i+c1*1e-3*i+c0;
+        for(int j=0;j<3;j++)
+        {
+            pEE[6*j+1]=initPee[6*j+1]-stepH/2*(cos(PI*i/maxTotalCount)-1);
+            pEE[6*j+2]=initPee[6*j+2]-stepD+stepD/4*(cos(PI/2*i/maxTotalCount)-1);
+
+            pEE[6*j+5]=initPee[6*j+5]-3*stepD/2;
+        }
+        rbt.SetPeb(pEB);
+        rbt.SetPee(pEE);
+
+        memcpy(entirePeb+6*(i+7*maxTotalCount),pEB,6*sizeof(double));
+        memcpy(entirePee+18*(i+7*maxTotalCount),pEE,18*sizeof(double));
+        rbt.GetPin(entirePin+18*(i+7*maxTotalCount));
+    }
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/entirePeb.txt",entirePeb,9*maxTotalCount,6);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/entirePee.txt",entirePee,9*maxTotalCount,18);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/entirePin.txt",entirePin,9*maxTotalCount,18);
+
+    delete [] entirePeb;
+    delete [] entirePee;
+    delete [] entirePin;
+    delete [] Pin_const;
+    delete [] pva_b_const;
+    printf("Finish GetEntireGait\n");
 }

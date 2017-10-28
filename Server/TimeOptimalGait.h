@@ -31,6 +31,7 @@ public:
     void OutputData();
 
     void GetNormalGait();
+    void GetEntireGait();
 
 private:
     double GetStanceSwitchMaxDec(int switchID, double ds);
