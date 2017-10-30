@@ -50,6 +50,8 @@ namespace NormalGait
     struct AdjustRcParam final :public aris::server::GaitParamBase
     {
         double distance {0};
+        bool isAll {false};
+        int legID {0};
         std::int32_t totalCount {1500};
     };
     void parseAdjustRc(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);

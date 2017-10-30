@@ -98,6 +98,14 @@ namespace NormalGait
             {
                 param.distance=std::stod(i.second);
             }
+            else if(i.first=="all")
+            {
+                param.isAll=true;
+            }
+            else if(i.first=="leg")
+            {
+                param.legID=std::stoi(i.second);
+            }
             else if(i.first=="totalCount")
             {
                 param.totalCount=std::stoi(i.second);
@@ -127,7 +135,8 @@ namespace NormalGait
             robot.GetPee(StartPee);
         }
 
-
+if(param.isAll==true)
+{
         for(int i=0;i<3;i++)//0 2 4
         {
             if(param.count<param.totalCount)
@@ -147,15 +156,42 @@ namespace NormalGait
                 currentPee[6*i+2]=StartPee[6*i+2]+param.distance*cos(PI/6+2*i*PI/3);
 
                 currentPee[6*i+3]=StartPee[6*i+3]+param.distance/2*sin(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
-                currentPee[6*i+4]=StartPee[3*i+4]+0.025*(1-cos((param.count-param.totalCount)*2*PI/param.totalCount));
+                currentPee[6*i+4]=StartPee[6*i+4]+0.025*(1-cos((param.count-param.totalCount)*2*PI/param.totalCount));
                 currentPee[6*i+5]=StartPee[6*i+5]+param.distance/2*cos(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
             }
         }
+}
+else
+{
+	    double k[6] {PI/6,PI/2,5*PI/6,-PI/6,3*PI/2,-5*PI/6};
+            for(int i=0;i<6;i++)
+            {
+            if(i==param.legID)
+            {
+                currentPee[3*i]=StartPee[3*i]+param.distance/2*sin(k[i])*(1-cos(param.count*PI/param.totalCount));
+                currentPee[3*i+1]=StartPee[3*i+1]+0.025*(1-cos(param.count*2*PI/param.totalCount));
+                currentPee[3*i+2]=StartPee[3*i+2]+param.distance/2*cos(k[i])*(1-cos(param.count*PI/param.totalCount));
+            }
+            else
+            {
+                currentPee[3*i]=StartPee[3*i];
+                currentPee[3*i+1]=StartPee[3*i+1];
+                currentPee[3*i+2]=StartPee[3*i+2];
+            }
+            }
+}
 
         robot.SetPeb(StartPeb);
         robot.SetPee(currentPee);
-
+    if(param.isAll==true)
+    {
         return 2*param.totalCount - param.count - 1;
+    }
+    else
+    {
+        return param.totalCount - param.count - 1;
+    }
+
     }
 
 	void StartRecordData()
@@ -3909,7 +3945,7 @@ namespace ForceTask
         double jumpDist=0.05;
         double jumpDistInB[3] {0};
         double jumpDistInG[3] {0};
-        double nonJumpDist=0.06;
+        double nonJumpDist=0.05;
         double nonJumpDistInB[3] {0};
         double nonJumpDistInG[3] {0};
         double handleLen=0.1;//for pull
@@ -4130,7 +4166,7 @@ namespace ForceTask
 			case MoveState::Backward:
 				Fbody[2]=1;
 
-                if (param.count-ODP.countIter>=750)
+                if (param.count-ODP.countIter>=1000)
 				{
                     ODP.countIter=param.count+1;
 					robot.GetPee(ODP.endPeeInB,robot.body());
@@ -4406,7 +4442,7 @@ namespace ForceTask
 
 				Fbody[2]=-1;
 
-                if (param.count-ODP.countIter>1500)
+                if (param.count-ODP.countIter>2000)
 				{
 					ODP.moveState=MoveState::PrePush;
 				}
@@ -4648,7 +4684,7 @@ namespace ForceTask
                     ODP.now2startDistanceInB[0]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.xNowInG);
                     if(isJump==false)
                     {
-                        ODP.now2startDistanceInB[1]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.yNowInG)+jumpH;
+                        ODP.now2startDistanceInB[1]=aris::dynamic::s_vn_dot_vn(3,ODP.now2startDistance,ODP.yNowInG);
                     }
                     else
                     {
@@ -4690,7 +4726,7 @@ namespace ForceTask
                             ODP.walkParam.alpha=(isLeft==true ? -PI/2 : PI/2);
 							ODP.walkParam.beta=0;
                             ODP.walkParam.totalCount=1000;
-                            ODP.walkParam.d=(isJump==false ? handle2MiddleDist/3*2 : (handle2MiddleDist-0.1)/3*2);
+                            ODP.walkParam.d=(isJump==false ? (handle2MiddleDist-0.03)/3*2 : (handle2MiddleDist-0.1)/3*2);
 						}
 						else//pause, tested useless
 						{
@@ -4714,11 +4750,11 @@ namespace ForceTask
                             ODP.pushState=PushState::pushWalk;
                             ODP.countIter=param.count+1;
 
-                            ODP.walkParam.totalCount=1000;
-                            ODP.walkParam.n=8;
+                            ODP.walkParam.totalCount=1500;
+                            ODP.walkParam.n=4;
                             ODP.walkParam.alpha=0;
                             ODP.walkParam.beta=0;
-                            ODP.walkParam.d=0.1;
+                            ODP.walkParam.d=0.4;
                         }
                         else//for pause, teseted useless
                         {
