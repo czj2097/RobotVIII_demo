@@ -8,3 +8,5 @@ Server/TimeOptimalGait.cpp
 Server/TimeOptimalGait.h
 resource/RobotEDU2.xml
 resource/Robot_III.xml
+Server/RealTimeOptimal.cpp
+Server/RealTimeOptimal.h
