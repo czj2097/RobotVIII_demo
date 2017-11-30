@@ -2450,11 +2450,9 @@ namespace FastWalk
 	}
 
 	/*analyse the maxVel of Pee in workspace*/
-	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc)
+    void maxCal(aris::dynamic::Model &model, double * direction, int legID, double vLmt, double *maxVel)
 	{
 		auto &robot = static_cast<Robots::RobotBase &>(model);
-		double vLmt[2]{-0.9,0.9};
-		double direction[3]{0,cos(alpha-PI/2),sin(alpha-PI/2)};
 		double Kv{0};
 		double Jvi[3][3];
 		double tem[3];
@@ -2466,13 +2464,13 @@ namespace FastWalk
 		{
 			if(i==0)
 			{
-				Kv=vLmt[1]/fabs(tem[i]);
+                Kv=vLmt/fabs(tem[i]);
 			}
 			else
 			{
-				if(Kv>=vLmt[1]/fabs(tem[i]))
+                if(Kv>=vLmt/fabs(tem[i]))
 				{
-					Kv=vLmt[1]/fabs(tem[i]);
+                    Kv=vLmt/fabs(tem[i]);
 				}
 			}
 		}
@@ -2481,7 +2479,7 @@ namespace FastWalk
 			maxVel[i]=Kv*direction[i];
 		}
 
-		//printf("alpha:%f ; tem:%f,%f,%f ; Kv:%f\n",alpha,tem[0],tem[1],tem[2],Kv);
+        printf("maxVel:%f,%f,%f\n",maxVel[0],maxVel[1],maxVel[2]);
 
 //		//maxAcc
 //        double aLmt[2]{-3.2,3.2};
@@ -2508,12 +2506,12 @@ namespace FastWalk
 							0.45, -0.85, 0,
 							 0.3, -0.85, 0.65 };
 		double pEE[18];
+        double vLmt {0.9};
 		int stepHNum=11;
 		int stepDNum=21;
 		int angleNum=36;
-		double alpha;
 		double maxVel[stepDNum*stepHNum*angleNum][18];
-		double maxAcc[stepDNum*stepHNum*angleNum][18];
+        //double maxAcc[stepDNum*stepHNum*angleNum][18];
 
 		for (int i=0;i<stepDNum;i++)
 		{
@@ -2530,10 +2528,11 @@ namespace FastWalk
 
 				for(int a=0;a<angleNum;a++)
 				{
-					alpha=(double)a/angleNum*PI;
+                    double alpha=(double)a/angleNum*PI;
+                    double direction[3] {0,cos(alpha-PI/2),sin(alpha-PI/2)};
 					for (int k=0;k<6;k++)
 					{
-						maxCal(rbt,alpha,k,*maxVel+((i*stepHNum+j)*angleNum+a)*18+3*k,*maxAcc+((i*stepHNum+j)*angleNum+a)*18+3*k);
+                        maxCal(rbt,direction,k,vLmt,*maxVel+((i*stepHNum+j)*angleNum+a)*18+3*k);
 					}
 				}
 			}

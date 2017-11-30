@@ -108,7 +108,9 @@ int main(int argc, char *argv[])
 //    optimalgait.OutputData();
 //    optimalgait.GetNormalGait();
 //    optimalgait.GetEntireGait();
-    screwInterpolationTraj();
+
+    RealTimeOptimal realtimegait;
+    realtimegait.screwInterpolationTraj();
 
     //FastWalk::JointSpaceWalk jointspacewalker;
     //FastWalk::FastWalkPY pyfastwalker;

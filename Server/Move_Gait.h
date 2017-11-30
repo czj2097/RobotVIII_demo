@@ -234,7 +234,7 @@ namespace FastWalk
     void TimeOptimalGait1by1();//3 swing legs calculated one by one
 
     //calculate max vel & cal at any position in workspace, vel finished, cal unfinished
-	void maxCal(aris::dynamic::Model &model, double alpha, int legID, double *maxVel, double *maxAcc);
+    void maxCal(aris::dynamic::Model &model, double *direction, int legID, double vLmt, double *maxVel);
     void maxVel();
 	struct maxVelParam
 	{
