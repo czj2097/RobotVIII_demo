@@ -4,7 +4,7 @@ RealTimeOptimal::RealTimeOptimal(){}
 RealTimeOptimal::~RealTimeOptimal(){}
 
 /*find gait with maxVel in joint space by iteration*/
-void RealTimeOptimal::GetSpline(double startP, double endP, double startV, double endV, double *a, double *t)
+void RealTimeOptimal::GetOptimalPTPMotion(double startP, double endP, double startV, double endV, double *a, double *t)
 {
     int k1 = endP > startP ? 1 : -1;
     double v0 {0};
@@ -167,7 +167,7 @@ void RealTimeOptimal::screwInterpolationTraj()
     float tused;
     gettimeofday(&tpstart,NULL);
 
-//    double totalTime{1.5};
+    double totalTime{1.5};
 //    double pEE[18];
 //    double pEE_B[18];
 //    double aEE[18];
@@ -208,9 +208,10 @@ void RealTimeOptimal::screwInterpolationTraj()
         keyPee_B[2][3*i+2]=initPee[3*i+2]-stepD/4;
     }
 
-//    double e{1};
-//    int k{0};
-//    double totalTmax {0};
+    double e{1};
+    int k{0};
+    double totalTmax {0};
+    double totalT[18] {0};
     double totalT1[18] {0};
     double totalT2[18] {0};
     int totalCount1[18] {0};
@@ -220,11 +221,12 @@ void RealTimeOptimal::screwInterpolationTraj()
     double a1[18][5] {0};
     double a2[18][5] {0};
 
-//    while(e>=0.0001)
-//    {
+    while(e>=0.0001)
+    {
         for (int i=0;i<3;i++)
         {
             double maxVel[18];
+            double Vbody[3] {0,0,stepD/totalTime/2};
             rbt.SetPee(*keyPee_B+18*i,rbt.body());
             for(int j=0;j<6;j++)
             {
@@ -232,17 +234,29 @@ void RealTimeOptimal::screwInterpolationTraj()
                 FastWalk::maxCal(rbt,direction,j,vLmt,maxVel+3*j);
             }
             rbt.SetVee(maxVel,rbt.body());
-
+            if(i!=1)
+            {
+                for(int j=0;j<6;j++)
+                {
+                    rbt.pLegs[j]->SetVee(Vbody,rbt.body());
+                }
+            }
             rbt.GetPin(*keyPin+18*i);
             rbt.GetVin(*keyVin+18*i);
+
+            printf("keyPin: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f",
+                   keyPin[i][0],keyPin[i][1],keyPin[i][2],keyPin[i][3],keyPin[i][4],keyPin[i][5],keyPin[i][6],keyPin[i][7],keyPin[i][8],
+                   keyPin[i][9],keyPin[i][10],keyPin[i][11],keyPin[i][12],keyPin[i][13],keyPin[i][14],keyPin[i][15],keyPin[i][16],keyPin[i][17]);
         }
 
-//        totalTmax=0;
+        totalTmax=0;
+        std::fill_n(*pIn,3000*18,0);
+        std::fill_n(*vIn,3000*18,0);
 
         for (int i=0;i<18;i++)
         {
-            GetSpline(keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
-            GetSpline(keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
+            GetOptimalPTPMotion(keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
+            GetOptimalPTPMotion(keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
 
             std::fill_n(totalT1,18,0);
             std::fill_n(totalT2,18,0);
@@ -254,23 +268,24 @@ void RealTimeOptimal::screwInterpolationTraj()
             totalCount1[i]=(int)(totalT1[i]*1000)+1;
             totalCount2[i]=(int)(totalT2[i]*1000)+1;
 
-//            if(totalT[i]>totalTmax)
-//            {
-//                totalTmax=totalT[i];
-//                k=i;
-//            }
+            totalT[i]=totalT1[i]+totalT2[i];
+
+            if(totalT[i]>totalTmax)
+            {
+                totalTmax=totalT[i];
+                k=i;
+            }
 
             GetTraj(i,0,totalCount1[i],keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
             GetTraj(i,totalCount1[i],totalCount2[i],keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
         }
 
-//        e=fabs(totalTmax-totalTime);
+        e=fabs(totalTmax-totalTime);
+        totalTime=totalTmax;
 
-//        totalTime=totalTmax;
-
-//        printf("%.4f,screwID:%d\n",totalTmax,k);
-//        printf("\n");
-//    }
+        printf("%.4f,screwID:%d\n",totalTmax,k);
+        printf("\n");
+    }
 
     gettimeofday(&tpend,NULL);
     tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;

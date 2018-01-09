@@ -36,7 +36,7 @@ private:
     const double initVee[18] {0};
     double vIn[3000][18];
     double pIn[3000][18];
-    void GetSpline(double startP, double endP, double startV, double endV, double *a, double *t);
+    void GetOptimalPTPMotion(double startP, double endP, double startV, double endV, double *a, double *t);
     void GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t);
     void ScalingTraj(double startP, double endP, double startV, double endV, double *a, double *t);
 
