@@ -587,6 +587,10 @@
             </tw>
             <arc default="arc_param">
                 <arc_param type="group">
+                    <leg_param type="unique" default="all">
+                       <all abbreviation="a"/>
+                       <leg abbreviation="l" type="int" default="0"/>
+                    </leg_param>
                     <distance abbreviation="d" type="double" default="0"/>
                     <totalCount abbreviation="t" type="int" default="1000"/>
                 </arc_param>
