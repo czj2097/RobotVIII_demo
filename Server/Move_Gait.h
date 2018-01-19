@@ -83,140 +83,8 @@ namespace NormalGait
 
 namespace ForceTask
 {
-    void parseContinueMoveBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
-    void parseContinueMoveJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
-    int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
-    void parseOpenDoorBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
-    void parseOpenDoorJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
-    int openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
     void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
 	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
-	enum MoveState
-	{
-		None,
-		PointLocate1,
-		PointLocate2,
-		LocateAjust,
-		Forward,
-		Backward,
-		Rightward,
-		Leftward,
-		Follow,
-        Jump,
-        NonJump,
-		Downward,
-		Pullhandle,
-		Pushhandle,
-        PrePull,
-        PrePush,
-        Pull,
-		Push,
-	};
-
-	enum PushState
-	{
-        push2Start,
-        alignWalk,
-        pushWalk,
-	};
-
-    enum PullState
-    {
-        pull2Start,
-        circleWalk,
-        legWork,
-        rotate,
-        pullWalk,
-    };
-
-	struct ContinueMoveParam final :public aris::server::GaitParamBase
-	{
-		std::int32_t move_direction;
-	};
-
-	struct ForceTaskParamBase
-	{
-		double bodyPE_last[6];//213 euler angle
-		double bodyVel_last[6];//derivative of 213 euler angle, not spatial velocity
-		double pEE_last[18];
-
-		double forceInB[6];
-        double forceInB_last[6];
-        double forceInB_sndlast[6];
-        double forceInB_avg[6];
-	};
-
-	struct OpenDoorParam :public ForceTaskParamBase
-	{
-		MoveState moveState;
-		PushState pushState;
-        PullState pullState;
-        int ret {0};
-        std::int32_t count {0};
-        std::int32_t countIter {0};
-		Robots::WalkParam walkParam;
-        NormalGait::CircleWalkParam circleWalkParam;
-        LowpassFilter<6> filter;
-
-        const double toolInR[3] {0,0.08,-0.385};
-        double toolInG[3] {0};
-        double toolVel[3] {0};
-
-		//MoveState: PointLocation
-        double pointLocation1[6] {0};
-        double pointLocation2[6] {0};
-        double pointLocation3[6] {0};
-        double location[3][3] {{0}};
-
-		//Door Location
-        double planeYPR[3] {0};
-        double handleLocation[3] {0};
-        const int jumpCount {1000};
-        double jumpStartPe[6] {0};
-        bool isLastFollow;
-
-		//startPE
-        double beginPE[6] {0};
-        double vector0[3] {0};
-        double vector1[3] {0};
-        double vector2[3] {0};
-
-		//now2Start used twice
-        double nowPE[6] {0}; //used in Follow again
-        double nowPee[18] {0};
-        double startPE[6] {0};
-        const int now2StartCount {1000};
-
-		//MoveState: Follow
-        double startPeeInB[18] {0};
-        double endPeeInB[18] {0};
-        const int followCount {1000};
-
-		//MoveState: Downward
-        bool downwardFlag;
-        int downwardCount {0};
-
-		//PushState
-        double nowPm[4][4] {{0}};
-        double xNowInG[3] {0};
-        double yNowInG[3] {0};
-        double now2startDistance[3] {0};
-        double now2startDistanceInB[6] {0};
-        double now2startDistanceInG[6] {0};
-        double now2startPeeDistInG[3] {0};
-
-        //PullState
-        const int legWorkCount {1000};
-
-		//pause
-		MoveState moveState_last;
-		int pauseCount{0};
-        bool isPause;
-	};
-
 
 	struct ForceWalkParam final:public aris::server::GaitParamBase
 	{
@@ -369,8 +237,6 @@ namespace FastWalk
 	};
 }
 
-extern Pipe<ForceTask::OpenDoorParam> openDoorPipe;
-static std::thread openDoorThread;
 extern Pipe<FastWalk::outputParam> fastWalkPipe;
 static std::thread fastWalkThread;
 

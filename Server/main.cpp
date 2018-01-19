@@ -20,6 +20,7 @@ using namespace std;
 #endif
 
 #include "Move_Gait.h"
+#include "OpenDoor.h"
 
 int main(int argc, char *argv[])
 {
@@ -71,10 +72,10 @@ int main(int argc, char *argv[])
     rs.addCmd("arc",NormalGait::parseAdjustRc,NormalGait::adjustRc);
     rs.addCmd("cwk",NormalGait::parseCircleWalk,NormalGait::circleWalk);
 
-    rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
-    rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
-    rs.addCmd("odb",ForceTask::parseOpenDoorBegin,ForceTask::openDoor);
-    rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
+    rs.addCmd("cmb",parseContinueMoveBegin,continueMove);
+    rs.addCmd("cmj",parseContinueMoveJudge,continueMove);
+    rs.addCmd("odb",parseOpenDoorBegin,openDoor);
+    rs.addCmd("odj",parseOpenDoorJudge,openDoor);
     rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
     rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);

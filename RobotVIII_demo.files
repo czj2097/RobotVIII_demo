@@ -7,3 +7,6 @@ Server/Move_Gait.h
 Server/TimeOptimalGait.cpp
 Server/TimeOptimalGait.h
 resource/RobotEDU2.xml
+Server/OpenDoor.cpp
+Server/OpenDoor.h
+Server/LowPassFilter.h
