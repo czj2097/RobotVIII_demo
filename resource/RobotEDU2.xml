@@ -606,8 +606,22 @@
                     <direction abbreviation="d" type="int" default="1"/>
                 </cwk_param>
             </cwk>
-            <odb default="odb_param">
-                <odb_param type="group">
+            <ppw default="ppw_param">
+                <ppw_param type="group">
+                    <totalCount abbreviation="t" type="int" default="1000"/>
+                    <height abbreviation="h" type="double" default="0.05"/>
+                    <x abbreviation="x" type="double" default="0"/>
+                    <y abbreviation="y" type="double" default="0"/>
+                    <z abbreviation="z" type="double" default="0"/>
+                </ppw_param>
+            </ppw>
+            <od default="od_param">
+                <od_param type="group">
+                    <state_param type="unique">
+                        <init abbreviation="i"/>
+                        <doorLocate abbreviation="d"/>
+                        <quit abbreviation="q"/>
+                    </state_param>
                     <u abbreviation="u" type="double" default="0"/>
                     <v abbreviation="v" type="double" default="0"/>
                     <w abbreviation="w" type="double" default="0"/>
@@ -617,20 +631,8 @@
                     <isForward abbreviation="f" type="int" default="1"/>
                     <isLeft abbreviation="l" type="int" default="0"/>
                     <isJump abbreviation="j" type="int" default="0"/>
-                </odb_param>
-            </odb>
-            <odj default="odj_param">
-                <odj_param type="group">
-                    <isQuit abbreviation="q" type="int" default="0"/>
-                    <isConfirm abbreviation="c" type="int" default="0"/>
-                    <u abbreviation="u" type="int" default="0"/>
-                    <v abbreviation="v" type="int" default="0"/>
-                    <w abbreviation="w" type="int" default="0"/>
-                    <roll abbreviation="r" type="int" default="0"/>
-                    <pitch abbreviation="p" type="int" default="0"/>
-                    <yaw abbreviation="y" type="int" default="0"/>
-                </odj_param>
-            </odj>
+                </od_param>
+            </od>
             <fwc/>
             <ro/>
         </Commands>

@@ -10,3 +10,5 @@ resource/RobotEDU2.xml
 Server/OpenDoor.cpp
 Server/OpenDoor.h
 Server/LowPassFilter.h
+Server/EmergencyStop.cpp
+Server/EmergencyStop.h

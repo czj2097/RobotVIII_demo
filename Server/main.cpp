@@ -27,12 +27,13 @@ int main(int argc, char *argv[])
     //FastWalk::TimeOptimalGait1by1();
     //FastWalk::WalkPYAnalyse();
 
-    NormalGait::testWorkSpace();
+//    NormalGait::testWorkSpace();
 
     FastWalk::JointSpaceWalk jointspacewalker;
     FastWalk::OfflineGait fastwalker;
     ForceTask::ForceWalk forcewalker;
-	NormalGait::StartRecordData();
+//	NormalGait::StartRecordData();
+    OpenDoor opener;
 	std::string xml_address;
 
 	if (argc <= 1)
@@ -72,10 +73,10 @@ int main(int argc, char *argv[])
     rs.addCmd("arc",NormalGait::parseAdjustRc,NormalGait::adjustRc);
     rs.addCmd("cwk",NormalGait::parseCircleWalk,NormalGait::circleWalk);
 
-    rs.addCmd("cmb",parseContinueMoveBegin,continueMove);
-    rs.addCmd("cmj",parseContinueMoveJudge,continueMove);
-    rs.addCmd("odb",parseOpenDoorBegin,openDoor);
-    rs.addCmd("odj",parseOpenDoorJudge,openDoor);
+//    rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
+//    rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
+    rs.addCmd("od",opener.parseOpenDoor,opener.openDoor);
+    opener.recordOpenDoorData();
     rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
     rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);

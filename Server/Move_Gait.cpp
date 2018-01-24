@@ -134,63 +134,137 @@ namespace NormalGait
             robot.GetPee(StartPee);
         }
 
-if(param.isAll==true)
-{
-        for(int i=0;i<3;i++)//0 2 4
+        if(param.isAll==true)
         {
-            if(param.count<param.totalCount)
+            for(int i=0;i<3;i++)//0 2 4
             {
-                currentPee[6*i]=StartPee[6*i]+param.distance/2*sin(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
-                currentPee[6*i+1]=StartPee[6*i+1]+0.025*(1-cos(param.count*2*PI/param.totalCount));
-                currentPee[6*i+2]=StartPee[6*i+2]+param.distance/2*cos(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
+                if(param.count<param.totalCount)
+                {
+                    currentPee[6*i]=StartPee[6*i]+param.distance/2*sin(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
+                    currentPee[6*i+1]=StartPee[6*i+1]+0.025*(1-cos(param.count*2*PI/param.totalCount));
+                    currentPee[6*i+2]=StartPee[6*i+2]+param.distance/2*cos(PI/6+2*i*PI/3)*(1-cos(param.count*PI/param.totalCount));
 
-                currentPee[6*i+3]=StartPee[6*i+3];
-                currentPee[6*i+4]=StartPee[6*i+4];
-                currentPee[6*i+5]=StartPee[6*i+5];
-            }
-            else
-            {
-                currentPee[6*i]=StartPee[6*i]+param.distance*sin(PI/6+2*i*PI/3);
-                currentPee[6*i+1]=StartPee[6*i+1];
-                currentPee[6*i+2]=StartPee[6*i+2]+param.distance*cos(PI/6+2*i*PI/3);
+                    currentPee[6*i+3]=StartPee[6*i+3];
+                    currentPee[6*i+4]=StartPee[6*i+4];
+                    currentPee[6*i+5]=StartPee[6*i+5];
+                }
+                else
+                {
+                    currentPee[6*i]=StartPee[6*i]+param.distance*sin(PI/6+2*i*PI/3);
+                    currentPee[6*i+1]=StartPee[6*i+1];
+                    currentPee[6*i+2]=StartPee[6*i+2]+param.distance*cos(PI/6+2*i*PI/3);
 
-                currentPee[6*i+3]=StartPee[6*i+3]+param.distance/2*sin(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
-                currentPee[6*i+4]=StartPee[6*i+4]+0.025*(1-cos((param.count-param.totalCount)*2*PI/param.totalCount));
-                currentPee[6*i+5]=StartPee[6*i+5]+param.distance/2*cos(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
+                    currentPee[6*i+3]=StartPee[6*i+3]+param.distance/2*sin(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
+                    currentPee[6*i+4]=StartPee[6*i+4]+0.025*(1-cos((param.count-param.totalCount)*2*PI/param.totalCount));
+                    currentPee[6*i+5]=StartPee[6*i+5]+param.distance/2*cos(PI/2-2*i*PI/3)*(1-cos((param.count-param.totalCount)*PI/param.totalCount));
+                }
             }
         }
-}
-else
-{
-	    double k[6] {PI/6,PI/2,5*PI/6,-PI/6,3*PI/2,-5*PI/6};
+        else
+        {
+            double k[6] {PI/6,PI/2,5*PI/6,-PI/6,3*PI/2,-5*PI/6};
             for(int i=0;i<6;i++)
             {
-            if(i==param.legID)
-            {
-                currentPee[3*i]=StartPee[3*i]+param.distance/2*sin(k[i])*(1-cos(param.count*PI/param.totalCount));
-                currentPee[3*i+1]=StartPee[3*i+1]+0.025*(1-cos(param.count*2*PI/param.totalCount));
-                currentPee[3*i+2]=StartPee[3*i+2]+param.distance/2*cos(k[i])*(1-cos(param.count*PI/param.totalCount));
+                if(i==param.legID)
+                {
+                    currentPee[3*i]=StartPee[3*i]+param.distance/2*sin(k[i])*(1-cos(param.count*PI/param.totalCount));
+                    currentPee[3*i+1]=StartPee[3*i+1]+0.025*(1-cos(param.count*2*PI/param.totalCount));
+                    currentPee[3*i+2]=StartPee[3*i+2]+param.distance/2*cos(k[i])*(1-cos(param.count*PI/param.totalCount));
+                }
+                else
+                {
+                    currentPee[3*i]=StartPee[3*i];
+                    currentPee[3*i+1]=StartPee[3*i+1];
+                    currentPee[3*i+2]=StartPee[3*i+2];
+                }
             }
-            else
-            {
-                currentPee[3*i]=StartPee[3*i];
-                currentPee[3*i+1]=StartPee[3*i+1];
-                currentPee[3*i+2]=StartPee[3*i+2];
-            }
-            }
-}
+        }
 
         robot.SetPeb(StartPeb);
         robot.SetPee(currentPee);
-    if(param.isAll==true)
-    {
-        return 2*param.totalCount - param.count - 1;
-    }
-    else
-    {
-        return param.totalCount - param.count - 1;
+        if(param.isAll==true)
+        {
+            return 2*param.totalCount - param.count - 1;
+        }
+        else
+        {
+            return param.totalCount - param.count - 1;
+        }
     }
 
+    void parseP2PWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    {
+        P2PWalkParam param;
+
+        for(auto &i:params)
+        {
+            if(i.first=="x")
+            {
+                param.targetPointInB[0]=std::stod(i.second);
+            }
+            else if(i.first=="y")
+            {
+                param.targetPointInB[1]=std::stod(i.second);
+            }
+            else if(i.first=="z")
+            {
+                param.targetPointInB[2]=std::stod(i.second);
+            }
+            else if(i.first=="totalCount")
+            {
+                param.totalCount=std::stoi(i.second);
+            }
+            else if(i.first=="height")
+            {
+                param.height=std::stod(i.second);
+            }
+            else
+            {
+                std::cout<<"parse failed"<<std::endl;
+            }
+        }
+
+        msg.copyStruct(param);
+
+        std::cout<<"finished parse"<<std::endl;
+    }
+
+    int p2pWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const P2PWalkParam &>(param_in);
+
+        static double beginPeb[6] {0};
+        if(param.count==0)
+        {
+            robot.GetPeb(beginPeb);
+        }
+        double Peb[6] {0};
+        double dist = sqrt(param.targetPointInB[0]*param.targetPointInB[0]+param.targetPointInB[2]*param.targetPointInB[2]);
+
+        Robots::WalkParam walkParam;
+        walkParam.alpha=atan2(param.targetPointInB[0],param.targetPointInB[2])+PI;
+        walkParam.beta=0;
+        walkParam.h=param.height;
+        if(dist<=0.25)
+        {
+            walkParam.n=1;
+        }
+        else
+        {
+            walkParam.n=(int)((dist-0.25)/0.5)+2;
+        }
+        walkParam.d=dist/(walkParam.n-0.5);
+        walkParam.count=param.count;
+        walkParam.totalCount=param.totalCount;
+
+        Robots::walkGait(robot,walkParam);
+        robot.GetPeb(Peb);
+        Peb[1]=beginPeb[1]+param.targetPointInB[1]*(-cos(param.count/(2*walkParam.n*param.totalCount)*PI)+1)/2;
+
+        robot.SetPeb(Peb);
+
+        return 2 * walkParam.n * param.totalCount - param.count - 1;
     }
 
 	void StartRecordData()
@@ -3551,6 +3625,249 @@ namespace ForceTask
 			}
 		}
 	}
+
+//    std::atomic_bool isForce;
+//    std::atomic_bool isContinue;
+
+//    void parseContinueMoveBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+//    {
+//        ContinueMoveParam param;
+
+//        for(auto &i:params)
+//        {
+//            if(i.first=="u")
+//            {
+//                moveDir[0]=std::stoi(i.second);
+//            }
+//            else if(i.first=="v")
+//            {
+//                moveDir[1]=std::stoi(i.second);
+//            }
+//            else if(i.first=="w")
+//            {
+//                moveDir[2]=std::stoi(i.second);
+//            }
+//            else if(i.first=="yaw")
+//            {
+//                moveDir[3]=std::stoi(i.second);
+//            }
+//            else if(i.first=="pitch")
+//            {
+//                moveDir[4]=std::stoi(i.second);
+//            }
+//            else if(i.first=="roll")
+//            {
+//                moveDir[5]=std::stoi(i.second);
+//            }
+//            else
+//            {
+//                std::cout<<"parse failed"<<std::endl;
+//            }
+//        }
+
+//        isContinue=true;
+//        isForce=true;
+
+//        msg.copyStruct(param);
+
+//        std::cout<<"finished parse"<<std::endl;
+//    }
+
+//    void parseContinueMoveJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+//    {
+//        for(auto &i:params)
+//        {
+//            if(i.first=="isStop")
+//            {
+//                if(i.second=="0")
+//                    isContinue=true;
+//                else
+//                    isContinue=false;
+//            }
+//            else if(i.first=="isForce")
+//            {
+//                if(i.second=="1")
+//                    isForce=true;
+//                else
+//                    isForce=false;
+//            }
+//            else if(i.first=="u")
+//            {
+//                moveDir[0]=std::stoi(i.second);
+//            }
+//            else if(i.first=="v")
+//            {
+//                moveDir[1]=std::stoi(i.second);
+//            }
+//            else if(i.first=="w")
+//            {
+//                moveDir[2]=std::stoi(i.second);
+//            }
+//            else if(i.first=="yaw")
+//            {
+//                moveDir[3]=std::stoi(i.second);
+//            }
+//            else if(i.first=="pitch")
+//            {
+//                moveDir[4]=std::stoi(i.second);
+//            }
+//            else if(i.first=="roll")
+//            {
+//                moveDir[5]=std::stoi(i.second);
+//            }
+//            else
+//            {
+//                std::cout<<"parse failed"<<std::endl;
+//            }
+//        }
+
+//        std::cout<<"finished parse"<<std::endl;
+//    }
+
+//    /*****C must be adjusted when used on different robots*****/
+//    int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+//    {
+//        auto &robot = static_cast<Robots::RobotBase &>(model);
+//        auto &param = static_cast<const ContinueMoveParam &>(param_in);
+
+//        double bodyVel[6];
+//        double bodyAcc[6];
+//        double bodyPm[4][4];
+//        double deltaPE[6];
+//        double deltaPm[4][4];
+//        double realPE[6];
+//        double realPm[4][4];
+//        double nowPee[18];
+
+//        double Fbody[6]{0,0,0,0,0,0};
+//        double C[6]{30,30,30,30,30,30};
+//        double M[6]{1,1,1,1,1,1};
+//        double deltaT{0.001};
+//        double forceRange[6]{30,30,30,20,20,20};
+
+//        static ForceTaskParamBase FTP;
+
+//        if(isContinue==true)
+//        {
+//            //rt_printf("gait continuing\n");
+//            if(isForce==false)
+//            {
+//                for (int i=0;i<6;i++)
+//                {
+//                    Fbody[i]=moveDir[i];
+//                }
+//            }
+//            else
+//            {
+//                //initialize
+//                if (param.count==0)
+//                {
+//                    for(int i=0;i<6;i++)
+//                    {
+//                        FTP.bodyVel_last[i]=0;
+//                    }
+//                }
+//                double forceInF[6];
+//                ForceTask::forceInit(param.count,param.force_data->at(0).fce,forceInF);
+//                aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF,FTP.forceInB);
+
+//                //Find the max force direction & Set the direction as the move dircetion
+//                int num1;
+//                int num2;
+//                double fmax{0};
+//                double mmax{0};
+//                for (int i=0;i<3;i++)
+//                {
+//                    if (fabs(FTP.forceInB[i])>fabs(fmax))
+//                    {
+//                        fmax=FTP.forceInB[i];
+//                        num1=i;
+//                    }
+//                    if (fabs(FTP.forceInB[i+3])>fabs(mmax))
+//                    {
+//                        mmax=FTP.forceInB[i+3];
+//                        num2=i+3;
+//                    }
+//                }
+
+//                //Judge whether to rotate in priority. If not, then judge whether to translate
+//                if(FTP.forceInB[num2]>forceRange[num2])
+//                {
+//                    Fbody[num2]=1;
+//                }
+//                else if(FTP.forceInB[num2]<-forceRange[num2])
+//                {
+//                    Fbody[num2]=-1;
+//                }
+//                else
+//                {
+//                    if(FTP.forceInB[num1]>forceRange[num1])
+//                    {
+//                        Fbody[num1]=1;
+//                    }
+//                    else if(FTP.forceInB[num1]<-forceRange[num1])
+//                    {
+//                        Fbody[num1]=-1;
+//                    }
+//                }
+//            }
+
+//            for (int i=0;i<6;i++)
+//            {
+//                bodyAcc[i]=(Fbody[i]-C[i]*FTP.bodyVel_last[i])/M[i];
+//                bodyVel[i]=FTP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+//                deltaPE[i]=bodyVel[i]*deltaT;
+//            }
+
+//            robot.GetPmb(*bodyPm);
+//            robot.GetPee(nowPee);
+//            aris::dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
+//            aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
+//            aris::dynamic::s_pm2pe(*realPm,realPE,"313");
+
+//            robot.SetPeb(realPE);
+//            robot.SetPee(nowPee);
+
+//            if(param.count%1000==0)
+//            {
+//                rt_printf("count:%d\n",param.count);
+//                //rt_printf("bodyPm:%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n%f,%f,%f,%f\n",bodyPm[0][0],bodyPm[0][1],bodyPm[0][2],bodyPm[0][3],bodyPm[1][0],bodyPm[1][1],bodyPm[1][2],bodyPm[1][3],bodyPm[2][0],bodyPm[2][1],bodyPm[2][2],bodyPm[2][3],bodyPm[3][0],bodyPm[3][1],bodyPm[3][2],bodyPm[3][3]);
+//                rt_printf("RawForce:%f,%f,%f\n",param.force_data->at(0).Fx,param.force_data->at(0).Fy,param.force_data->at(0).Fz);
+//                rt_printf("Force:%f,%f,%f,%f,%f,%f\n",FTP.forceInB[0],FTP.forceInB[1],FTP.forceInB[2],FTP.forceInB[3],FTP.forceInB[4],FTP.forceInB[5]);
+//                rt_printf("realPE:%f,%f,%f,%f,%f,%f\n\n",realPE[0],realPE[1],realPE[2],realPE[3],realPE[4],realPE[5]);
+//            }
+
+//            memcpy(FTP.bodyVel_last,bodyVel,sizeof(double)*6);
+//            return 1;
+//        }
+
+//        else
+//        {
+//            //rt_printf("gait stopping\n");
+//            for (int i=0;i<6;i++)
+//            {
+//                bodyAcc[i]=(Fbody[i]-C[i]*FTP.bodyVel_last[i])/M[i];
+//                bodyVel[i]=FTP.bodyVel_last[i]+bodyAcc[i]*deltaT;
+//                deltaPE[i]=bodyVel[i]*deltaT;
+//            }
+
+//            robot.GetPmb(*bodyPm);
+//            robot.GetPee(nowPee);
+//            aris::dynamic::s_pe2pm(deltaPE,*deltaPm,"213");
+//            aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*realPm);
+//            aris::dynamic::s_pm2pe(*realPm,realPE,"313");
+
+//            robot.SetPeb(realPE);
+//            robot.SetPee(nowPee);
+
+//            memcpy(FTP.bodyVel_last,bodyVel,sizeof(double)*6);
+
+//            if ( fabs(bodyVel[0])<1e-10 && fabs(bodyVel[1])<1e-10 && fabs(bodyVel[2])<1e-10 && fabs(bodyVel[3])<1e-10 && fabs(bodyVel[4])<1e-10 && fabs(bodyVel[5])<1e-10)
+//                return 0;
+//            else
+//                return 1;
+//        }
+//    }
 
     double ForceWalk::forwardAcc;
     double ForceWalk::turnAcc;

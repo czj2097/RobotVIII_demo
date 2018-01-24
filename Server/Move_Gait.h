@@ -18,6 +18,11 @@ using namespace aris::control;
 
 namespace NormalGait
 {
+    void StartRecordData();
+    void inv3(double * matrix,double * invmatrix);
+    double norm(double * vector_in);
+    void testWorkSpace();
+
 	enum WalkState
 	{
 		Init,
@@ -40,12 +45,6 @@ namespace NormalGait
 	};
     void parseMoveWithRotate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
-	void StartRecordData();
-	void inv3(double * matrix,double * invmatrix);
-	double norm(double * vector_in);
-
-    void testWorkSpace();
 
     struct AdjustRcParam final :public aris::server::GaitParamBase
     {
@@ -79,12 +78,29 @@ namespace NormalGait
     };
     void parseLegWork(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     int legWork(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+    struct P2PWalkParam final :public aris::server::GaitParamBase
+    {
+        double targetPointInB[3] {0};
+        std::int32_t totalCount {1000};
+        double height {0.05};
+    };
+    void parseP2PWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    int p2pWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 }
 
 namespace ForceTask
 {
     void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
 	int forceForward(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+//    struct ContinueMoveParam final :public aris::server::GaitParamBase
+//    {
+//        std::int32_t move_direction;
+//    };
+//    void parseContinueMoveBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+//    void parseContinueMoveJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+//    int continueMove(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	struct ForceWalkParam final:public aris::server::GaitParamBase
 	{
@@ -154,7 +170,6 @@ namespace ForceTask
 
 namespace FastWalk
 {
-
     void TestGetdJacOverPee();
     void TimeOptimalGait3();//3 swing legs calculated together
     void TimeOptimalGait1by1();//3 swing legs calculated one by one
