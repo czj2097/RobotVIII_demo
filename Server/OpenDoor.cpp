@@ -14,7 +14,7 @@
 
 //Pipe<OpenDoorParam> openDoorPipe(true);
 double OpenDoor::Fbody[6];
-double OpenDoor::ForceRange[2];
+double OpenDoor::ForceRange[2] {1,6};
 double OpenDoor::bodyLastVel[6];//derivative of 213 euler angle, not spatial velocity
 double OpenDoor::planeVerticalInB[3];
 double OpenDoor::ODBeginPeb[6];
@@ -155,6 +155,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         {
             GetAdjustD2HParam(robot);
             ODState=OpenDoorState::AdjustD2H;
+            rt_printf("ODState changed to AdjustD2H at count %d\n",param.count);
         }
         break;
     case OpenDoorState::AdjustD2H:
@@ -163,6 +164,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         {
             ODState=OpenDoorState::HandleLocate;
             HLState=HandleLocateState::Forward;
+            rt_printf("ODState changed to HandleLocate at count %d\n",param.count);
         }
         break;
     case OpenDoorState::HandleLocate:
@@ -170,6 +172,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         if(ret==0)
         {
             ODState=OpenDoorState::TurnHandle;
+            rt_printf("ODState changed to TurnHandle at count %d\n",param.count);
         }
         break;
     case OpenDoorState::TurnHandle:
@@ -177,9 +180,15 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         if(ret==0)
         {
             if(isPull==true)
+            {
                 ODState=OpenDoorState::PullHandle;
+                rt_printf("ODState changed to PullHandle at count %d\n",param.count);
+            }
             else
+            {
                 ODState=OpenDoorState::PushHandle;
+                rt_printf("ODState changed to PushHandle at count %d\n",param.count);
+            }
         }
         break;
     case OpenDoorState::PushHandle:
@@ -188,6 +197,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         {
             ODState=OpenDoorState::AdjustPush2W;
             GetAdjustPush2WParam(robot);
+            rt_printf("ODState changed to AdjustPush2W at count %d\n",param.count);
         }
         break;
     case OpenDoorState::PullHandle:
@@ -196,6 +206,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         {
             ODState=OpenDoorState::AdjustPull2W;
             GetAdjustPull2WParam(robot);
+            rt_printf("ODState changed to AdjustPull2W at count %d\n",param.count);
         }
         break;
     case OpenDoorState::AdjustPush2W:
@@ -205,6 +216,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
             ODState=OpenDoorState::WalkThrough;
             WTState=WalkThroughState::AlignWalk;
             GetPushWalkParam();
+            rt_printf("ODState changed to WalkThrough at count %d\n",param.count);
         }
         break;
     case OpenDoorState::AdjustPull2W:
@@ -214,6 +226,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
             ODState=OpenDoorState::PullWork;
             PWState=PullWorkState::CircleWalk;
             GetPullWalkParam();
+            rt_printf("ODState changed to PullWork at count %d\n",param.count);
         }
         break;
     case OpenDoorState::WalkThrough:
@@ -242,8 +255,8 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
 
     if (param.count%100==0)
     {
-        rt_printf("ODState:%d,forceRaw:%.2f,%.2f,%.2f,forceInB:%.2f,%.2f,%.2f,forceFiltered:%.2f,%.2f,%.2f\n",
-                  ODState,param.ruicong_data->at(0).force[0].Fx,param.ruicong_data->at(0).force[0].Fy,param.ruicong_data->at(0).force[0].Fz,
+        rt_printf("ODState:%d,DLState:%d,HLState:%d,WTState:%d\nforceRaw:%.2f,%.2f,%.2f,forceInB:%.2f,%.2f,%.2f,forceFiltered:%.2f,%.2f,%.2f\n",
+                  ODState,DLState,HLState,WTState,param.ruicong_data->at(0).force[0].Fx,param.ruicong_data->at(0).force[0].Fy,param.ruicong_data->at(0).force[0].Fz,
                 ODP.forceInB[0],ODP.forceInB[1],ODP.forceInB[2],ODP.forceInB_filtered[0],ODP.forceInB_filtered[1],ODP.forceInB_filtered[2]);
     }
 
@@ -282,6 +295,7 @@ int OpenDoor::locateDoor(Robots::RobotBase &robot, int count)
             robot.GetPeb(point1);
             memcpy(*Location,point1,sizeof(double)*3);
             DLState=DoorLocateState::Point2;
+            rt_printf("DLState changed to Point2 at count %d\n",count);
         }
         break;
     case DoorLocateState::Point2:
@@ -304,6 +318,7 @@ int OpenDoor::locateDoor(Robots::RobotBase &robot, int count)
             robot.GetPeb(point2);
             memcpy(*Location+3,point2,sizeof(double)*3);
             DLState=DoorLocateState::Point3;
+            rt_printf("DLState changed to Point3 at count %d\n",count);
         }
         break;
     case DoorLocateState::Point3:
@@ -328,6 +343,8 @@ int OpenDoor::locateDoor(Robots::RobotBase &robot, int count)
             aris::dynamic::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
             aris::dynamic::s_inv_pm_dot_v3(*ODBeginPmb,planeVertical,planeVerticalInB);
 
+            rt_printf("DoorLocate Finished. Going to adjustRobotD2H\n");
+
             return 0;
         }
         break;
@@ -336,6 +353,37 @@ int OpenDoor::locateDoor(Robots::RobotBase &robot, int count)
     }
 
     return 1;
+}
+
+void OpenDoor::GenerateBodyMotionByFce(Robots::RobotBase &robot)
+{
+    double C[6] {50,50,50,50,50,50};
+    double M[6] {1,1,1,1,1,1};
+    double deltaT {0.001};
+    double bodyPm[4][4] {0};
+    double deltaPm[4][4] {0};
+    double deltaPe[6] {0};
+    double nextPm[4][4] {0};
+    double Pee[18] {0};
+
+    double bodyAcc[6] {0};
+    double bodyVel[6] {0};
+
+    for (int i=0;i<6;i++)
+    {
+        bodyAcc[i]=(Fbody[i]-C[i]*bodyLastVel[i])/M[i];
+        bodyVel[i]=bodyLastVel[i]+bodyAcc[i]*deltaT;
+        deltaPe[i]=bodyVel[i]*deltaT;
+    }
+
+    robot.GetPmb(*bodyPm);
+    robot.GetPee(Pee);
+    aris::dynamic::s_pe2pm(deltaPe,*deltaPm,"213");
+    aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*nextPm);
+    robot.SetPmb(*nextPm);
+    robot.SetPee(Pee);
+
+    memcpy(bodyLastVel,bodyVel,6*sizeof(double));
 }
 
 void OpenDoor::GetAdjustD2HParam(Robots::RobotBase &robot)
@@ -373,47 +421,22 @@ void OpenDoor::GetAdjustD2HParam(Robots::RobotBase &robot)
     rt_printf("yaw:%f,pitch:%f,roll:%f\n",planeYPR[0],planeYPR[1],planeYPR[2]);
 }
 
-void OpenDoor::GenerateBodyMotionByFce(Robots::RobotBase &robot)
-{
-    double C[6] {50,50,50,50,50,50};
-    double M[6] {1,1,1,1,1,1};
-    double deltaT {0.001};
-    double bodyPm[4][4] {0};
-    double deltaPm[4][4] {0};
-    double deltaPe[6] {0};
-    double nextPm[4][4] {0};
-
-    double bodyAcc[6] {0};
-    double bodyVel[6] {0};
-
-    for (int i=0;i<6;i++)
-    {
-        bodyAcc[i]=(Fbody[i]-C[i]*bodyLastVel[i])/M[i];
-        bodyVel[i]=bodyLastVel[i]+bodyAcc[i]*deltaT;
-        deltaPe[i]=bodyVel[i]*deltaT;
-    }
-
-    robot.GetPmb(*bodyPm);
-    aris::dynamic::s_pe2pm(deltaPe,*deltaPm,"213");
-    aris::dynamic::s_pm_dot_pm(*bodyPm,*deltaPm,*nextPm);
-    robot.SetPmb(*nextPm);
-
-    memcpy(bodyLastVel,bodyVel,6*sizeof(double));
-}
-
 int OpenDoor::adjustRobotD2H(Robots::RobotBase &robot, int count)
 {
-    double currentPe[6] {0};
+    double currentPeb[6] {0};
+    double currentPee[18] {0};
 
     walkParam.count=count-ODP.countIter;
     int ret=Robots::walkGait(robot,walkParam);
-    robot.GetPeb(currentPe);
+    robot.GetPeb(currentPeb);
+    robot.GetPee(currentPee);
 
     for (int i=0;i<3;i++)
     {
-        currentPe[i]=nowPeb[i]+(adjustBeginPeb[i]-nowPeb[i])/2*(1-cos((count-ODP.countIter)*PI/(2*walkParam.n*walkParam.totalCount)));
+        currentPeb[i]=nowPeb[i]+(adjustBeginPeb[i]-nowPeb[i])/2*(1-cos((count-ODP.countIter)*PI/(2*walkParam.n*walkParam.totalCount)));
     }
-    robot.SetPeb(currentPe);
+    robot.SetPeb(currentPeb);
+    robot.SetPee(currentPee);
 
     if(ret==0)
     {
@@ -578,7 +601,7 @@ int OpenDoor::locateHandle(Robots::RobotBase &robot, int count)
                 if(isJump==false)
                 {
                     HLState=HandleLocateState::NonJump;
-                    robot.GetPeb(adjustBeginPeb);//For adjustRobotT2P
+                    robot.GetPeb(adjustBeginPeb);//For adjustRobotP2W
                 }
                 else
                 {
@@ -659,6 +682,7 @@ int OpenDoor::locateHandle(Robots::RobotBase &robot, int count)
 
         if(fabs(ODP.forceInB_filtered[1])>ForceRange[0])
         {
+            isLastFollow=false;
             ODP.countIter=count+1;
             robot.GetPeb(nowPeb);
             for (int i=0;i<3;i++)
@@ -752,21 +776,17 @@ void OpenDoor::GetAdjustPush2WParam(Robots::RobotBase &robot)
     robot.GetPee(nowPee);
     for(int i=0;i<3;i++)
     {
-        now2startDistance[i]=forwardBeginPeb[i]-nowPeb[i];
+        now2startDistance[i]=adjustBeginPeb[i]-nowPeb[i];
     }
     aris::dynamic::s_pm_dot_v3(*nowPmb,xBodyInB,xNowInG);
     aris::dynamic::s_pm_dot_v3(*nowPmb,yBodyInB,yNowInG);
 
     now2startPebDistInB[0]=aris::dynamic::s_vn_dot_vn(3,now2startDistance,xNowInG);
-    if(isJump==false)
-    {
-        now2startPebDistInB[1]=aris::dynamic::s_vn_dot_vn(3,now2startDistance,yNowInG);
-    }
-    else
-    {
-        now2startPebDistInB[1]=aris::dynamic::s_vn_dot_vn(3,now2startDistance,yNowInG);
-    }
+    now2startPebDistInB[1]=aris::dynamic::s_vn_dot_vn(3,now2startDistance,yNowInG);
     now2startPebDistInB[2]=0;
+    now2startPebDistInB[3]=nowPeb[3];
+    now2startPebDistInB[4]=nowPeb[4];
+    now2startPebDistInB[5]=nowPeb[5];
 
     aris::dynamic::s_pm_dot_v3(*nowPmb,now2startPebDistInB,now2startPebDistInG);
 }
@@ -920,10 +940,10 @@ int OpenDoor::pushWalkThrough(Robots::RobotBase &robot, int count)
             ODP.countIter=count+1;
 
             walkParam.totalCount=1500;
-            walkParam.n=4;
+            walkParam.n=2;
             walkParam.alpha=0;
             walkParam.beta=0;
-            walkParam.d=0.4;
+            walkParam.d=0.1;
         }
         break;
 

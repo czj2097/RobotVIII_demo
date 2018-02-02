@@ -246,13 +246,13 @@ namespace NormalGait
         walkParam.alpha=atan2(param.targetPointInB[0],param.targetPointInB[2])+PI;
         walkParam.beta=0;
         walkParam.h=param.height;
-        if(dist<=0.25)
+        if(dist<=0.2)
         {
             walkParam.n=1;
         }
         else
         {
-            walkParam.n=(int)((dist-0.25)/0.5)+2;
+            walkParam.n=(int)((dist-0.2)/0.4)+2;
         }
         walkParam.d=dist/(walkParam.n-0.5);
         walkParam.count=param.count;
@@ -355,6 +355,32 @@ namespace NormalGait
         rbt.pLegs[3]->GetPin(Pin);
 
         printf("Pin:%.4f, %.4f, %.4f\n", Pin[0],Pin[1],Pin[2]);
+    }
+
+    void printEverything(Robots::RobotBase &robot)
+    {
+        double printPmb[16];
+        robot.GetPmb(printPmb);
+        rt_printf("Pmb[16]={%.4f,%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,%.4f\n%.4f,%.4f,%.4f,%.4f\n%.4f,%.4f,%.4f,%.4f}\n",
+                  printPmb[0],printPmb[1],printPmb[2],printPmb[3],
+                printPmb[4],printPmb[5],printPmb[6],printPmb[7],
+                printPmb[8],printPmb[9],printPmb[10],printPmb[11],
+                  printPmb[12],printPmb[13],printPmb[14],printPmb[15]);
+        double printPeb[6];
+        double printPee[18];
+        robot.GetPeb(printPeb);
+        robot.GetPee(printPee);
+        rt_printf("Peb[6]={%.4f,%.4f,%.4f,%.4f,%.4f,%.4f}\nPee[18]={%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f}\n",
+                  printPeb[0],printPeb[1],printPeb[2],printPeb[3],printPeb[4],printPeb[5],
+                printPee[0],printPee[1],printPee[2],printPee[3],printPee[4],printPee[5],
+                printPee[6],printPee[7],printPee[8],printPee[9],printPee[10],printPee[11],
+                printPee[12],printPee[13],printPee[14],printPee[15],printPee[16],printPee[17]);
+        double printPin[18];
+        robot.GetPin(printPin);
+        rt_printf("Pin[18]={%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f,\n%.4f,%.4f,%.4f}\n",
+                  printPin[0],printPin[1],printPin[2],printPin[3],printPin[4],printPin[5],
+                  printPin[6],printPin[7],printPin[8],printPin[9],printPin[10],printPin[11],
+                  printPin[12],printPin[13],printPin[14],printPin[15],printPin[16],printPin[17]);
     }
 
     void parseCircleWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)

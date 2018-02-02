@@ -49,9 +49,9 @@ int main(int argc, char *argv[])
 	{
         xml_address = "../../resource/Robot_VIII.xml";
 	}
-    else if (std::string(argv[1]) == "EDU2")
+    else if (std::string(argv[1]) == "EDU4")
     {
-        xml_address = "../../resource/RobotEDU2.xml";
+        xml_address = "../../resource/RobotEDU4.xml";
     }
 	else
 	{
@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
     rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);
     rs.addCmd("fwc",fastwalker.parseFastWalkByCZJ,fastwalker.fastWalkByCZJ);
     rs.addCmd("fcw",forcewalker.parseForceWalk,forcewalker.forceWalk);
+    rs.addCmd("ppw",NormalGait::parseP2PWalk,NormalGait::p2pWalk);
 
 	rs.open();
 

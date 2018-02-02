@@ -1,5 +1,12 @@
 #include "EmergencyStop.h"
 
+#ifdef UNIX
+#include "rtdk.h"
+#endif
+#ifdef WIN32
+#define rt_printf printf
+#endif
+
 bool EmergencyStop::needRecord {true};
 double EmergencyStop::sndLastPin[18] {0};
 double EmergencyStop::lastPin[18];
@@ -7,7 +14,10 @@ double EmergencyStop::lastVin[18];
 int EmergencyStop::startCount {0};
 int EmergencyStop::totalCount {0};
 
-EmergencyStop::EmergencyStop(){}
+EmergencyStop::EmergencyStop()
+{
+    needRecord=true;
+}
 EmergencyStop::~EmergencyStop(){}
 
 void EmergencyStop::doRecord(Robots::RobotBase &robot)
@@ -49,5 +59,12 @@ int EmergencyStop::stop(Robots::RobotBase &robot, int currentCount, double maxAi
     }
     robot.SetPin(nextPin);
 
-    return totalCount - (currentCount-startCount) - 1;
+    rt_printf("currentCount=%d, startCount=%d, totalCount=%d\n", currentCount,startCount,totalCount);
+
+    if(totalCount-(currentCount-startCount)<0)
+    {
+        return 0;
+    }
+
+    return totalCount - (currentCount-startCount);
 }

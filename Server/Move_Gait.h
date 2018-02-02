@@ -22,6 +22,7 @@ namespace NormalGait
     void inv3(double * matrix,double * invmatrix);
     double norm(double * vector_in);
     void testWorkSpace();
+    void printEverything(Robots::RobotBase &robot);
 
 	enum WalkState
 	{
