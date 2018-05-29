@@ -10,3 +10,5 @@ resource/RobotEDU2.xml
 resource/Robot_III.xml
 Server/RealTimeOptimal.cpp
 Server/RealTimeOptimal.h
+Server/GeneralFunc.cpp
+Server/GeneralFunc.h
