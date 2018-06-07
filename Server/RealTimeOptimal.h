@@ -12,8 +12,9 @@ struct P2PMotionParam
     int inopInterNum;//inoperative interval
     double minT;
     double inopInter[2];
-    double trapTrajAcc[4];//trapezoidal trajectory
-    double trapTrajT[4];
+    double trajAcc[4];//trapezoidal trajectory
+    double trajTim[4];
+    double trajPos[4];
 };
 struct PolylineParam
 {
@@ -31,8 +32,12 @@ struct PolylineParam
 };
 enum VelType
 {
-    acc_const_dec,
-    dec_const_acc,
+    Acc,
+    Dec,
+    AccDec,
+    DecAcc,
+    AccPosDec,
+    DecNegAcc,
 };
 enum LineType //polyline type
 {

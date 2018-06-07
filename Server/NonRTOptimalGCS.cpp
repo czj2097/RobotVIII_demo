@@ -1,9 +1,9 @@
-#include "TimeOptimalGait.h"
+#include "NonRTOptimalGCS.h"
 
-TimeOptimalGait::TimeOptimalGait(){}
-TimeOptimalGait::~TimeOptimalGait(){}
+NonRTOptimalGCS::NonRTOptimalGCS(){}
+NonRTOptimalGCS::~NonRTOptimalGCS(){}
 
-void TimeOptimalGait::GetStanceLegParam(int count, int legID, double s)
+void NonRTOptimalGCS::GetStanceLegParam(int count, int legID, double s)
 {
     double pEB[6] {0};
     double pEE[18] {0};
@@ -119,7 +119,7 @@ void TimeOptimalGait::GetStanceLegParam(int count, int legID, double s)
     }
 }
 
-double TimeOptimalGait::GetStanceMaxDec(int count, double ds)
+double NonRTOptimalGCS::GetStanceMaxDec(int count, double ds)
 {
     double dec[18] {0};
     std::fill_n(dec,18,-1e6);
@@ -151,7 +151,7 @@ double TimeOptimalGait::GetStanceMaxDec(int count, double ds)
     return *std::max_element(dec,dec+18);
 }
 
-double TimeOptimalGait::GetStanceMinAcc(int count, double ds)
+double NonRTOptimalGCS::GetStanceMinAcc(int count, double ds)
 {
     double acc[18] {0};
     std::fill_n(acc,18,1e6);
@@ -183,7 +183,7 @@ double TimeOptimalGait::GetStanceMinAcc(int count, double ds)
     return *std::min_element(acc,acc+18);
 }
 
-void TimeOptimalGait::GetStanceDsBound(int count)
+void NonRTOptimalGCS::GetStanceDsBound(int count)
 {
     int k_st {0};
     bool dsBoundFlag_st {false};
@@ -234,7 +234,7 @@ void TimeOptimalGait::GetStanceDsBound(int count)
     ds_upBound_body[count]=std::min(ds_upBound_aLmt_body[count],ds_upBound_vLmt_body[count]);
 }
 
-void TimeOptimalGait::GetStanceSwitchPoint()
+void NonRTOptimalGCS::GetStanceSwitchPoint()
 {
     double slopedsBound_body[2201] {0};
     double paramdds0Point_body[2201] {0};
@@ -413,7 +413,7 @@ void TimeOptimalGait::GetStanceSwitchPoint()
     printf("\n");
 }
 
-double TimeOptimalGait::GetStanceSwitchMaxDec(int switchID, double ds)
+double NonRTOptimalGCS::GetStanceSwitchMaxDec(int switchID, double ds)
 {
     double dec[18] {0};
     std::fill_n(dec,18,-1e6);
@@ -446,7 +446,7 @@ double TimeOptimalGait::GetStanceSwitchMaxDec(int switchID, double ds)
     return *std::max_element(dec,dec+18);
 }
 
-double TimeOptimalGait::GetStanceSwitchMinAcc(int switchID, double ds)
+double NonRTOptimalGCS::GetStanceSwitchMinAcc(int switchID, double ds)
 {
     double acc[18] {0};
     std::fill_n(acc,18,1e6);
@@ -479,7 +479,7 @@ double TimeOptimalGait::GetStanceSwitchMinAcc(int switchID, double ds)
     return *std::min_element(acc,acc+18);
 }
 
-double TimeOptimalGait::GetStanceSwitchDsBound(int switchID)
+double NonRTOptimalGCS::GetStanceSwitchDsBound(int switchID)
 {
     double ds_a;
     int k_st {0};
@@ -520,7 +520,7 @@ double TimeOptimalGait::GetStanceSwitchDsBound(int switchID)
     return std::min(ds_a,ds_v);
 }
 
-void TimeOptimalGait::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint)
+void NonRTOptimalGCS::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint)
 {
     lowPoint[0]=-1;
     lowPoint[switchCount_body-1]=ds_upBound_body[count5];
@@ -580,7 +580,7 @@ void TimeOptimalGait::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoin
     }
 }
 
-void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
+void NonRTOptimalGCS::GetStanceOptimalDsBySwitchPoint()
 {
     bool stopFlag {false};
     int forwardEnd_s {-1};
@@ -793,7 +793,7 @@ void TimeOptimalGait::GetStanceOptimalDsBySwitchPoint()
     delete [] upPoint;
 }
 
-void TimeOptimalGait::ApplyExtraItegration()
+void NonRTOptimalGCS::ApplyExtraItegration()
 {
     bool stopFlag {false};
     int k_st {0};
@@ -816,6 +816,7 @@ void TimeOptimalGait::ApplyExtraItegration()
             }
             else
             {
+                real_ds_body[k_st+1]=real_ds_body_tmp;
                 k_st++;
             }
         }
@@ -823,7 +824,7 @@ void TimeOptimalGait::ApplyExtraItegration()
     else if(real_ds_body[0]<real_ds_body[count5])
     {
         //backward
-        real_ds_body[0]=real_ds_body[count5];
+        real_ds_body[count5]=real_ds_body[0];
         k_st_start=k_st=count5;
         stopFlag=false;
         while(stopFlag==false)
@@ -837,6 +838,7 @@ void TimeOptimalGait::ApplyExtraItegration()
             }
             else
             {
+                real_ds_body[k_st-1]=real_ds_body_tmp;
                 k_st--;
             }
         }
@@ -848,7 +850,7 @@ void TimeOptimalGait::ApplyExtraItegration()
 
 }
 
-void TimeOptimalGait::GetStanceOptimalDsByDirectNI()
+void NonRTOptimalGCS::GetStanceOptimalDsByDirectNI()
 {
     bool stopFlag {false};
     bool accFlag {true};
@@ -980,7 +982,7 @@ void TimeOptimalGait::GetStanceOptimalDsByDirectNI()
     }
 }
 
-void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
+void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
 {
     double Tsb1 {0};
     double Tsb2 {0};
@@ -1100,7 +1102,7 @@ void TimeOptimalGait::GetStanceOptimalDsByMinorIteration()
     printf("Minor iteration count: %d, s_b1=%.4f, s_b2=%.4f, s_b3=%.4f, s_b4=%.4f\n",k,s_b1,s_b2,s_b3,s_b4);
 }
 
-void TimeOptimalGait::GetSwingLegParam(int count, int legID, double sw, double *pva_body)
+void NonRTOptimalGCS::GetSwingLegParam(int count, int legID, double sw, double *pva_body)
 {
     double pEB[6] {0};
     double pEE[18] {0};
@@ -1232,7 +1234,7 @@ void TimeOptimalGait::GetSwingLegParam(int count, int legID, double sw, double *
     }
 }
 
-double TimeOptimalGait::GetSwingMaxDec(int count, double ds, int legID)
+double NonRTOptimalGCS::GetSwingMaxDec(int count, double ds, int legID)
 {
     int swCount = count<count3 ? (count-count1) : (count-count3);
     double dec[3] {0};
@@ -1247,7 +1249,7 @@ double TimeOptimalGait::GetSwingMaxDec(int count, double ds, int legID)
     return *std::max_element(dec,dec+3);
 }
 
-double TimeOptimalGait::GetSwingMinAcc(int count, double ds, int legID)
+double NonRTOptimalGCS::GetSwingMinAcc(int count, double ds, int legID)
 {
     int swCount = count<count3 ? (count-count1) : (count-count3);
     double acc[3] {0};
@@ -1262,7 +1264,7 @@ double TimeOptimalGait::GetSwingMinAcc(int count, double ds, int legID)
     return *std::min_element(acc,acc+3);
 }
 
-void TimeOptimalGait::GetSwingDsBound(int count, int legID)
+void NonRTOptimalGCS::GetSwingDsBound(int count, int legID)
 {
     bool ds_lowBoundFlag_sw {false};
     bool ds_upBoundFlag_sw {false};
@@ -1368,7 +1370,7 @@ void TimeOptimalGait::GetSwingDsBound(int count, int legID)
     ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
 }
 
-void TimeOptimalGait::GetSwingSwitchPoint(int legID)
+void NonRTOptimalGCS::GetSwingSwitchPoint(int legID)
 {
     double slopedsBound[901] {0};
     double paramdds0Point[901] {0};
@@ -1520,7 +1522,7 @@ void TimeOptimalGait::GetSwingSwitchPoint(int legID)
     printf("\n");
 }
 
-double TimeOptimalGait::GetSwingSwitchMaxDec(int switchID, double ds, int legID)
+double NonRTOptimalGCS::GetSwingSwitchMaxDec(int switchID, double ds, int legID)
 {
     double dec[3] {0};
     std::fill_n(dec,3,-1e6);
@@ -1534,7 +1536,7 @@ double TimeOptimalGait::GetSwingSwitchMaxDec(int switchID, double ds, int legID)
     return *std::max_element(dec,dec+3);
 }
 
-double TimeOptimalGait::GetSwingSwitchMinAcc(int switchID, double ds, int legID)
+double NonRTOptimalGCS::GetSwingSwitchMinAcc(int switchID, double ds, int legID)
 {
     double acc[3] {0};
     std::fill_n(acc,3,1e6);
@@ -1548,7 +1550,7 @@ double TimeOptimalGait::GetSwingSwitchMinAcc(int switchID, double ds, int legID)
     return *std::min_element(acc,acc+3);
 }
 
-double TimeOptimalGait::GetSwingSwitchDsBound(int switchID, int legID, double *pva_body)
+double NonRTOptimalGCS::GetSwingSwitchDsBound(int switchID, int legID, double *pva_body)
 {
     bool ds_lowBoundFlag_sw {false};
     bool ds_upBoundFlag_sw {false};
@@ -1626,7 +1628,7 @@ double TimeOptimalGait::GetSwingSwitchDsBound(int switchID, int legID, double *p
     return std::min(ds_a,ds_v);
 }
 
-void TimeOptimalGait::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint)
+void NonRTOptimalGCS::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint)
 {
     lowPoint[0]=-1;
     lowPoint[switchCount[legID]-1]=0;
@@ -1682,7 +1684,7 @@ void TimeOptimalGait::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, doub
     }
 }
 
-void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
+void NonRTOptimalGCS::GetSwingOptimalDsBySwitchPoint(int legID)
 {
     bool stopFlag {false};
     int forwardEnd_s {-1};
@@ -1883,7 +1885,7 @@ void TimeOptimalGait::GetSwingOptimalDsBySwitchPoint(int legID)
     delete [] upPoint;
 }
 
-void TimeOptimalGait::GetSwingOptimalDsByDirectNI(int legID)
+void NonRTOptimalGCS::GetSwingOptimalDsByDirectNI(int legID)
 {
     bool stopFlag {false};
     bool accFlag {true};
@@ -2016,7 +2018,7 @@ void TimeOptimalGait::GetSwingOptimalDsByDirectNI(int legID)
     }
 }
 
-void TimeOptimalGait::GetOptimalDsByMajorIteration()
+void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
 {
     rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotEDU2.xml");
 
@@ -2202,7 +2204,7 @@ void TimeOptimalGait::GetOptimalDsByMajorIteration()
     printf("UsedTime:%f\n",tused);
 }
 
-void TimeOptimalGait::GetOptimalGait2s()
+void NonRTOptimalGCS::GetOptimalGait2s()
 {
     printf("start GetOptimalGait2s\n");
     double pEB[6] {0};
@@ -2401,7 +2403,7 @@ void TimeOptimalGait::GetOptimalGait2s()
     printf("finish GetOptimalGait2s\n");
 }
 
-void TimeOptimalGait::GetOptimalGait2t()
+void NonRTOptimalGCS::GetOptimalGait2t()
 {
     printf("start GetOptimalGait2t\n");
     double * pva_b_t=new double [3*5*maxTotalCount];
@@ -2733,7 +2735,7 @@ void TimeOptimalGait::GetOptimalGait2t()
     printf("finish GetOptimalGait2t\n");
 }
 
-void TimeOptimalGait::OutputData()
+void NonRTOptimalGCS::OutputData()
 {
     printf("Start output data...\n");
     aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt_body.txt",ds_upBound_aLmt_body,2201,1);
@@ -2791,7 +2793,7 @@ void TimeOptimalGait::OutputData()
 }
 
 
-void TimeOptimalGait::GetNormalGait()
+void NonRTOptimalGCS::GetNormalGait()
 {
     printf("Start GetNormalGait\n");
     double pEB[6] {0};
@@ -2914,7 +2916,7 @@ void TimeOptimalGait::GetNormalGait()
     printf("Finish GetNormalGait\n");
 }
 
-void TimeOptimalGait::GetEntireGait()
+void NonRTOptimalGCS::GetEntireGait()
 {
     printf("Start GetEntireGait\n");
     double c3;

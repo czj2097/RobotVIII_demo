@@ -1,5 +1,6 @@
 #include "RealTimeOptimal.h"
 #include <cmath>
+#include <cstdlib>
 
 RealTimeOptimal::RealTimeOptimal(){}
 RealTimeOptimal::~RealTimeOptimal(){}
@@ -326,13 +327,10 @@ void RealTimeOptimal::GetParamOfTypeIII(double *pnts, int pntsNum, double startV
     }
 }
 
-
-
-
 void RealTimeOptimal::InitP2PParam(P2PMotionParam &p2pParam)//Called before GetOptimalP2PMotionAcc
 {
-    p2pParam.trapTrajT[0]=0;
-    p2pParam.trapTrajAcc[0]=0;
+    p2pParam.trajTim[0]=0;
+    p2pParam.trajAcc[0]=0;
     p2pParam.inopInter[0]=-1;
     p2pParam.inopInter[1]=-1;
 }
@@ -341,67 +339,78 @@ void RealTimeOptimal::GetP2PMotionParam(double startP, double endP, double start
 {
     switch(p2pParam.velType)
     {
-    case VelType::dec_const_acc:
+    case VelType::DecAcc:
         if(midV<-vLmt)//constant phase
         {
-            p2pParam.trapTrajT[1]=(startV+vLmt)/aLmt;
-            p2pParam.trapTrajAcc[1]=-aLmt;
-            p2pParam.trapTrajT[3]=(endV+vLmt)/aLmt;
-            p2pParam.trapTrajAcc[3]=aLmt;
+            p2pParam.velType=VelType::DecNegAcc;
+            p2pParam.trajTim[1]=(startV+vLmt)/aLmt;
+            p2pParam.trajAcc[1]=-aLmt;
+            p2pParam.trajTim[3]=(endV+vLmt)/aLmt;
+            p2pParam.trajAcc[3]=aLmt;
 
-            double s0=(startV*startV-vLmt*vLmt)/(2*aLmt);
-            double s2=(endV*endV-vLmt*vLmt)/(2*aLmt);
-            double remainS=endP-startP-s0-s2;
-            if(remainS>0)
+            p2pParam.trajPos[1]=(vLmt*vLmt-startV*startV)/(-2*aLmt);
+            p2pParam.trajPos[3]=(endV*endV-vLmt*vLmt)/(2*aLmt);
+            p2pParam.trajPos[2]=endP-startP-s0-s2;
+            if(p2pParam.trajPos[2]>0)
             {
-                print("Error! Remain s should be negative. remainS=%.2f.\n",remainS);
+                print("Error! Remain s should be negative. remainS=%.2f.\n",p2pParam.trajPos[2]);
+                std::abort();
             }
             else
             {
-                p2pParam.trapTrajT[2]=remainS/(-vLmt);
-                p2pParam.trapTrajAcc[2]=0;
+                p2pParam.trajTim[2]=p2pParam.trajPos[2]/(-vLmt);
+                p2pParam.trajAcc[2]=0;
+
             }
         }
         else//none constant phase
         {
-            p2pParam.trapTrajT[1]=(startV-midV)/aLmt;
-            p2pParam.trapTrajAcc[1]=-aLmt;
-            p2pParam.trapTrajT[2]=0;
-            p2pParam.trapTrajAcc[2]=0;
-            p2pParam.trapTrajT[3]=(endV-midV)/aLmt;
-            p2pParam.trapTrajAcc[3]=aLmt;
+            p2pParam.trajTim[1]=(startV-midV)/aLmt;
+            p2pParam.trajAcc[1]=-aLmt;
+            p2pParam.trajPos[1]=(midV*midV-startV*startV)/(-2*aLmt);
+            p2pParam.trajTim[2]=0;
+            p2pParam.trajAcc[2]=0;
+            p2pParam.trajPos[2]=0;
+            p2pParam.trajTim[3]=(endV-midV)/aLmt;
+            p2pParam.trajAcc[3]=aLmt;
+            p2pParam.trajPos[3]=(endV*endV-midV*midV)/(2*aLmt);
         }
 
         break;
-    case VelType::acc_const_dec:
+    case VelType::AccDec:
         if(midV>vLmt)//constant phase
         {
-            p2pParam.trapTrajT[1]=(vLmt-startV)/aLmt;
-            p2pParam.trapTrajAcc[1]=aLmt;
-            p2pParam.trapTrajT[3]=(vLmt-endV)/aLmt;
-            p2pParam.trapTrajAcc[3]=-aLmt;
+            p2pParam.velType=VelType::AccPosDec;
+            p2pParam.trajTim[1]=(vLmt-startV)/aLmt;
+            p2pParam.trajAcc[1]=aLmt;
+            p2pParam.trajTim[3]=(vLmt-endV)/aLmt;
+            p2pParam.trajAcc[3]=-aLmt;
 
-            double s0=(vLmt*vLmt-startV*startV)/(2*aLmt);
-            double s2=(vLmt*vLmt-endV*endV)/(2*aLmt);
-            double remainS=endP-startP-s0-s2;
-            if(remainS<0)
+            p2pParam.trajPos[1]=(vLmt*vLmt-startV*startV)/(2*aLmt);
+            p2pParam.trajPos[3]=(vLmt*vLmt-endV*endV)/(2*aLmt);
+            p2pParam.trajPos[2]=endP-startP-s0-s2;
+            if(p2pParam.trajPos[2]<0)
             {
-                print("Error! Remain s should be positive. remainS=%.2f.\n",remainS);
+                print("Error! Remain s should be positive. remainS=%.2f.\n",p2pParam.trajPos[2]);
+                std::abort();
             }
             else
             {
-                p2pParam.trapTrajT[2]=remainS/vLmt;
-                p2pParam.trapTrajAcc[2]=0;
+                p2pParam.trajTim[2]=p2pParam.trajPos[2]/vLmt;
+                p2pParam.trajAcc[2]=0;
             }
         }
         else//none constant phase
         {
-            p2pParam.trapTrajT[1]=(midV-startV)/aLmt;
-            p2pParam.trapTrajAcc[1]=aLmt;
-            p2pParam.trapTrajT[2]=0;
-            p2pParam.trapTrajAcc[2]=0;
-            p2pParam.trapTrajT[3]=(midV-endV)/aLmt;
-            p2pParam.trapTrajAcc[3]=-aLmt;
+            p2pParam.trajTim[1]=(midV-startV)/aLmt;
+            p2pParam.trajAcc[1]=aLmt;
+            p2pParam.trajPos[1]=(midV*midV-startV*startV)/(2*aLmt);
+            p2pParam.trajTim[2]=0;
+            p2pParam.trajAcc[2]=0;
+            p2pParam.trajPos[2]=0;
+            p2pParam.trajTim[3]=(midV-endV)/aLmt;
+            p2pParam.trajAcc[3]=-aLmt;
+            p2pParam.trajPos[3]=(endV*endV-midV*midV)/(-2*aLmt);
         }
 
         break;
@@ -409,10 +418,11 @@ void RealTimeOptimal::GetP2PMotionParam(double startP, double endP, double start
         break;
     }
 
-    if(p2pParam.trapTrajT[1]<0 || p2pParam.trapTrajT[2]<0 || p2pParam.trapTrajT[3]<0)
+    if(p2pParam.trajTim[1]<0 || p2pParam.trajTim[2]<0 || p2pParam.trajTim[3]<0)
     {
         print("Error! Time impossible to be negative. T=(%.2f,%.2f,%.2f).\n",
-              p2pParam.trapTrajT[0],p2pParam.trapTrajT[1],p2pParam.trapTrajT[2]);
+              p2pParam.trajTim[0],p2pParam.trajTim[1],p2pParam.trajTim[2]);
+        std::abort();
     }
 }
 
@@ -422,9 +432,10 @@ void RealTimeOptimal::GetOptimalP2PMotionAcc(double startP, double endP, double 
     {
         if(startV<0)
         {
-            p2pParam.trapTrajT[0]=-2*startV/aLmt;
-            p2pParam.trapTrajAcc[0]=aLmt;
-            GetOptimalP2PMotionAcc(startP,endP,-startV,endV);
+            p2pParam.trajTim[0]=-2*startV/aLmt;
+            p2pParam.trajAcc[0]=aLmt;
+            p2pParam.trajPos[0]=0;
+            GetOptimalP2PMotionAcc(startP,endP,-startV,endV,p2pParam);
         }
         else
         {
@@ -437,72 +448,73 @@ void RealTimeOptimal::GetOptimalP2PMotionAcc(double startP, double endP, double 
             deltaDist=endV*endV/aLmt;
             if(endV<=0)
             {
-                if(endP-startP<judgeDist)//Type II -- dec-const-acc
+                if(endP-startP<judgeDist)//Type III -- dec-neg-acc
                 {
                     p2pParam.inopInterNum=0;
-                    p2pParam.velType=VelType::dec_const_acc;
+                    p2pParam.velType=VelType::DecAcc;
                     midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.minT=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
                 }
-                else//Type I -- acc-const-dec
+                else//Type I -- acc-pos-dec
                 {
                     p2pParam.inopInterNum=0;
-                    p2pParam.velType=VelType::acc_const_dec;
+                    p2pParam.velType=VelType::AccDec;
                     midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.minT=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
                 }
             }
             else
             {
-                if(endP-startP<=judgeDist)//Type II -- dec-const-acc
+                if(endP-startP<=judgeDist)//Type III -- dec-neg-acc
                 {
                     p2pParam.inopInterNum=0;
-                    p2pParam.velType=VelType::dec_const_acc;
+                    p2pParam.velType=VelType::DecAcc;
                     midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.minT=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
                 }
-                else if(endP-startP>=judgeDist+deltaDist)//Type I -- acc-const-dec
+                else if(endP-startP>=judgeDist+deltaDist)//Type I -- acc-pos-dec
                 {
                     p2pParam.inopInterNum=0;
-                    p2pParam.velType=VelType::acc_const_dec;
+                    p2pParam.velType=VelType::AccDec;
                     midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.minT=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
                 }
                 else//Both type
                 {
                     p2pParam.inopInterNum=1;
 
-                    //Type I -- acc-const-dec
-                    p2pParam.velType=VelType::acc_const_dec;
+                    //Type I -- acc-pos-dec
+                    p2pParam.velType=VelType::AccDec;
                     midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.minT=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
 
-                    //Type II -- dec-const-acc
-                    p2pParam.velType=VelType::dec_const_acc;
+                    //Type II -- dec-acc
+                    p2pParam.velType=VelType::DecAcc;
                     midV=sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.inopInter[0]=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.inopInter[0]=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
 
-                    //Type II -- dec-const-acc
-                    p2pParam.velType=VelType::dec_const_acc;
+                    //Type III -- dec-neg-acc
+                    p2pParam.velType=VelType::DecAcc;
                     midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
-                    GetP2PMotionParam(startP,endP,startV,endV,midV);
-                    p2pParam.inopInter[1]=p2pParam.trapTrajT[0]+p2pParam.trapTrajT[1]+p2pParam.trapTrajT[2]+p2pParam.trapTrajT[3];
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.inopInter[1]=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
                 }
             }
         }
     }
     else
     {
-        GetOptimalP2PMotionAcc(-startP,-endP,-startV,-endV);
+        GetOptimalP2PMotionAcc(-startP,-endP,-startV,-endV,p2pParam);
         for(int i=0;i<4;i++)
         {
-            p2pParam.trapTrajAcc[i]=-p2pParam.trapTrajAcc[i];
+            p2pParam.trajAcc[i]=-p2pParam.trajAcc[i];
+            p2pParam.trajPos[i]=-p2pParam.trajPos[i];
         }
     }
 }

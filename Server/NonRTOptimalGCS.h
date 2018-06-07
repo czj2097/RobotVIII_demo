@@ -1,15 +1,15 @@
-#ifndef TIMEOPTIMALGAIT_H
-#define TIMEOPTIMALGAIT_H
+#ifndef NONRT_OPTIMAL_GCS_H
+#define NONRT_OPTIMAL_GCS_H
 
 #include <aris.h>
 #include <Robot_Type_I.h>
 #include <sys/time.h>
 
-class TimeOptimalGait
+class NonRTOptimalGCS
 {
 public:
-    TimeOptimalGait();
-    ~TimeOptimalGait();
+    NonRTOptimalGCS();
+    ~NonRTOptimalGCS();
 
     void GetStanceLegParam(int count, int legID, double s);
     void GetStanceDsBound(int count);

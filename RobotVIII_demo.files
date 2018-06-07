@@ -12,3 +12,7 @@ Server/RealTimeOptimal.cpp
 Server/RealTimeOptimal.h
 Server/GeneralFunc.cpp
 Server/GeneralFunc.h
+Server/NonRTOptimalBCS.cpp
+Server/NonRTOptimalBCS.h
+Server/NonRTOptimalGCS.cpp
+Server/NonRTOptimalGCS.h
