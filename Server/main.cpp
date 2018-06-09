@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 //    optimalgait.GetNormalGait();
 //    optimalgait.GetEntireGait();
 
-    RealTimeOptimal realtimegait;
+    RTOptimal realtimegait;
     realtimegait.screwInterpolationTraj();
 
     //FastWalk::JointSpaceWalk jointspacewalker;

@@ -6,52 +6,51 @@
 #include <sys/time.h>
 #include "Move_Gait.h"
 
+enum VelType
+{
+    AccDec,
+    DecAcc,
+    AccConstDec,
+    DecConstAcc,
+};
 struct P2PMotionParam
 {
     VelType velType;
     int inopInterNum;//inoperative interval
-    double minT;
+    double minTime;
     double inopInter[2];
-    double trajAcc[4];//trapezoidal trajectory
-    double trajTim[4];
-    double trajPos[4];
+    double trajAcc[3];//trapezoidal trajectory
+    double trajTime[3];
+    double trajPos[3];
+    double maxVel;
 };
-struct PolylineParam
-{
-    int fstBrkPntNum;
-    int lstBrkPntNum;
-    double fstBrkPntVel;
-    double lstBrkPntVel;
-
-    double pntsI[2];
-    double pntsII[3];
-    double pntsIII[4];
-
-    double nxtPntTime;
-    double remainTime;
-};
-enum VelType
-{
-    Acc,
-    Dec,
-    AccDec,
-    DecAcc,
-    AccPosDec,
-    DecNegAcc,
-};
-enum LineType //polyline type
+enum PolylineType //polyline type
 {
     I,
     II,
     III,
-    IV,
+};
+struct PolylineParam
+{
+    PolylineType lineType;
+    double pnts[1000];
+    int pntsNum;
+    double startV;
+    double endV;
+    double nxtPntTime;
+    int fstBrkPntNum;
+    int lstBrkPntNum;
+    double fstBrkPntVel;
+    double lstBrkPntVel;
 };
 
-class RealTimeOptimal
+
+
+class RTOptimal
 {
 public:
-    RealTimeOptimal();
-    ~RealTimeOptimal();
+    RTOptimal();
+    ~RTOptimal();
     void screwInterpolationTraj();
 
 private:
@@ -78,45 +77,31 @@ private:
     void GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t);
     void ScalingTraj(double startP, double endP, double startV, double endV, double *a, double *t);
 
-
-    LineType lineType;
-    P2PMotionParam fstP2PParam;
-    P2PMotionParam lstP2PParam;
-    //P2PMotionParam curP2PParam;
-    PolylineParam lineParam;
-
-    double curPos;
-    double nxtPos;
-
-    int segStartNum;
-    int segEndNum;
-    double segStartVel;
-    double segEndVel;
-    bool isCurSegFnshed;
+    Robots::RobotTypeI rbt;
+    PolylineParam lineParam[18];
+    P2PMotionParam curP2PParam[18];
 
     double curPnt[3];
     double curSeg[3];
     double curPntVel[3];
     double curSegVel[3];
     double curMinTime;
-    P2PMotionParam curP2PParam[3];
 
-    void Init();
-    void JudgeLineType(double *pnts, int pntsNum);
-    void GetInitSegParam(double *pnts, int pntsNum, double startV, double endV);
+    void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
+    void JudgeLineType(PolylineParam &lnParam);
+    void GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam);
+    void GetNxtPntTimeTypeI(PolylineParam &lnParam, P2PMotionParam &p2pParam);
+    void GetNxtPntTimeTypeII(PolylineParam &lnParam, P2PMotionParam &p2pParam);
+    void GetNxtPntTimeTypeIII(PolylineParam &lnParam, P2PMotionParam &p2pParam);
+
     void GetTwoTimeThreeDof();
     void GetCurSegOptParam(P2PMotionParam *p2pParam);
 
-    void GetParamOfTypeI(double *pnts, int pntsNum, double startV, double endV);
-    void GetCurSegParam(double segStartP, double segEndP, double segStartV, double segEndV, P2PMotionParam &p2pParam);
-    void GetParamOfTypeIII(double *pnts, int pntsNum, double startV, double endV);
-
-    void InitP2PParam(P2PMotionParam &p2pParam);
     void GetP2PMotionParam(double startP, double endP, double startV, double endV, double midV, P2PMotionParam &p2pParam);
     void GetOptimalP2PMotionAcc(double startP, double endP, double startV, double endV, P2PMotionParam &p2pParam);
     void GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV);
 
-    void tg(double *pnts, int pntsNum, double startV, double endV, int count);
+    void GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID);
 };
 
 struct JointSpaceWalkParam final:public aris::server::GaitParamBase

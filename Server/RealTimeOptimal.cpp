@@ -2,75 +2,121 @@
 #include <cmath>
 #include <cstdlib>
 
-RealTimeOptimal::RealTimeOptimal(){}
-RealTimeOptimal::~RealTimeOptimal(){}
+RTOptimal::RTOptimal()
+{
+    rbt.loadXml("../../resource/Robot_III_re.xml");
+    rbt.SetPeb(initPeb);
+    rbt.SetVb(initVeb);
+}
+RTOptimal::~RTOptimal(){}
 
 /*find gait with maxVel in joint space by iteration*/
-void RealTimeOptimal::Init()
+
+//pnts means the knots of the leg, which is a pntsNum*3 matrix
+void RTOptimal::GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID)
 {
-    lineParam.fstBrkPntNum=0;
-    lineParam.lstBrkPntNum=pntsNum-1;
+    GetParamInFromParamEE(pnts,pntsNum,startV,endV,legID);
 
-
-    isCurSegFnshed=false;
-}
-
-void RealTimeOptimal::tg(double *pnts, int pntsNum, double startV, double endV)
-{
-    JudgeLineType(pnts,pntsNum);
-    GetInitSegParam(pnts,pntsNum,startV,endV);
-    GetTwoTimeThreeDof();
-
-}
-
-void RealTimeOptimal::JudgeLineType(double *pnts, int pntsNum)
-{
-    if(pntsNum>2)
+    for(int i=0;i<3;i++)
     {
-        for(int i=1;i<pntsNum-1;i++)
+        JudgeLineType(lineParam[3*legID+i]);
+        switch(lineParam[3*legID+i].lineType)
         {
-            if((pnts[i]-pnts[i-1])(pnts[i]-pnts[i+1])<0)
+        case PolylineType::I:
+            GetNxtPntTimeTypeI(lineParam[3*legID+i],curP2PParam[3*legID+i]);
+            break;
+        case PolylineType::II:
+            GetNxtPntTimeTypeII(lineParam[3*legID+i],curP2PParam[3*legID+i]);
+            break;
+        case PolylineType::III:
+            GetNxtPntTimeTypeIII(lineParam[3*legID+i],curP2PParam[3*legID+i]);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void RTOptimal::GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID)
+{
+    for(int i=0;i<3;i++)
+    {
+        lineParam[3*legID].pntsNum=pntsNum;
+    }
+
+    for(int i=0;i<pntsNum;i++)
+    {
+        double pIn_tmp[3];
+        double startVin_tmp[3];
+        double endVin_tmp[3];
+        rbt.pLegs[legID]->SetPee(pnts+3*i,rbt.body());
+        rbt.pLegs[legID]->GetPin(pIn_tmp);
+        for(int k=0;k<3;k++)
+        {
+            lineParam[3*legID+k].pnts[i]=pIn_tmp[k];
+        }
+
+        if(i==0)
+        {
+            rbt.pLegs[legID]->SetVee(startV,rbt.body());
+            rbt.pLegs[legID]->GetVin(startVin_tmp);
+            for(int k=0;k<3;k++)
             {
-                lineParam.fstBrkPntNum=i;
+                lineParam[3*legID+k].startV=startVin_tmp[k];
+            }
+        }
+        if(i==pntsNum-1)
+        {
+            rbt.pLegs[legID]->SetVee(endV,rbt.body());
+            rbt.pLegs[legID]->GetVin(endVin_tmp);
+            for(int k=0;k<3;k++)
+            {
+                lineParam[3*legID+k].endV=endVin_tmp[k];
+            }
+        }
+    }
+}
+
+void RTOptimal::JudgeLineType(PolylineParam &lnParam)
+{
+    lnParam.fstBrkPntNum=0;
+    lnParam.lstBrkPntNum=lnParam.pntsNum-1;
+
+    if(lnParam.pntsNum>2)
+    {
+        for(int i=1;i<lnParam.pntsNum-1;i++)
+        {
+            if((lnParam.pnts[i]-lnParam.pnts[i-1])(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
+            {
+                lnParam.fstBrkPntNum=i;
                 break;
             }
         }
-        for(int i=pntsNum-2;i>0;i--)
+        for(int i=lnParam.pntsNum-2;i>0;i--)
         {
-            if((pnts[i]-pnts[i-1])(pnts[i]-pnts[i+1])<0)
+            if((lnParam.pnts[i]-lnParam.pnts[i-1])(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
             {
-                lineParam.lstBrkPntNum=i;
+                lnParam.lstBrkPntNum=i;
                 break;
             }
         }
 
-        if(lineParam.fstBrkPntNum==0 && lineParam.lstBrkPntNum==pntsNum-1)
+        if(lnParam.fstBrkPntNum==0 && lnParam.lstBrkPntNum==lnParam.pntsNum-1)
         {
-            lineType=LineType::I;
-            lineParam.pntsI[0]=pnts[0];
-            lineParam.pntsI[1]=pnts[pntsNum-1];
+            lnParam.lineType=PolylineType::I;
         }
-        else if(lineParam.fstBrkPntNum==lineParam.lstBrkPntNum)
+        else if(lnParam.fstBrkPntNum==lnParam.lstBrkPntNum)
         {
-            lineType=LineType::II;
-            lineParam.pntsII[0]=pnts[0];
-            lineParam.pntsII[1]=pnts[lineParam.fstBrkPntNum];
-            lineParam.pntsII[2]=pnts[pntsNum-1];
+            lnParam.lineType=PolylineType::II;
         }
         else
         {
-            lineType=LineType::III;
-            lineParam.pntsIII[0]=pnts[0];
-            lineParam.pntsIII[1]=pnts[lineParam.fstBrkPntNum];
-            lineParam.pntsIII[2]=pnts[lineParam.lstBrkPntNum];
-            lineParam.pntsIII[3]=pnts[pntsNum-1];
+            lnParam.lineType=PolylineType::III;
         }
     }
-    else if(pntsNum==2)
+    else if(lnParam.pntsNum==2)
     {
-        lineType=LineType::I;
-        lineParam.pntsI[0]=pnts[0];
-        lineParam.pntsI[1]=pnts[pntsNum-1];
+        lnParam.lineType=PolylineType::I;
     }
     else
     {
@@ -78,339 +124,272 @@ void RealTimeOptimal::JudgeLineType(double *pnts, int pntsNum)
     }
 }
 
-void RealTimeOptimal::GetInitSegParam(double *pnts, int pntsNum, double startV, double endV)
+void RTOptimal::GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam)
 {
-    switch(lineType)
-    {
-    case LineType::I:
-        segStartNum=0;
-        segStartVel=startV;
-        segEndNum=pntsNum-1;
-        segEndVel=endV;
-        break;
-    case LineType::II:
-        segStartNum=0;
-        segStartVel=startV;
+    double reachT1;
+    double reachT2;
 
-        if(pnts[lineParam.fstBrkPntNum]>pnts[0])
+    if((lnParam.pnts[1]-lnParam.pnts[0])*(lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[0])<=0)
+    {
+        double d=lnParam.pnts[1]-lnParam.pnts[0];
+        reachT1=(-lnParam.startV+sqrt(lnParam.startV*lnParam.startV+2*p2pParam.trajAcc[0]*d))/p2pParam.trajAcc[0];
+        reachT2=(-lnParam.startV-sqrt(lnParam.startV*lnParam.startV+2*p2pParam.trajAcc[0]*d))/p2pParam.trajAcc[0];
+        if(reachT1>=0 && reachT2>=0)
         {
-            double judgeSs=pnts[0]+startV*startV/(2*aLmt);
-            double judgeSe=pnts[pntsNum-1]+endV*endV/(2*aLmt);
-            if(judgeSs<=pnts[lineParam.fstBrkPntNum] && judgeSe<=pnts[lineParam.fstBrkPntNum])
-            {
-                segEndVel=lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=0;
-            }
-            else
-            {
-                if(judgeSs>=judgeSe)
-                {
-                    segEndVel=lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=sqrt(startV*startV-2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
-                }
-                else
-                {
-                    segEndVel=lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=-sqrt(endV*endV-2*aLmt*(pnts[lineParam.lstBrkPntNum]-pnts[pntsNum-1]));
-                }
-            }
+            lnParam.nxtPntTime=std::min(reachT1,reachT2);
+        }
+        else if(reachT1<0 && reachT2>=0)
+        {
+            lnParam.nxtPntTime=reachT2;
+        }
+        else if(reachT1>=0 && reachT2<0)
+        {
+            lnParam.nxtPntTime=reachT1;
         }
         else
         {
-            double judgeSs=pnts[0]-startV*startV/(2*aLmt);
-            double judgeSe=pnts[pntsNum-1]-endV*endV/(2*aLmt);
-            if(judgeSs>=pnts[lineParam.fstBrkPntNum] && judgeSe>=pnts[lineParam.fstBrkPntNum])
-            {
-                segEndVel=lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=0;
-            }
-            else
-            {
-                if(judgeSs<=judgeSe)
-                {
-                    segEndVel=lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=-sqrt(startV*startV+2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
-                }
-                else
-                {
-                    segEndVel=lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=sqrt(endV*endV+2*aLmt*(pnts[lineParam.lstBrkPntNum]-pnts[pntsNum-1]));
-                }
-            }
+            printf("Error! Next Point Time calculated wrong before const!\n");
         }
-        break;
-    case LineType::III:
-        segStartNum=0;
-        segStartVel=startV;
-
-        if(pnts[lineParam.fstBrkPntNum]>pnts[0])
+    }
+    else if((lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[0])*(lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[1])<=0)
+    {
+        reachT1=(lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[0])/p2pParam.maxVel;
+        lnParam.nxtPntTime=p2pParam.trajTime[0]+reachT1;
+    }
+    else
+    {
+        double d=lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[0]-p2pParam.trajPos[1];
+        reachT1=(-p2pParam.maxVel+sqrt(p2pParam.maxVel*p2pParam.maxVel+2*p2pParam.trajAcc[2]*d))/p2pParam.trajAcc[2];
+        reachT2=(-p2pParam.maxVel-sqrt(p2pParam.maxVel*p2pParam.maxVel+2*p2pParam.trajAcc[2]*d))/p2pParam.trajAcc[2];
+        if(reachT1>=0 && reachT2>=0)
         {
-            double judgeSs=pnts[0]+startV*startV/(2*aLmt);
-            if(judgeSs<=pnts[lineParam.fstBrkPntNum])
-            {
-                segEndVel=lineParam.fstBrkPntVel=0;
-            }
-            else
-            {
-                segEndVel=lineParam.fstBrkPntVel=sqrt(startV*startV-2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
-            }
+            lnParam.nxtPntTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+std::min(reachT1,reachT2);
+        }
+        else if(reachT1<0 && reachT2>=0)
+        {
+            lnParam.nxtPntTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+reachT2;
+        }
+        else if(reachT1>=0 && reachT2<0)
+        {
+            lnParam.nxtPntTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+reachT1;
         }
         else
         {
-            double judgeSs=pnts[0]-startV*startV/(2*aLmt);
-            if(judgeSs>=pnts[lineParam.fstBrkPntNum])
-            {
-                segEndVel=lineParam.fstBrkPntVel=0;
-            }
-            else
-            {
-                segEndVel=lineParam.fstBrkPntVel=-sqrt(startV*startV+2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
-            }
+            printf("Error! Next Point Time calculated wrong after const!\n");
         }
-        break;
-    default:
-        break;
     }
 }
 
-void RealTimeOptimal::GetTwoTimeThreeDof()
+void RTOptimal::GetNxtPntTimeTypeI(PolylineParam &lnParam, P2PMotionParam &p2pParam)
 {
-    for(int i=0;i<3;i++)
-    {
-        InitP2PParam(curP2PParam[i]);
-        GetOptimalP2PMotionAcc(curPnt[i],curSeg[i],curPntVel[i],curSegVel[i],curP2PParam[i]);
-    }
-    GetCurSegOptParam(curP2PParam);
+    GetOptimalP2PMotionAcc(lnParam.pnts[0],lnParam.pnts[lnParam.pntsNum-1],lnParam.startV,lnParam.endV,p2pParam);
+    GetNxtPntTime(lnParam,p2pParam);
 }
 
-void RealTimeOptimal::GetCurSegOptParam(P2PMotionParam *p2pParam)
+void RTOptimal::GetNxtPntTimeTypeII(PolylineParam &lnParam, P2PMotionParam &p2pParam)
 {
-    double legMinT = 0;
-    double legInopInter[2] {0,0};
-    for(int i=0;i<3;i++)
+    double curEndVel;
+    if(lnParam.pnts[lnParam.fstBrkPntNum]>lnParam.pnts[0])
     {
-        if(legMinT<p2pParam[i].minT)
+        double judgeSs=lnParam.pnts[0]+lnParam.startV*lnParam.startV/(2*aLmt);
+        double judgeSe=lnParam.pnts[lnParam.pntsNum-1]+lnParam.endV*lnParam.endV/(2*aLmt);
+        if(judgeSs<=lnParam.pnts[lnParam.fstBrkPntNum] && judgeSe<=lnParam.pnts[lnParam.fstBrkPntNum])
         {
-            legMinT=p2pParam[i].minT;
-        }
-
-        if(p2pParam[i].inopInterNum==1)
-        {
-            if(legInopInter[0]>p2pParam[i].inopInter[0])
-            {
-                legInopInter[0]=p2pParam[i].inopInter[0];
-            }
-            if(legInopInter[1]<p2pParam[i].inopInter[1])
-            {
-                legInopInter[1]=p2pParam[i].inopInter[1];
-            }
-        }
-    }
-
-    if(legMinT>legInopInter[0] && legMinT<legInopInter[1])
-    {
-        legMinT=legInopInter[1];
-    }
-
-
-}
-
-void RealTimeOptimal::GetCurSegParam(double segStartP, double segEndP, double segStartV, double segEndV)
-{
-    if(pnts[lineParam.fstBrkPntNum]>pnts[0])
-    {
-        double judgeSs=pnts[0]+segStartV*segStartV/(2*aLmt);
-        double judgeSe=pnts[pntsNum-1]+segEndV*segEndV/(2*aLmt);
-        if(judgeSs<=pnts[lineParam.fstBrkPntNum] && judgeSe<=pnts[lineParam.fstBrkPntNum])
-        {
-            lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=0;
+            curEndVel=lnParam.fstBrkPntVel=lnParam.lstBrkPntVel=0;
         }
         else
         {
             if(judgeSs>=judgeSe)
             {
-                lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=sqrt(segStartV*segStartV-2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
+                curEndVel=lnParam.fstBrkPntVel=lnParam.lstBrkPntVel
+                        =sqrt(lnParam.startV*lnParam.startV-2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
             }
             else
             {
-                lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=-sqrt(segEndV*segEndV-2*aLmt*(pnts[lineParam.lstBrkPntNum]-pnts[pntsNum-1]));
+                curEndVel=lnParam.fstBrkPntVel=lnParam.lstBrkPntVel
+                        =-sqrt(lnParam.endV*lnParam.endV-2*aLmt*(lnParam.pnts[lnParam.lstBrkPntNum]-lnParam.pnts[lnParam.pntsNum-1]));
             }
         }
     }
     else
     {
-        double judgeSs=pnts[0]-segStartV*segStartV/(2*aLmt);
-        double judgeSe=pnts[pntsNum-1]-segEndV*segEndV/(2*aLmt);
-        if(judgeSs>=pnts[lineParam.fstBrkPntNum] && judgeSe>=pnts[lineParam.fstBrkPntNum])
+        double judgeSs=lnParam.pnts[0]-lnParam.startV*lnParam.startV/(2*aLmt);
+        double judgeSe=lnParam.pnts[lnParam.pntsNum-1]-lnParam.endV*lnParam.endV/(2*aLmt);
+        if(judgeSs>=lnParam.pnts[lnParam.fstBrkPntNum] && judgeSe>=lnParam.pnts[lnParam.fstBrkPntNum])
         {
-            lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=0;
+            curEndVel=lnParam.fstBrkPntVel=lnParam.lstBrkPntVel=0;
         }
         else
         {
             if(judgeSs<=judgeSe)
             {
-                lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=-sqrt(segStartV*segStartV+2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
+                curEndVel=lnParam.fstBrkPntVel=lnParam.lstBrkPntVel
+                        =-sqrt(lnParam.startV*lnParam.startV+2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
             }
             else
             {
-                lineParam.fstBrkPntVel=lineParam.lstBrkPntVel=sqrt(segEndV*segEndV+2*aLmt*(pnts[lineParam.lstBrkPntNum]-pnts[pntsNum-1]));
+                curEndVel=lnParam.fstBrkPntVel=lnParam.lstBrkPntVel
+                        =sqrt(lnParam.endV*lnParam.endV+2*aLmt*(lnParam.pnts[lnParam.lstBrkPntNum]-lnParam.pnts[lnParam.pntsNum-1]));
             }
         }
     }
+
+    GetOptimalP2PMotionAcc(lnParam.pnts[0],lnParam.pnts[lnParam.fstBrkPntNum],lnParam.startV,curEndVel,p2pParam);
+    GetNxtPntTime(lnParam,p2pParam);
 }
 
-void RealTimeOptimal::GetParamOfTypeIII(double *pnts, int pntsNum, double startV, double endV)
+void RTOptimal::GetNxtPntTimeTypeIII(PolylineParam &lnParam, P2PMotionParam &p2pParam)
 {
-    InitP2PParam(fstP2PParam);
-    if(pnts[lineParam.fstBrkPntNum]>pnts[0])
+    double curEndVel;
+    if(lnParam.pnts[lnParam.fstBrkPntNum]>lnParam.pnts[0])
     {
-        double judgeSs=pnts[0]+startV*startV/(2*aLmt);
-        if(judgeSs<=pnts[lineParam.fstBrkPntNum])
+        double judgeSs=lnParam.pnts[0]+lnParam.startV*lnParam.startV/(2*aLmt);
+        if(judgeSs<=lnParam.pnts[lnParam.fstBrkPntNum])
         {
-            lineParam.fstBrkPntVel=0;
+            curEndVel=lnParam.fstBrkPntVel=0;
         }
         else
         {
-            lineParam.fstBrkPntVel=sqrt(startV*startV-2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
+            curEndVel=lnParam.fstBrkPntVel=sqrt(lnParam.startV*lnParam.startV-2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
         }
     }
     else
     {
-        double judgeSs=pnts[0]-startV*startV/(2*aLmt);
-        if(judgeSs>=pnts[lineParam.fstBrkPntNum])
+        double judgeSs=lnParam.pnts[0]-lnParam.startV*lnParam.startV/(2*aLmt);
+        if(judgeSs>=lnParam.pnts[lnParam.fstBrkPntNum])
         {
-            lineParam.fstBrkPntVel=0;
+            curEndVel=lnParam.fstBrkPntVel=0;
         }
         else
         {
-            lineParam.fstBrkPntVel=-sqrt(startV*startV+2*aLmt*(pnts[lineParam.fstBrkPntNum]-pnts[0]));
+            curEndVel=lnParam.fstBrkPntVel=-sqrt(lnParam.startV*lnParam.startV+2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
         }
     }
-    GetOptimalP2PMotionAcc(pnts[0],pnts[lineParam.fstBrkPntNum],startV,lineParam.fstBrkPntVel,fstP2PParam);
 
-    InitP2PParam(lstP2PParam);
-    if(pnts[lineParam.lstBrkPntNum]>pnts[pntsNum-1])
-    {
-        double judgeSe=pnts[pntsNum-1]+endV*endV/(2*aLmt);
-        if(judgeSe<=pnts[lineParam.lstBrkPntNum])
-        {
-            lineParam.lstBrkPntVel=0;
-        }
-        else
-        {
-            lineParam.lstBrkPntVel=-sqrt(endV*endV-2*aLmt*(pnts[lineParam.lstBrkPntNum]-pnts[pntsNum-1]));
-        }
-    }
-    else
-    {
-        double judgeSe=pnts[pntsNum-1]-endV*endV/(2*aLmt);
-        if(judgeSe>=pnts[lineParam.lstBrkPntNum])
-        {
-            lineParam.lstBrkPntVel=0;
-        }
-        else
-        {
-            lineParam.lstBrkPntVel=sqrt(endV*endV+2*aLmt*(pnts[lineParam.lstBrkPntNum]-pnts[pntsNum-1]));
-        }
-    }
-    GetOptimalP2PMotionAcc(pnts[lineParam.lstBrkPntNum],pnts[pntsNum-1],lineParam.lstBrkPntVel,endV,lstP2PParam);
-
-    InitP2PParam(currentP2PParam);
-    lineParam.segStartNum=lineParam.fstBrkPntNum;
-    lineParam.segStartVel=lineParam.fstBrkPntVel;
-
-    lineParam.segEndNum=lineParam.fstBrkPntNum;
-    lineParam.segEndVel=lineParam.fstBrkPntVel;
-    for(int i=lineParam.segStartNum+1; i<lineParam.lstBrkPntNum; i++)
-    {
-        if((pnts[i]-pnts[i-1])(pnts[i]-pnts[i+1])<0)
-        {
-            lineParam.segEndNum=i;
-            lineParam.segEndVel=0;
-            GetOptimalP2PMotionAcc(pnts[lineParam.segStartNum],pnts[lineParam.segEndNum],lineParam.segStartVel,lineParam.segEndVel,currentP2PParam);
-            break;
-        }
-    }
+    GetOptimalP2PMotionAcc(lnParam.pnts[0],lnParam.pnts[lnParam.fstBrkPntNum],lnParam.startV,curEndVel,p2pParam);
+    GetNxtPntTime(lnParam,p2pParam);
 }
 
-void RealTimeOptimal::InitP2PParam(P2PMotionParam &p2pParam)//Called before GetOptimalP2PMotionAcc
-{
-    p2pParam.trajTim[0]=0;
-    p2pParam.trajAcc[0]=0;
-    p2pParam.inopInter[0]=-1;
-    p2pParam.inopInter[1]=-1;
-}
+//void RTOptimal::GetTwoTimeThreeDof()
+//{
+//    for(int i=0;i<3;i++)
+//    {
+//        InitP2PParam(curP2PParam[i]);
+//        GetOptimalP2PMotionAcc(curPnt[i],curSeg[i],curPntVel[i],curSegVel[i],curP2PParam[i]);
+//    }
+//    GetCurSegOptParam(curP2PParam);
+//}
 
-void RealTimeOptimal::GetP2PMotionParam(double startP, double endP, double startV, double endV, double midV, P2PMotionParam &p2pParam)
+//void RTOptimal::GetCurSegOptParam(P2PMotionParam *p2pParam)
+//{
+//    double legMinT = 0;
+//    double legInopInter[2] {0,0};
+//    for(int i=0;i<3;i++)
+//    {
+//        if(legMinT<p2pParam[i].minTime)
+//        {
+//            legMinT=p2pParam[i].minTime;
+//        }
+
+//        if(p2pParam[i].inopInterNum==1)
+//        {
+//            if(legInopInter[0]>p2pParam[i].inopInter[0])
+//            {
+//                legInopInter[0]=p2pParam[i].inopInter[0];
+//            }
+//            if(legInopInter[1]<p2pParam[i].inopInter[1])
+//            {
+//                legInopInter[1]=p2pParam[i].inopInter[1];
+//            }
+//        }
+//    }
+
+//    if(legMinT>legInopInter[0] && legMinT<legInopInter[1])
+//    {
+//        legMinT=legInopInter[1];
+//    }
+//}
+
+void RTOptimal::GetP2PMotionParam(double startP, double endP, double startV, double endV, double midV, P2PMotionParam &p2pParam)
 {
     switch(p2pParam.velType)
     {
     case VelType::DecAcc:
         if(midV<-vLmt)//constant phase
         {
-            p2pParam.velType=VelType::DecNegAcc;
-            p2pParam.trajTim[1]=(startV+vLmt)/aLmt;
-            p2pParam.trajAcc[1]=-aLmt;
-            p2pParam.trajTim[3]=(endV+vLmt)/aLmt;
-            p2pParam.trajAcc[3]=aLmt;
+            p2pParam.velType=VelType::DecConstAcc;
+            p2pParam.maxVel=-vLmt;
+            p2pParam.trajTime[0]=(startV+vLmt)/aLmt;
+            p2pParam.trajAcc[0]=-aLmt;
+            p2pParam.trajTime[2]=(endV+vLmt)/aLmt;
+            p2pParam.trajAcc[2]=aLmt;
 
-            p2pParam.trajPos[1]=(vLmt*vLmt-startV*startV)/(-2*aLmt);
-            p2pParam.trajPos[3]=(endV*endV-vLmt*vLmt)/(2*aLmt);
-            p2pParam.trajPos[2]=endP-startP-s0-s2;
-            if(p2pParam.trajPos[2]>0)
+            p2pParam.trajPos[0]=(vLmt*vLmt-startV*startV)/(-2*aLmt);
+            p2pParam.trajPos[2]=(endV*endV-vLmt*vLmt)/(2*aLmt);
+            p2pParam.trajPos[1]=endP-startP-s0-s2;
+            if(p2pParam.trajPos[1]>0)
             {
-                print("Error! Remain s should be negative. remainS=%.2f.\n",p2pParam.trajPos[2]);
+                print("Error! Remain s should be negative. remainS=%.2f.\n",p2pParam.trajPos[1]);
                 std::abort();
             }
             else
             {
-                p2pParam.trajTim[2]=p2pParam.trajPos[2]/(-vLmt);
-                p2pParam.trajAcc[2]=0;
+                p2pParam.trajTime[1]=p2pParam.trajPos[1]/(-vLmt);
+                p2pParam.trajAcc[1]=0;
 
             }
         }
         else//none constant phase
         {
-            p2pParam.trajTim[1]=(startV-midV)/aLmt;
-            p2pParam.trajAcc[1]=-aLmt;
-            p2pParam.trajPos[1]=(midV*midV-startV*startV)/(-2*aLmt);
-            p2pParam.trajTim[2]=0;
-            p2pParam.trajAcc[2]=0;
-            p2pParam.trajPos[2]=0;
-            p2pParam.trajTim[3]=(endV-midV)/aLmt;
-            p2pParam.trajAcc[3]=aLmt;
-            p2pParam.trajPos[3]=(endV*endV-midV*midV)/(2*aLmt);
+            p2pParam.maxVel=midV;
+            p2pParam.trajTime[0]=(startV-midV)/aLmt;
+            p2pParam.trajAcc[0]=-aLmt;
+            p2pParam.trajPos[0]=(midV*midV-startV*startV)/(-2*aLmt);
+            p2pParam.trajTime[1]=0;
+            p2pParam.trajAcc[1]=0;
+            p2pParam.trajPos[1]=0;
+            p2pParam.trajTime[2]=(endV-midV)/aLmt;
+            p2pParam.trajAcc[2]=aLmt;
+            p2pParam.trajPos[2]=(endV*endV-midV*midV)/(2*aLmt);
         }
 
         break;
     case VelType::AccDec:
         if(midV>vLmt)//constant phase
         {
-            p2pParam.velType=VelType::AccPosDec;
-            p2pParam.trajTim[1]=(vLmt-startV)/aLmt;
-            p2pParam.trajAcc[1]=aLmt;
-            p2pParam.trajTim[3]=(vLmt-endV)/aLmt;
-            p2pParam.trajAcc[3]=-aLmt;
+            p2pParam.velType=VelType::AccConstDec;
+            p2pParam.maxVel=vLmt;
+            p2pParam.trajTime[0]=(vLmt-startV)/aLmt;
+            p2pParam.trajAcc[0]=aLmt;
+            p2pParam.trajTime[2]=(vLmt-endV)/aLmt;
+            p2pParam.trajAcc[2]=-aLmt;
 
-            p2pParam.trajPos[1]=(vLmt*vLmt-startV*startV)/(2*aLmt);
-            p2pParam.trajPos[3]=(vLmt*vLmt-endV*endV)/(2*aLmt);
-            p2pParam.trajPos[2]=endP-startP-s0-s2;
-            if(p2pParam.trajPos[2]<0)
+            p2pParam.trajPos[0]=(vLmt*vLmt-startV*startV)/(2*aLmt);
+            p2pParam.trajPos[2]=(vLmt*vLmt-endV*endV)/(2*aLmt);
+            p2pParam.trajPos[1]=endP-startP-s0-s2;
+            if(p2pParam.trajPos[1]<0)
             {
-                print("Error! Remain s should be positive. remainS=%.2f.\n",p2pParam.trajPos[2]);
+                print("Error! Remain s should be positive. remainS=%.2f.\n",p2pParam.trajPos[1]);
                 std::abort();
             }
             else
             {
-                p2pParam.trajTim[2]=p2pParam.trajPos[2]/vLmt;
-                p2pParam.trajAcc[2]=0;
+                p2pParam.trajTime[1]=p2pParam.trajPos[1]/vLmt;
+                p2pParam.trajAcc[1]=0;
             }
         }
         else//none constant phase
         {
-            p2pParam.trajTim[1]=(midV-startV)/aLmt;
-            p2pParam.trajAcc[1]=aLmt;
-            p2pParam.trajPos[1]=(midV*midV-startV*startV)/(2*aLmt);
-            p2pParam.trajTim[2]=0;
-            p2pParam.trajAcc[2]=0;
-            p2pParam.trajPos[2]=0;
-            p2pParam.trajTim[3]=(midV-endV)/aLmt;
-            p2pParam.trajAcc[3]=-aLmt;
-            p2pParam.trajPos[3]=(endV*endV-midV*midV)/(-2*aLmt);
+            p2pParam.maxVel=midV;
+            p2pParam.trajTime[0]=(midV-startV)/aLmt;
+            p2pParam.trajAcc[0]=aLmt;
+            p2pParam.trajPos[0]=(midV*midV-startV*startV)/(2*aLmt);
+            p2pParam.trajTime[1]=0;
+            p2pParam.trajAcc[1]=0;
+            p2pParam.trajPos[1]=0;
+            p2pParam.trajTime[2]=(midV-endV)/aLmt;
+            p2pParam.trajAcc[2]=-aLmt;
+            p2pParam.trajPos[2]=(endV*endV-midV*midV)/(-2*aLmt);
         }
 
         break;
@@ -418,43 +397,47 @@ void RealTimeOptimal::GetP2PMotionParam(double startP, double endP, double start
         break;
     }
 
-    if(p2pParam.trajTim[1]<0 || p2pParam.trajTim[2]<0 || p2pParam.trajTim[3]<0)
+    if(p2pParam.trajTime[0]<0 || p2pParam.trajTime[1]<0 || p2pParam.trajTime[2]<0)
     {
         print("Error! Time impossible to be negative. T=(%.2f,%.2f,%.2f).\n",
-              p2pParam.trajTim[0],p2pParam.trajTim[1],p2pParam.trajTim[2]);
+              p2pParam.trajTime[0],p2pParam.trajTime[1],p2pParam.trajTime[2]);
         std::abort();
     }
 }
 
-void RealTimeOptimal::GetOptimalP2PMotionAcc(double startP, double endP, double startV, double endV, P2PMotionParam &p2pParam)
+void RTOptimal::GetOptimalP2PMotionAcc(double startP, double endP, double startV, double endV, P2PMotionParam &p2pParam)
 {
     if(startP<=endP)
     {
-        if(startV<0)
-        {
-            p2pParam.trajTim[0]=-2*startV/aLmt;
-            p2pParam.trajAcc[0]=aLmt;
-            p2pParam.trajPos[0]=0;
-            GetOptimalP2PMotionAcc(startP,endP,-startV,endV,p2pParam);
-        }
-        else
-        {
-            double midV {0};
-            double judgeDist {0};
-            double deltaDist {0};
+        double midV {0};
+        double judgeDist1 {0};
+        double judgeDist2 {0};
 
-            //type judgement of inoperative time interval
-            judgeDist=(startV*startV-endV*endV)/(2*aLmt);
-            deltaDist=endV*endV/aLmt;
+        p2pParam.inopInter[0]=-1;
+        p2pParam.inopInter[1]=-1;
+
+        //type judgement of inoperative time interval
+        if(startV<=0)
+        {
             if(endV<=0)
             {
-                if(endP-startP<judgeDist)//Type III -- dec-neg-acc
+                //Type I -- acc-pos-dec
+                p2pParam.inopInterNum=0;
+                p2pParam.velType=VelType::AccDec;
+                midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
+                GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
+            }
+            else
+            {
+                judgeDist1=(endV*endV-startV*startV)/(2*aLmt);
+                if(endP-startP<judgeDist1)//Type III -- dec-neg-acc
                 {
                     p2pParam.inopInterNum=0;
                     p2pParam.velType=VelType::DecAcc;
                     midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
                 }
                 else//Type I -- acc-pos-dec
                 {
@@ -462,48 +445,73 @@ void RealTimeOptimal::GetOptimalP2PMotionAcc(double startP, double endP, double 
                     p2pParam.velType=VelType::AccDec;
                     midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
                 }
             }
-            else
+        }
+        else
+        {
+            if(endV<=0)
             {
-                if(endP-startP<=judgeDist)//Type III -- dec-neg-acc
+                judgeDist1=(startV*startV-endV*endV)/(2*aLmt);
+                if(endP-startP<judgeDist1)//Type III -- dec-neg-acc
                 {
                     p2pParam.inopInterNum=0;
                     p2pParam.velType=VelType::DecAcc;
                     midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
                 }
-                else if(endP-startP>=judgeDist+deltaDist)//Type I -- acc-pos-dec
+                else//Type I -- acc-pos-dec
                 {
                     p2pParam.inopInterNum=0;
                     p2pParam.velType=VelType::AccDec;
                     midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
                 }
-                else//Both type
+            }
+            else
+            {
+                judgeDist1=fabs(startV*startV-endV*endV)/(2*aLmt);
+                judgeDist2=(startV*startV+endV*endV)/(2*aLmt);
+                if(endP-startP<=judgeDist1)//Type III -- dec-neg-acc
                 {
-                    p2pParam.inopInterNum=1;
-
-                    //Type I -- acc-pos-dec
+                    p2pParam.inopInterNum=0;
+                    p2pParam.velType=VelType::DecAcc;
+                    midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
+                }
+                else if(endP-startP>=judgeDist2)//Type I -- acc-pos-dec
+                {
+                    p2pParam.inopInterNum=0;
                     p2pParam.velType=VelType::AccDec;
                     midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.minT=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
+                }
+                else//All type
+                {
+                    p2pParam.inopInterNum=1;
 
                     //Type II -- dec-acc
                     p2pParam.velType=VelType::DecAcc;
                     midV=sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.inopInter[0]=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.inopInter[0]=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
 
                     //Type III -- dec-neg-acc
                     p2pParam.velType=VelType::DecAcc;
                     midV=-sqrt(startV*startV/2+endV*endV/2-aLmt*(endP-startP));
                     GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
-                    p2pParam.inopInter[1]=p2pParam.trajTim[0]+p2pParam.trajTim[1]+p2pParam.trajTim[2]+p2pParam.trajTim[3];
+                    p2pParam.inopInter[1]=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
+
+                    //Type I -- acc-pos-dec
+                    p2pParam.velType=VelType::AccDec;
+                    midV=sqrt(startV*startV/2+endV*endV/2+aLmt*(endP-startP));
+                    GetP2PMotionParam(startP,endP,startV,endV,midV,p2pParam);
+                    p2pParam.minTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+p2pParam.trajTime[2];
                 }
             }
         }
@@ -511,20 +519,41 @@ void RealTimeOptimal::GetOptimalP2PMotionAcc(double startP, double endP, double 
     else
     {
         GetOptimalP2PMotionAcc(-startP,-endP,-startV,-endV,p2pParam);
-        for(int i=0;i<4;i++)
+        for(int i=0;i<3;i++)
         {
             p2pParam.trajAcc[i]=-p2pParam.trajAcc[i];
             p2pParam.trajPos[i]=-p2pParam.trajPos[i];
         }
+        p2pParam.maxVel=-p2pParam.maxVel;
+        if(p2pParam.velType==VelType::AccDec)
+        {
+            p2pParam.velType=VelType::DecAcc;
+        }
+        else if(p2pParam.velType==VelType::DecAcc)
+        {
+            p2pParam.velType=VelType::AccDec;
+        }
+        else if(p2pParam.velType==VelType::AccConstDec)
+        {
+            p2pParam.velType=VelType::DecConstAcc;
+        }
+        else if(p2pParam.velType==VelType::DecConstAcc)
+        {
+            p2pParam.velType=VelType::AccConstDec;
+        }
+        else
+        {
+            printf("Error! Unknown VelType!\n");
+        }
     }
 }
 
-void RealTimeOptimal::GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV)
+void RTOptimal::GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV)
 {
 
 }
 
-void RealTimeOptimal::GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t)
+void RTOptimal::GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t)
 {
     double v[5] {startV};
     double s[5] {startP};
@@ -578,7 +607,7 @@ void RealTimeOptimal::GetTraj(int screwID, int startCount, int totalCount, doubl
     }
 }
 
-void RealTimeOptimal::screwInterpolationTraj()
+void RTOptimal::screwInterpolationTraj()
 {
     Robots::RobotTypeI rbt;
     rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotEDU2.xml");
