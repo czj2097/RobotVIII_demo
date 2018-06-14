@@ -43,6 +43,17 @@ struct PolylineParam
     double fstBrkPntVel;
     double lstBrkPntVel;
 };
+struct NextPointParam
+{
+    double min_t1;
+    double min_t2;
+    double min_vm;
+    double max_t1;
+    double max_t2;
+    double max_vm;
+    double reachableVel[2];
+    double optVel;
+};
 
 
 
@@ -54,6 +65,8 @@ public:
     void screwInterpolationTraj();
 
 private:
+    const double stepD {0.5};
+    const double stepH {0.05};
     const double vLmt {1.0};
     const double aLmt {3.2};
     const double initPeb[6] {0};
@@ -72,6 +85,7 @@ private:
                           0.60, -0.58,  0,
                           0.30, -0.58,  0.52 };//Robot EDU2
     const double initVee[18] {0};
+
     double vIn[3000][18];
     double pIn[3000][18];
     void GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t);
@@ -81,11 +95,8 @@ private:
     PolylineParam lineParam[18];
     P2PMotionParam curP2PParam[18];
 
-    double curPnt[3];
-    double curSeg[3];
-    double curPntVel[3];
-    double curSegVel[3];
-    double curMinTime;
+    double nxtPntMinTime;
+    int actScrewID;
 
     void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
     void JudgeLineType(PolylineParam &lnParam);
@@ -94,14 +105,15 @@ private:
     void GetNxtPntTimeTypeII(PolylineParam &lnParam, P2PMotionParam &p2pParam);
     void GetNxtPntTimeTypeIII(PolylineParam &lnParam, P2PMotionParam &p2pParam);
 
-    void GetTwoTimeThreeDof();
-    void GetCurSegOptParam(P2PMotionParam *p2pParam);
+    void GetNxtPntOptVel(PolylineParam &lnParam, NextPointParam &nxtParam);
+    bool GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nxtParam, int screwID);
+    double GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam);
 
     void GetP2PMotionParam(double startP, double endP, double startV, double endV, double midV, P2PMotionParam &p2pParam);
     void GetOptimalP2PMotionAcc(double startP, double endP, double startV, double endV, P2PMotionParam &p2pParam);
     void GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV);
 
-    void GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID);
+    void GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, double *pIn);
 };
 
 struct JointSpaceWalkParam final:public aris::server::GaitParamBase

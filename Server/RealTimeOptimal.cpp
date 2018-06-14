@@ -1,6 +1,7 @@
 #include "RealTimeOptimal.h"
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
 
 RTOptimal::RTOptimal()
 {
@@ -13,7 +14,7 @@ RTOptimal::~RTOptimal(){}
 /*find gait with maxVel in joint space by iteration*/
 
 //pnts means the knots of the leg, which is a pntsNum*3 matrix
-void RTOptimal::GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID)
+void RTOptimal::GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, double *pIn)
 {
     GetParamInFromParamEE(pnts,pntsNum,startV,endV,legID);
 
@@ -34,6 +35,18 @@ void RTOptimal::GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double 
         default:
             break;
         }
+    }
+
+    double nxtPntTime_tmp[3] {lineParam[3*legID].nxtPntTime,lineParam[3*legID+1].nxtPntTime,lineParam[3*legID+2].nxtPntTime};
+    actScrewID=std::max_element(nxtPntTime_tmp,nxtPntTime_tmp+3)-nxtPntTime_tmp;
+    nxtPntMinTime=nxtPntTime_tmp[actScrewID];
+
+    NextPointParam nxtPntParam[3];
+    for(int i=0;i<3;i++)
+    {
+        GetNxtPntOptVel(lineParam[3*legID+i],nxtPntParam[i]);
+        GetNxtPntReachableVel(lineParam[3*legID+i],nxtPntParam[i],i);
+        pIn[3*legID+i]=GetNxtPin(lineParam[3*legID+i],nxtPntParam[i]);
     }
 }
 
@@ -86,7 +99,7 @@ void RTOptimal::JudgeLineType(PolylineParam &lnParam)
     {
         for(int i=1;i<lnParam.pntsNum-1;i++)
         {
-            if((lnParam.pnts[i]-lnParam.pnts[i-1])(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
+            if((lnParam.pnts[i]-lnParam.pnts[i-1])*(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
             {
                 lnParam.fstBrkPntNum=i;
                 break;
@@ -94,7 +107,7 @@ void RTOptimal::JudgeLineType(PolylineParam &lnParam)
         }
         for(int i=lnParam.pntsNum-2;i>0;i--)
         {
-            if((lnParam.pnts[i]-lnParam.pnts[i-1])(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
+            if((lnParam.pnts[i]-lnParam.pnts[i-1])*(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
             {
                 lnParam.lstBrkPntNum=i;
                 break;
@@ -270,45 +283,157 @@ void RTOptimal::GetNxtPntTimeTypeIII(PolylineParam &lnParam, P2PMotionParam &p2p
     GetNxtPntTime(lnParam,p2pParam);
 }
 
-//void RTOptimal::GetTwoTimeThreeDof()
-//{
-//    for(int i=0;i<3;i++)
-//    {
-//        InitP2PParam(curP2PParam[i]);
-//        GetOptimalP2PMotionAcc(curPnt[i],curSeg[i],curPntVel[i],curSegVel[i],curP2PParam[i]);
-//    }
-//    GetCurSegOptParam(curP2PParam);
-//}
+void RTOptimal::GetNxtPntOptVel(PolylineParam &lnParam, NextPointParam &nxtParam)
+{
+    if(lnParam.pnts[lnParam.fstBrkPntNum]>=lnParam.pnts[0])
+    {
+        nxtParam.optVel=sqrt(lnParam.fstBrkPntVel*lnParam.fstBrkPntVel+2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
+        if(nxtParam.optVel>vLmt)
+        {
+            nxtParam.optVel=vLmt;
+        }
+    }
+    else
+    {
+        nxtParam.optVel=-sqrt(lnParam.fstBrkPntVel*lnParam.fstBrkPntVel-2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
+        if(nxtParam.optVel<-vLmt)
+        {
+            nxtParam.optVel=-vLmt;
+        }
+    }
+}
 
-//void RTOptimal::GetCurSegOptParam(P2PMotionParam *p2pParam)
-//{
-//    double legMinT = 0;
-//    double legInopInter[2] {0,0};
-//    for(int i=0;i<3;i++)
-//    {
-//        if(legMinT<p2pParam[i].minTime)
-//        {
-//            legMinT=p2pParam[i].minTime;
-//        }
+bool RTOptimal::GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nxtParam, int screwID)
+{
+    double s=lnParam.pnts[1]-lnParam.pnts[0];
+    double max_s=lnParam.startV*nxtPntMinTime+0.5*aLmt*nxtPntMinTime*nxtPntMinTime;
+    double min_s=lnParam.startV*nxtPntMinTime-0.5*aLmt*nxtPntMinTime*nxtPntMinTime;
 
-//        if(p2pParam[i].inopInterNum==1)
-//        {
-//            if(legInopInter[0]>p2pParam[i].inopInter[0])
-//            {
-//                legInopInter[0]=p2pParam[i].inopInter[0];
-//            }
-//            if(legInopInter[1]<p2pParam[i].inopInter[1])
-//            {
-//                legInopInter[1]=p2pParam[i].inopInter[1];
-//            }
-//        }
-//    }
+    //nxtPntMinTime in inoperative interval, new time need to be figured out
+    if(s>max_s)//startV<0,s<0,a>0
+    {
+        printf("screw %d cannot reach next point within the min time %.4f.\n",actScrewID,nxtPntMinTime);
+        //nxtPntMinTime=(-lnParam.startV-sqrt(lnParam.startV*lnParam.startV+2*aLmt*s))/aLmt;
+        //actScrewID=screwID;
+        return false;
+    }
+    else if(s<min_s)//startV>0,s>0,a<0
+    {
+        printf("screw %d cannot reach next point within the min time %.4f.\n",actScrewID,nxtPntMinTime);
+        //nxtPntMinTime=(-lnParam.startV+sqrt(lnParam.startV*lnParam.startV-2*aLmt*s))/(-aLmt);
+        //actScrewID=screwID;
+        return false;
+    }
+    else
+    {
+        nxtParam.min_t2=sqrt(aLmt*lnParam.startV*nxtPntMinTime+0.5*aLmt*aLmt*nxtPntMinTime*nxtPntMinTime-aLmt*s)/aLmt;
+        nxtParam.min_t1=nxtPntMinTime-nxtParam.min_t2;
+        nxtParam.min_vm=lnParam.startV+aLmt*nxtParam.min_t1;
+        nxtParam.reachableVel[0]=lnParam.startV+aLmt*nxtParam.min_t1-aLmt*nxtParam.min_t2;
 
-//    if(legMinT>legInopInter[0] && legMinT<legInopInter[1])
-//    {
-//        legMinT=legInopInter[1];
-//    }
-//}
+        nxtParam.max_t2=sqrt(-aLmt*lnParam.startV*nxtPntMinTime+0.5*aLmt*aLmt*nxtPntMinTime*nxtPntMinTime+aLmt*s)/aLmt;
+        nxtParam.max_t1=nxtPntMinTime-nxtParam.max_t2;
+        nxtParam.max_vm=lnParam.startV-aLmt*nxtParam.min_t1;
+        nxtParam.reachableVel[1]=lnParam.startV-aLmt*nxtParam.max_t1+aLmt*nxtParam.max_t2;
+        return true;
+    }
+}
+
+double RTOptimal::GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam)
+{
+    double pIn;
+    if(nxtParam.optVel<=nxtParam.reachableVel[0])
+    {
+        if(0.001<=nxtParam.min_t1)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*0.001+0.5*aLmt*0.001*0.001;
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV+aLmt*0.001;
+        }
+        else if(0.001<=nxtParam.min_t1+nxtParam.min_t2)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.min_t1+0.5*aLmt*nxtParam.min_t1*nxtParam.min_t1
+                    +nxtParam.min_vm*(0.001-nxtParam.min_t1)-0.5*aLmt*(0.001-nxtParam.min_t1)*(0.001-nxtParam.min_t1);
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV+aLmt*nxtParam.min_t1-aLmt*(0.001-nxtParam.min_t1);
+        }
+        else
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*0.001-0.5*aLmt*0.001*0.001;
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV-aLmt*0.001;
+
+            for(int j=1;j<lnParam.pntsNum+1;j++)
+            {
+                lnParam.pnts[j]=lnParam.pnts[j+1];
+            }
+            lnParam.pntsNum--;
+        }
+    }
+    else if(nxtParam.optVel<=nxtParam.reachableVel[1])
+    {
+        double delta_vm=(nxtParam.optVel-nxtParam.reachableVel[0])*nxtParam.min_t2/(nxtParam.min_t1+nxtParam.min_t2);
+        nxtParam.min_vm=nxtParam.min_vm-delta_vm;
+        double acc1=(nxtParam.min_vm-lnParam.startV)/nxtParam.min_t1;
+        double acc2=(nxtParam.optVel-nxtParam.min_vm)/nxtParam.min_t2;
+        if(0.001<=nxtParam.min_t1)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*0.001+0.5*acc1*0.001*0.001;
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV+acc1*0.001;
+        }
+        else if(0.001<=nxtParam.min_t1+nxtParam.min_t2)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.min_t1+0.5*acc1*nxtParam.min_t1*nxtParam.min_t1
+                    +nxtParam.min_vm*(0.001-nxtParam.min_t1)+0.5*acc2*(0.001-nxtParam.min_t1)*(0.001-nxtParam.min_t1);
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV+acc1*nxtParam.min_t1+acc2*(0.001-nxtParam.min_t2);
+        }
+        else
+        {
+            double endV_tmp=lnParam.startV+0.001*(nxtParam.optVel-lnParam.startV)/(nxtParam.min_t1+nxtParam.min_t2);
+            pIn=lnParam.pnts[0]+(lnParam.startV+endV_tmp)*0.001;
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=endV_tmp;
+
+            for(int j=1;j<lnParam.pntsNum+1;j++)
+            {
+                lnParam.pnts[j]=lnParam.pnts[j+1];
+            }
+            lnParam.pntsNum--;
+        }
+    }
+    else
+    {
+        if(0.001<=nxtParam.max_t1)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*0.001-0.5*aLmt*0.001*0.001;
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV-aLmt*0.001;
+        }
+        else if(0.001<nxtParam.max_t1+nxtParam.max_t2)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.max_t1-0.5*aLmt*nxtParam.max_t1*nxtParam.max_t1
+                    +nxtParam.max_vm*(0.001-nxtParam.max_t1)+0.5*aLmt*(0.001-nxtParam.max_t1)*(0.001-nxtParam.max_t1);
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV-aLmt*nxtParam.max_t1+aLmt*(0.001-nxtParam.max_t1);
+        }
+        else
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*0.001+0.5*aLmt*0.001*0.001;
+            lnParam.pnts[0]=pIn;
+            lnParam.startV=lnParam.startV+aLmt*0.001;
+
+            for(int j=1;j<lnParam.pntsNum+1;j++)
+            {
+                lnParam.pnts[j]=lnParam.pnts[j+1];
+            }
+            lnParam.pntsNum--;
+        }
+    }
+
+    return pIn;
+}
 
 void RTOptimal::GetP2PMotionParam(double startP, double endP, double startV, double endV, double midV, P2PMotionParam &p2pParam)
 {
@@ -326,10 +451,10 @@ void RTOptimal::GetP2PMotionParam(double startP, double endP, double startV, dou
 
             p2pParam.trajPos[0]=(vLmt*vLmt-startV*startV)/(-2*aLmt);
             p2pParam.trajPos[2]=(endV*endV-vLmt*vLmt)/(2*aLmt);
-            p2pParam.trajPos[1]=endP-startP-s0-s2;
+            p2pParam.trajPos[1]=endP-startP-p2pParam.trajPos[0]-p2pParam.trajPos[2];
             if(p2pParam.trajPos[1]>0)
             {
-                print("Error! Remain s should be negative. remainS=%.2f.\n",p2pParam.trajPos[1]);
+                printf("Error! Remain s should be negative. remainS=%.2f.\n",p2pParam.trajPos[1]);
                 std::abort();
             }
             else
@@ -366,10 +491,10 @@ void RTOptimal::GetP2PMotionParam(double startP, double endP, double startV, dou
 
             p2pParam.trajPos[0]=(vLmt*vLmt-startV*startV)/(2*aLmt);
             p2pParam.trajPos[2]=(vLmt*vLmt-endV*endV)/(2*aLmt);
-            p2pParam.trajPos[1]=endP-startP-s0-s2;
+            p2pParam.trajPos[1]=endP-startP-p2pParam.trajPos[0]-p2pParam.trajPos[2];
             if(p2pParam.trajPos[1]<0)
             {
-                print("Error! Remain s should be positive. remainS=%.2f.\n",p2pParam.trajPos[1]);
+                printf("Error! Remain s should be positive. remainS=%.2f.\n",p2pParam.trajPos[1]);
                 std::abort();
             }
             else
@@ -399,7 +524,7 @@ void RTOptimal::GetP2PMotionParam(double startP, double endP, double startV, dou
 
     if(p2pParam.trajTime[0]<0 || p2pParam.trajTime[1]<0 || p2pParam.trajTime[2]<0)
     {
-        print("Error! Time impossible to be negative. T=(%.2f,%.2f,%.2f).\n",
+        printf("Error! Time impossible to be negative. T=(%.2f,%.2f,%.2f).\n",
               p2pParam.trajTime[0],p2pParam.trajTime[1],p2pParam.trajTime[2]);
         std::abort();
     }
@@ -704,8 +829,8 @@ void RTOptimal::screwInterpolationTraj()
 
         for (int i=0;i<18;i++)
         {
-            GetOptimalPTPMotion(keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
-            GetOptimalPTPMotion(keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
+            //GetOptimalPTPMotion(keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
+            //GetOptimalPTPMotion(keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
 
             std::fill_n(totalT1,18,0);
             std::fill_n(totalT2,18,0);
