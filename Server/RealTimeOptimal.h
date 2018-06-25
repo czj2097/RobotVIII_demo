@@ -4,7 +4,8 @@
 #include <aris.h>
 #include <Robot_Type_I.h>
 #include <sys/time.h>
-#include "Move_Gait.h"
+
+void dlmwrite(const char *filename, const double *mtx, const int m, const int n);
 
 enum VelType
 {
@@ -51,8 +52,14 @@ struct NextPointParam
     double max_t1;
     double max_t2;
     double max_vm;
+    double rch_t1;
+    double rch_t2;
+    double rch_vm;
     double reachableVel[2];
     double optVel;
+
+    double record_t1;
+    double record_t2;
 };
 
 
@@ -62,7 +69,12 @@ class RTOptimal
 public:
     RTOptimal();
     ~RTOptimal();
-    void screwInterpolationTraj();
+    void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
+    bool GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, int count, double *pIn, double *pEE);
+
+
+    double nxtPntTime[3000][9];
+    void RecordNxtPntTime(NextPointParam &nxtParam, int count, int screwID);
 
 private:
     const double stepD {0.5};
@@ -71,25 +83,20 @@ private:
     const double aLmt {3.2};
     const double initPeb[6] {0};
     const double initVeb[6] {0};
-    //const double initPee[18]{ -0.3, -0.85, -0.65,
-    //                   -0.45, -0.85, 0,
-    //                    -0.3, -0.85, 0.65,
-    //                     0.3, -0.85, -0.65,
-    //                    0.45, -0.85, 0,
-    //                     0.3, -0.85, 0.65 };//Robot_VIII
+    const double initPee[18]{ -0.3, -0.85, -0.65,
+                       -0.45, -0.85, 0,
+                        -0.3, -0.85, 0.65,
+                         0.3, -0.85, -0.65,
+                        0.45, -0.85, 0,
+                         0.3, -0.85, 0.65 };//Robot_VIII
 
-    const double initPee[18] { -0.30, -0.58, -0.52,
-                         -0.60, -0.58,  0,
-                         -0.30, -0.58,  0.52,
-                          0.30, -0.58, -0.52,
-                          0.60, -0.58,  0,
-                          0.30, -0.58,  0.52 };//Robot EDU2
+//    const double initPee[18] { -0.30, -0.58, -0.52,
+//                         -0.60, -0.58,  0,
+//                         -0.30, -0.58,  0.52,
+//                          0.30, -0.58, -0.52,
+//                          0.60, -0.58,  0,
+//                          0.30, -0.58,  0.52 };//Robot EDU2
     const double initVee[18] {0};
-
-    double vIn[3000][18];
-    double pIn[3000][18];
-    void GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t);
-    void ScalingTraj(double startP, double endP, double startV, double endV, double *a, double *t);
 
     Robots::RobotTypeI rbt;
     PolylineParam lineParam[18];
@@ -97,8 +104,10 @@ private:
 
     double nxtPntMinTime;
     int actScrewID;
+    bool isCurPntPassed;
+    double lstPntTime;
 
-    void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
+    //void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
     void JudgeLineType(PolylineParam &lnParam);
     void GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam);
     void GetNxtPntTimeTypeI(PolylineParam &lnParam, P2PMotionParam &p2pParam);
@@ -107,47 +116,13 @@ private:
 
     void GetNxtPntOptVel(PolylineParam &lnParam, NextPointParam &nxtParam);
     bool GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nxtParam, int screwID);
-    double GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam);
+    double GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam, int count);
 
     void GetP2PMotionParam(double startP, double endP, double startV, double endV, double midV, P2PMotionParam &p2pParam);
     void GetOptimalP2PMotionAcc(double startP, double endP, double startV, double endV, P2PMotionParam &p2pParam);
     void GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV);
 
-    void GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, double *pIn);
+    //void GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, double *pIn);
 };
-
-struct JointSpaceWalkParam final:public aris::server::GaitParamBase
-{
-};
-
-class JointSpaceWalk
-{
-public:
-    JointSpaceWalk();
-    ~JointSpaceWalk();
-    static void parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
-    static int jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-
-private:
-    static void swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
-    static void stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID);
-
-    static double bodyAcc;
-    static double bodyDec;
-    static int totalCount;
-    static double height;
-    static double beta;
-    static NormalGait::WalkState walkState;
-
-    static double beginPee[18];
-    static double beginVel;
-    static double endPee[18];
-    static double endVel;
-    static double distance;
-
-    static NormalGait::GaitPhase gaitPhase[6];//swing true, stance false
-    static bool constFlag;
-};
-
 
 #endif

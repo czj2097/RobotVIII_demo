@@ -1,52 +1,108 @@
-#include "RealTimeOptimal.h"
+#include "plan.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
 
+void dlmwrite(const char *filename, const double *mtx, const int m, const int n)
+{
+    std::ofstream file;
+
+    file.open(filename);
+
+    file << std::setprecision(15);
+
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            file << mtx[n*i + j] << "   ";
+        }
+        file << std::endl;
+    }
+}
+
 RTOptimal::RTOptimal()
 {
-    rbt.loadXml("../../resource/Robot_III_re.xml");
+    rbt.loadXml("/usr/Robots/resource/Robot_Type_I/Robot_III.xml");
     rbt.SetPeb(initPeb);
     rbt.SetVb(initVeb);
+    isCurPntPassed=true;
+    lstPntTime=0;
 }
 RTOptimal::~RTOptimal(){}
 
 /*find gait with maxVel in joint space by iteration*/
 
 //pnts means the knots of the leg, which is a pntsNum*3 matrix
-void RTOptimal::GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, double *pIn)
+bool RTOptimal::GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, int count, double *pIn, double *pEE)
 {
-    GetParamInFromParamEE(pnts,pntsNum,startV,endV,legID);
-
-    for(int i=0;i<3;i++)
-    {
-        JudgeLineType(lineParam[3*legID+i]);
-        switch(lineParam[3*legID+i].lineType)
-        {
-        case PolylineType::I:
-            GetNxtPntTimeTypeI(lineParam[3*legID+i],curP2PParam[3*legID+i]);
-            break;
-        case PolylineType::II:
-            GetNxtPntTimeTypeII(lineParam[3*legID+i],curP2PParam[3*legID+i]);
-            break;
-        case PolylineType::III:
-            GetNxtPntTimeTypeIII(lineParam[3*legID+i],curP2PParam[3*legID+i]);
-            break;
-        default:
-            break;
-        }
-    }
-
-    double nxtPntTime_tmp[3] {lineParam[3*legID].nxtPntTime,lineParam[3*legID+1].nxtPntTime,lineParam[3*legID+2].nxtPntTime};
-    actScrewID=std::max_element(nxtPntTime_tmp,nxtPntTime_tmp+3)-nxtPntTime_tmp;
-    nxtPntMinTime=nxtPntTime_tmp[actScrewID];
+    //GetParamInFromParamEE(pnts,pntsNum,startV,endV,legID);
 
     NextPointParam nxtPntParam[3];
+
+    if(isCurPntPassed==true)
+    {
+        isCurPntPassed=false;
+        lstPntTime+=nxtPntMinTime;
+
+        for(int i=0;i<3;i++)
+        {
+            JudgeLineType(lineParam[3*legID+i]);
+            switch(lineParam[3*legID+i].lineType)
+            {
+            case PolylineType::I:
+                GetNxtPntTimeTypeI(lineParam[3*legID+i],curP2PParam[3*legID+i]);
+                break;
+            case PolylineType::II:
+                GetNxtPntTimeTypeII(lineParam[3*legID+i],curP2PParam[3*legID+i]);
+                break;
+            case PolylineType::III:
+                GetNxtPntTimeTypeIII(lineParam[3*legID+i],curP2PParam[3*legID+i]);
+                break;
+            default:
+                break;
+            }
+        }
+
+        double nxtPntTime_tmp[3] {lineParam[3*legID].nxtPntTime,lineParam[3*legID+1].nxtPntTime,lineParam[3*legID+2].nxtPntTime};
+        actScrewID=std::max_element(nxtPntTime_tmp,nxtPntTime_tmp+3)-nxtPntTime_tmp;
+        nxtPntMinTime=nxtPntTime_tmp[actScrewID];
+        printf("nxtPnttime:%.4f,%.4f,%.4f; nxtPntMinTime:%.4f\n",nxtPntTime_tmp[0],nxtPntTime_tmp[1],nxtPntTime_tmp[2],nxtPntMinTime);
+
+        for(int i=0;i<3;i++)
+        {
+            GetNxtPntOptVel(lineParam[3*legID+i],nxtPntParam[i]);
+            GetNxtPntReachableVel(lineParam[3*legID+i],nxtPntParam[i],i);
+
+            RecordNxtPntTime(nxtPntParam[i],count,i);
+        }
+
+        for(int i=0;i<3;i++)
+        {
+            printf("pnts of screw %d:",i);
+            for(int k=0;k<lineParam[3*legID+i].pntsNum;k++)
+            {
+                printf("%.4f,",lineParam[3*legID+i].pnts[k]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+
     for(int i=0;i<3;i++)
     {
-        GetNxtPntOptVel(lineParam[3*legID+i],nxtPntParam[i]);
-        GetNxtPntReachableVel(lineParam[3*legID+i],nxtPntParam[i],i);
-        pIn[3*legID+i]=GetNxtPin(lineParam[3*legID+i],nxtPntParam[i]);
+        pIn[3*legID+i]=GetNxtPin(lineParam[3*legID+i],nxtPntParam[i],count);
+    }
+    rbt.pLegs[legID]->SetPin(pIn+3*legID);
+    rbt.pLegs[legID]->GetPee(pEE+3*legID);
+
+    if(lineParam[3*legID].pntsNum==1)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
@@ -54,14 +110,14 @@ void RTOptimal::GetParamInFromParamEE(double *pnts, int pntsNum, double *startV,
 {
     for(int i=0;i<3;i++)
     {
-        lineParam[3*legID].pntsNum=pntsNum;
+        lineParam[3*legID+i].pntsNum=pntsNum;
     }
-
+    double startVin_tmp[3];
+    double endVin_tmp[3];
     for(int i=0;i<pntsNum;i++)
     {
         double pIn_tmp[3];
-        double startVin_tmp[3];
-        double endVin_tmp[3];
+
         rbt.pLegs[legID]->SetPee(pnts+3*i,rbt.body());
         rbt.pLegs[legID]->GetPin(pIn_tmp);
         for(int k=0;k<3;k++)
@@ -87,7 +143,16 @@ void RTOptimal::GetParamInFromParamEE(double *pnts, int pntsNum, double *startV,
                 lineParam[3*legID+k].endV=endVin_tmp[k];
             }
         }
+        printf("pIn of leg %d: %.4f, %.4f, %.4f\n",legID,lineParam[3*legID].pnts[i],lineParam[3*legID+1].pnts[i],lineParam[3*legID+2].pnts[i]);
     }
+    printf("startVin: %.4f,%.4f,%.4f; endVin:%.4f,%.4f,%.4f\n",
+           lineParam[3*legID].startV,lineParam[3*legID+1].startV,lineParam[3*legID+2].startV,
+           lineParam[3*legID].endV,lineParam[3*legID+1].endV,lineParam[3*legID+2].endV);
+    printf("startVin_tmp: %.4f,%.4f,%.4f; endVin_tmp:%.4f,%.4f,%.4f\n",
+           startVin_tmp[0],startVin_tmp[1],startVin_tmp[2],
+           endVin_tmp[0],endVin_tmp[1],endVin_tmp[2]);
+    printf("startVee: %.4f,%.4f,%.4f; endVee:%.4f,%.4f,%.4f\n",
+           startV[0],startV[1],startV[2],endV[0],endV[1],endV[2]);
 }
 
 void RTOptimal::JudgeLineType(PolylineParam &lnParam)
@@ -99,7 +164,7 @@ void RTOptimal::JudgeLineType(PolylineParam &lnParam)
     {
         for(int i=1;i<lnParam.pntsNum-1;i++)
         {
-            if((lnParam.pnts[i]-lnParam.pnts[i-1])*(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
+            if((lnParam.pnts[i]-lnParam.pnts[i-1])*(lnParam.pnts[i]-lnParam.pnts[i+1])>0)
             {
                 lnParam.fstBrkPntNum=i;
                 break;
@@ -107,7 +172,7 @@ void RTOptimal::JudgeLineType(PolylineParam &lnParam)
         }
         for(int i=lnParam.pntsNum-2;i>0;i--)
         {
-            if((lnParam.pnts[i]-lnParam.pnts[i-1])*(lnParam.pnts[i]-lnParam.pnts[i+1])<0)
+            if((lnParam.pnts[i]-lnParam.pnts[i-1])*(lnParam.pnts[i]-lnParam.pnts[i+1])>0)
             {
                 lnParam.lstBrkPntNum=i;
                 break;
@@ -133,7 +198,7 @@ void RTOptimal::JudgeLineType(PolylineParam &lnParam)
     }
     else
     {
-        printf("Error! Trajectory cannot be generated by only one knot!");
+        printf("Error! Trajectory cannot be generated by only one knot!\n");
     }
 }
 
@@ -145,8 +210,20 @@ void RTOptimal::GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam)
     if((lnParam.pnts[1]-lnParam.pnts[0])*(lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[0])<=0)
     {
         double d=lnParam.pnts[1]-lnParam.pnts[0];
-        reachT1=(-lnParam.startV+sqrt(lnParam.startV*lnParam.startV+2*p2pParam.trajAcc[0]*d))/p2pParam.trajAcc[0];
-        reachT2=(-lnParam.startV-sqrt(lnParam.startV*lnParam.startV+2*p2pParam.trajAcc[0]*d))/p2pParam.trajAcc[0];
+        double v_square=lnParam.startV*lnParam.startV+2*p2pParam.trajAcc[0]*d;
+        if(v_square<0)
+        {
+            if(v_square>-1e-10)
+            {
+                v_square=0;
+            }
+            else
+            {
+                printf("Error! sqrt applied to negative!\n");
+            }
+        }
+        reachT1=(-lnParam.startV+sqrt(v_square))/p2pParam.trajAcc[0];
+        reachT2=(-lnParam.startV-sqrt(v_square))/p2pParam.trajAcc[0];
         if(reachT1>=0 && reachT2>=0)
         {
             lnParam.nxtPntTime=std::min(reachT1,reachT2);
@@ -172,8 +249,20 @@ void RTOptimal::GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam)
     else
     {
         double d=lnParam.pnts[1]-lnParam.pnts[0]-p2pParam.trajPos[0]-p2pParam.trajPos[1];
-        reachT1=(-p2pParam.maxVel+sqrt(p2pParam.maxVel*p2pParam.maxVel+2*p2pParam.trajAcc[2]*d))/p2pParam.trajAcc[2];
-        reachT2=(-p2pParam.maxVel-sqrt(p2pParam.maxVel*p2pParam.maxVel+2*p2pParam.trajAcc[2]*d))/p2pParam.trajAcc[2];
+        double v_square=p2pParam.maxVel*p2pParam.maxVel+2*p2pParam.trajAcc[2]*d<0;
+        if(v_square<0)
+        {
+            if(v_square>-1e-10)
+            {
+                v_square=0;
+            }
+            else
+            {
+                printf("Error! sqrt applied to negative!\n");
+            }
+        }
+        reachT1=(-p2pParam.maxVel+sqrt(v_square))/p2pParam.trajAcc[2];
+        reachT2=(-p2pParam.maxVel-sqrt(v_square))/p2pParam.trajAcc[2];
         if(reachT1>=0 && reachT2>=0)
         {
             lnParam.nxtPntTime=p2pParam.trajTime[0]+p2pParam.trajTime[1]+std::min(reachT1,reachT2);
@@ -188,7 +277,8 @@ void RTOptimal::GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam)
         }
         else
         {
-            printf("Error! Next Point Time calculated wrong after const!\n");
+            printf("Error! Next Point Time calculated wrong after const! Time: %.4f, %.4f\n",reachT1,reachT2);
+            printf("maxVel=%.4f,and %.10f\n",p2pParam.maxVel,p2pParam.maxVel*p2pParam.maxVel+2*p2pParam.trajAcc[2]*d);
         }
     }
 }
@@ -196,6 +286,10 @@ void RTOptimal::GetNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam)
 void RTOptimal::GetNxtPntTimeTypeI(PolylineParam &lnParam, P2PMotionParam &p2pParam)
 {
     GetOptimalP2PMotionAcc(lnParam.pnts[0],lnParam.pnts[lnParam.pntsNum-1],lnParam.startV,lnParam.endV,p2pParam);
+    printf("Type I p2pParam time: %.4f,%.4f,%.4f, acc: %.4f,%.4f,%.4f, pos: %.4f,%.4f,%.4f\n",
+           p2pParam.trajTime[0],p2pParam.trajTime[1],p2pParam.trajTime[2],
+           p2pParam.trajAcc[0],p2pParam.trajAcc[1],p2pParam.trajAcc[2],
+           p2pParam.trajPos[0],p2pParam.trajPos[1],p2pParam.trajPos[2]);
     GetNxtPntTime(lnParam,p2pParam);
 }
 
@@ -248,6 +342,10 @@ void RTOptimal::GetNxtPntTimeTypeII(PolylineParam &lnParam, P2PMotionParam &p2pP
     }
 
     GetOptimalP2PMotionAcc(lnParam.pnts[0],lnParam.pnts[lnParam.fstBrkPntNum],lnParam.startV,curEndVel,p2pParam);
+    printf("Type II p2pParam time: %.4f,%.4f,%.4f, acc: %.4f,%.4f,%.4f, pos: %.4f,%.4f,%.4f\n",
+           p2pParam.trajTime[0],p2pParam.trajTime[1],p2pParam.trajTime[2],
+           p2pParam.trajAcc[0],p2pParam.trajAcc[1],p2pParam.trajAcc[2],
+           p2pParam.trajPos[0],p2pParam.trajPos[1],p2pParam.trajPos[2]);
     GetNxtPntTime(lnParam,p2pParam);
 }
 
@@ -280,27 +378,55 @@ void RTOptimal::GetNxtPntTimeTypeIII(PolylineParam &lnParam, P2PMotionParam &p2p
     }
 
     GetOptimalP2PMotionAcc(lnParam.pnts[0],lnParam.pnts[lnParam.fstBrkPntNum],lnParam.startV,curEndVel,p2pParam);
+    printf("Type III p2pParam time: %.4f,%.4f,%.4f, acc: %.4f,%.4f,%.4f, pos: %.4f,%.4f,%.4f\n",
+           p2pParam.trajTime[0],p2pParam.trajTime[1],p2pParam.trajTime[2],
+           p2pParam.trajAcc[0],p2pParam.trajAcc[1],p2pParam.trajAcc[2],
+           p2pParam.trajPos[0],p2pParam.trajPos[1],p2pParam.trajPos[2]);
     GetNxtPntTime(lnParam,p2pParam);
 }
 
 void RTOptimal::GetNxtPntOptVel(PolylineParam &lnParam, NextPointParam &nxtParam)
 {
-    if(lnParam.pnts[lnParam.fstBrkPntNum]>=lnParam.pnts[0])
+    double nxtBrkPnt;
+    double nxtBrkPntVel;
+    switch(lnParam.lineType)
     {
-        nxtParam.optVel=sqrt(lnParam.fstBrkPntVel*lnParam.fstBrkPntVel+2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
-        if(nxtParam.optVel>vLmt)
-        {
-            nxtParam.optVel=vLmt;
-        }
+    case PolylineType::I:
+        nxtBrkPnt=lnParam.pnts[lnParam.pntsNum-1];
+        nxtBrkPntVel=lnParam.endV;
+        break;
+    case PolylineType::II:
+    case PolylineType::III:
+        nxtBrkPnt=lnParam.pnts[lnParam.fstBrkPntNum];
+        nxtBrkPntVel=lnParam.fstBrkPntVel;
+        break;
+    default:
+        break;
+    }
+    if(lnParam.pntsNum==2)
+    {
+        nxtParam.optVel=lnParam.endV;
     }
     else
     {
-        nxtParam.optVel=-sqrt(lnParam.fstBrkPntVel*lnParam.fstBrkPntVel-2*aLmt*(lnParam.pnts[lnParam.fstBrkPntNum]-lnParam.pnts[0]));
-        if(nxtParam.optVel<-vLmt)
+        if(nxtBrkPnt>=lnParam.pnts[0])
         {
-            nxtParam.optVel=-vLmt;
+            nxtParam.optVel=sqrt(nxtBrkPntVel*nxtBrkPntVel+2*aLmt*(nxtBrkPnt-lnParam.pnts[1]));
+            if(nxtParam.optVel>vLmt)
+            {
+                nxtParam.optVel=vLmt;
+            }
+        }
+        else
+        {
+            nxtParam.optVel=-sqrt(nxtBrkPntVel*nxtBrkPntVel-2*aLmt*(nxtBrkPnt-lnParam.pnts[1]));
+            if(nxtParam.optVel<-vLmt)
+            {
+                nxtParam.optVel=-vLmt;
+            }
         }
     }
+    printf("OptVel:%.4f\n",nxtParam.optVel);
 }
 
 bool RTOptimal::GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nxtParam, int screwID)
@@ -312,14 +438,14 @@ bool RTOptimal::GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nx
     //nxtPntMinTime in inoperative interval, new time need to be figured out
     if(s>max_s)//startV<0,s<0,a>0
     {
-        printf("screw %d cannot reach next point within the min time %.4f.\n",actScrewID,nxtPntMinTime);
+        printf("Error! Screw %d cannot reach next point within the min time %.4f.\n",actScrewID,nxtPntMinTime);
         //nxtPntMinTime=(-lnParam.startV-sqrt(lnParam.startV*lnParam.startV+2*aLmt*s))/aLmt;
         //actScrewID=screwID;
         return false;
     }
     else if(s<min_s)//startV>0,s>0,a<0
     {
-        printf("screw %d cannot reach next point within the min time %.4f.\n",actScrewID,nxtPntMinTime);
+        printf("Error! Screw %d cannot reach next point within the min time %.4f.\n",actScrewID,nxtPntMinTime);
         //nxtPntMinTime=(-lnParam.startV+sqrt(lnParam.startV*lnParam.startV-2*aLmt*s))/(-aLmt);
         //actScrewID=screwID;
         return false;
@@ -333,102 +459,148 @@ bool RTOptimal::GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nx
 
         nxtParam.max_t2=sqrt(-aLmt*lnParam.startV*nxtPntMinTime+0.5*aLmt*aLmt*nxtPntMinTime*nxtPntMinTime+aLmt*s)/aLmt;
         nxtParam.max_t1=nxtPntMinTime-nxtParam.max_t2;
-        nxtParam.max_vm=lnParam.startV-aLmt*nxtParam.min_t1;
+        nxtParam.max_vm=lnParam.startV-aLmt*nxtParam.max_t1;
         nxtParam.reachableVel[1]=lnParam.startV-aLmt*nxtParam.max_t1+aLmt*nxtParam.max_t2;
+
+        printf("reachableVel:%.4f,%.4f\n",nxtParam.reachableVel[0],nxtParam.reachableVel[1]);
+        printf("min_vm=%.4f, max_vm=%.4f\n",nxtParam.min_vm,nxtParam.max_vm);
         return true;
     }
 }
 
-double RTOptimal::GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam)
+double RTOptimal::GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam, int count)
 {
     double pIn;
+    double curT=0.001*count-lstPntTime;
     if(nxtParam.optVel<=nxtParam.reachableVel[0])
     {
-        if(0.001<=nxtParam.min_t1)
+        if(curT<=nxtParam.min_t1)
         {
-            pIn=lnParam.pnts[0]+lnParam.startV*0.001+0.5*aLmt*0.001*0.001;
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV+aLmt*0.001;
+            pIn=lnParam.pnts[0]+lnParam.startV*curT+0.5*aLmt*curT*curT;
+            if(curT<=0.001)
+            {
+                nxtParam.record_t1=nxtParam.min_t1;
+                nxtParam.record_t2=nxtParam.min_t2;
+                printf("Unreachable NxtPnt time:%.4f,%.4f, acc:%.4f,%.4f\n",nxtParam.min_t1,nxtParam.min_t2,aLmt,-aLmt);
+            }
         }
-        else if(0.001<=nxtParam.min_t1+nxtParam.min_t2)
+        else if(curT<=nxtParam.min_t1+nxtParam.min_t2)
         {
             pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.min_t1+0.5*aLmt*nxtParam.min_t1*nxtParam.min_t1
-                    +nxtParam.min_vm*(0.001-nxtParam.min_t1)-0.5*aLmt*(0.001-nxtParam.min_t1)*(0.001-nxtParam.min_t1);
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV+aLmt*nxtParam.min_t1-aLmt*(0.001-nxtParam.min_t1);
+                    +nxtParam.min_vm*(curT-nxtParam.min_t1)-0.5*aLmt*(curT-nxtParam.min_t1)*(curT-nxtParam.min_t1);
+
+            if(curT+0.001>nxtParam.min_t1+nxtParam.min_t2)
+            {
+                printf("Current target point passed! Go on to next one!\n");
+                for(int j=0;j<lnParam.pntsNum+1;j++)
+                {
+                    lnParam.pnts[j]=lnParam.pnts[j+1];
+                }
+                lnParam.pntsNum--;
+                lnParam.startV=nxtParam.reachableVel[0];
+                isCurPntPassed=true;
+            }
         }
         else
         {
-            pIn=lnParam.pnts[0]+lnParam.startV*0.001-0.5*aLmt*0.001*0.001;
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV-aLmt*0.001;
-
-            for(int j=1;j<lnParam.pntsNum+1;j++)
-            {
-                lnParam.pnts[j]=lnParam.pnts[j+1];
-            }
-            lnParam.pntsNum--;
+            printf("Error! Impossible to enter here!\n");
         }
     }
     else if(nxtParam.optVel<=nxtParam.reachableVel[1])
     {
-        double delta_vm=(nxtParam.optVel-nxtParam.reachableVel[0])*nxtParam.min_t2/(nxtParam.min_t1+nxtParam.min_t2);
-        nxtParam.min_vm=nxtParam.min_vm-delta_vm;
-        double acc1=(nxtParam.min_vm-lnParam.startV)/nxtParam.min_t1;
-        double acc2=(nxtParam.optVel-nxtParam.min_vm)/nxtParam.min_t2;
-        if(0.001<=nxtParam.min_t1)
+        if(nxtParam.optVel==lnParam.startV)
         {
-            pIn=lnParam.pnts[0]+lnParam.startV*0.001+0.5*acc1*0.001*0.001;
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV+acc1*0.001;
-        }
-        else if(0.001<=nxtParam.min_t1+nxtParam.min_t2)
-        {
-            pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.min_t1+0.5*acc1*nxtParam.min_t1*nxtParam.min_t1
-                    +nxtParam.min_vm*(0.001-nxtParam.min_t1)+0.5*acc2*(0.001-nxtParam.min_t1)*(0.001-nxtParam.min_t1);
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV+acc1*nxtParam.min_t1+acc2*(0.001-nxtParam.min_t2);
+            nxtParam.rch_t1=nxtPntMinTime/2;
         }
         else
         {
-            double endV_tmp=lnParam.startV+0.001*(nxtParam.optVel-lnParam.startV)/(nxtParam.min_t1+nxtParam.min_t2);
-            pIn=lnParam.pnts[0]+(lnParam.startV+endV_tmp)*0.001;
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=endV_tmp;
-
-            for(int j=1;j<lnParam.pntsNum+1;j++)
+            double s=lnParam.pnts[1]-lnParam.pnts[0];
+            double delta=(lnParam.startV*nxtPntMinTime-s)*(lnParam.startV*nxtPntMinTime-s)/2
+                        +(nxtParam.optVel*nxtPntMinTime-s)*(nxtParam.optVel*nxtPntMinTime-s)/2;
+            double t1=(-(nxtParam.optVel*nxtPntMinTime-s)+sqrt(delta))/(lnParam.startV-nxtParam.optVel);
+            double t2=(-(nxtParam.optVel*nxtPntMinTime-s)-sqrt(delta))/(lnParam.startV-nxtParam.optVel);
+            if(t1>=0 && t1<=nxtPntMinTime)
             {
-                lnParam.pnts[j]=lnParam.pnts[j+1];
+                nxtParam.rch_t1=t1;
             }
-            lnParam.pntsNum--;
+            else if(t2>=0 && t2<=nxtPntMinTime)
+            {
+                nxtParam.rch_t1=t2;
+            }
+            else
+            {
+                printf("Error! optVel cannot be reached! t1=%.4f & t2=%.4f are negative!\n",t1,t2);
+            }
+        }
+
+        double acc=(nxtParam.optVel-lnParam.startV)/(2*nxtParam.rch_t1-nxtPntMinTime);
+        nxtParam.rch_t2=nxtPntMinTime-nxtParam.rch_t1;
+        nxtParam.rch_vm=lnParam.startV+acc*nxtParam.rch_t1;
+
+        if(curT<=nxtParam.rch_t1)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*curT+0.5*acc*curT*curT;
+            if(curT<=0.001)
+            {
+                nxtParam.record_t1=nxtParam.rch_t1;
+                nxtParam.record_t2=nxtParam.rch_t2;
+                printf("Reachable NxtPnt time:%.4f,%.4f, acc:%.4f,%.4f\n",nxtParam.rch_t1,nxtParam.rch_t2,acc,-acc);
+            }
+        }
+        else if(curT<=nxtParam.rch_t1+nxtParam.rch_t2)
+        {
+            pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.rch_t1+0.5*acc*nxtParam.rch_t1*nxtParam.rch_t1
+                    +nxtParam.rch_vm*(curT-nxtParam.rch_t1)-0.5*acc*(curT-nxtParam.rch_t1)*(curT-nxtParam.rch_t1);
+
+            if(curT+0.001>nxtParam.rch_t1+nxtParam.rch_t2)
+            {
+                printf("Current target point passed! Go on to next one!\n");
+                for(int j=0;j<lnParam.pntsNum+1;j++)
+                {
+                    lnParam.pnts[j]=lnParam.pnts[j+1];
+                }
+                lnParam.pntsNum--;
+                lnParam.startV=nxtParam.optVel;
+                isCurPntPassed=true;
+            }
+        }
+        else
+        {
+            printf("Error! Impossible to enter here!\n");
         }
     }
     else
     {
-        if(0.001<=nxtParam.max_t1)
+        if(curT<=nxtParam.max_t1)
         {
-            pIn=lnParam.pnts[0]+lnParam.startV*0.001-0.5*aLmt*0.001*0.001;
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV-aLmt*0.001;
+            pIn=lnParam.pnts[0]+lnParam.startV*curT-0.5*aLmt*curT*curT;
+            if(curT<=0.001)
+            {
+                nxtParam.record_t1=nxtParam.max_t1;
+                nxtParam.record_t2=nxtParam.max_t2;
+                printf("UnReachable NxtPnt time:%.4f,%.4f, acc:%.4f,%.4f\n",nxtParam.max_t1,nxtParam.max_t2,-aLmt,aLmt);
+            }
         }
-        else if(0.001<nxtParam.max_t1+nxtParam.max_t2)
+        else if(curT<nxtParam.max_t1+nxtParam.max_t2)
         {
             pIn=lnParam.pnts[0]+lnParam.startV*nxtParam.max_t1-0.5*aLmt*nxtParam.max_t1*nxtParam.max_t1
-                    +nxtParam.max_vm*(0.001-nxtParam.max_t1)+0.5*aLmt*(0.001-nxtParam.max_t1)*(0.001-nxtParam.max_t1);
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV-aLmt*nxtParam.max_t1+aLmt*(0.001-nxtParam.max_t1);
+                    +nxtParam.max_vm*(curT-nxtParam.max_t1)+0.5*aLmt*(curT-nxtParam.max_t1)*(curT-nxtParam.max_t1);
+
+            if(curT+0.001>nxtParam.max_t1+nxtParam.max_t2)
+            {
+                printf("Current target point passed! Go on to next one!\n");
+                for(int j=0;j<lnParam.pntsNum+1;j++)
+                {
+                    lnParam.pnts[j]=lnParam.pnts[j+1];
+                }
+                lnParam.pntsNum--;
+                lnParam.startV=nxtParam.reachableVel[1];
+                isCurPntPassed=true;
+            }
         }
         else
         {
-            pIn=lnParam.pnts[0]+lnParam.startV*0.001+0.5*aLmt*0.001*0.001;
-            lnParam.pnts[0]=pIn;
-            lnParam.startV=lnParam.startV+aLmt*0.001;
-
-            for(int j=1;j<lnParam.pntsNum+1;j++)
-            {
-                lnParam.pnts[j]=lnParam.pnts[j+1];
-            }
-            lnParam.pntsNum--;
+            printf("Error! Impossible to enter here!\n");
         }
     }
 
@@ -678,625 +850,9 @@ void RTOptimal::GetOptimalP2PMotionJerk(double startP, double endP, double start
 
 }
 
-void RTOptimal::GetTraj(int screwID, int startCount, int totalCount, double startP, double endP, double startV, double endV, double *a, double *t)
+void RTOptimal::RecordNxtPntTime(NextPointParam &nxtParam, int count, int screwID)
 {
-    double v[5] {startV};
-    double s[5] {startP};
-    for(int i=1;i<5;i++)
-    {
-        v[i]=v[i-1]+a[i-1]*t[i-1];
-        s[i]=s[i-1]+v[i-1]*t[i-1]+0.5*a[i-1]*t[i-1]*t[i-1];
-    }
-    printf("t:%.4f,%.4f,%.4f,%.4f,%.4f\n",t[0],t[1],t[2],t[3],t[4]);
-    printf("a:%.4f,%.4f,%.4f,%.4f,%.4f\n",a[0],a[1],a[2],a[3],a[4]);
-    printf("v:%.4f,%.4f,%.4f,%.4f,%.4f\n",v[0],v[1],v[2],v[3],v[4]);
-    printf("s:%.4f,%.4f,%.4f,%.4f,%.4f\n\n",s[0],s[1],s[2],s[3],s[4]);
-
-    for (int i=0;i<totalCount;i++)
-    {
-        if(i*0.001<t[0])
-        {
-            vIn[i+startCount][screwID]=v[0]+a[0]*i*0.001;
-            pIn[i+startCount][screwID]=s[0]+v[0]*i*0.001+0.5*a[0]*i*0.001*i*0.001;
-        }
-        else if(i*0.001<(t[0]+t[1]))
-        {
-            vIn[i+startCount][screwID]=v[1]+a[1]*(i*0.001-t[0]);
-            pIn[i+startCount][screwID]=s[1]+v[1]*(i*0.001-t[0])+0.5*a[1]*(i*0.001-t[0])*(i*0.001-t[0]);
-        }
-        else if(i*0.001<(t[0]+t[1]+t[2]))
-        {
-            vIn[i+startCount][screwID]=v[2]+a[2]*(i*0.001-t[0]-t[1]);
-            pIn[i+startCount][screwID]=s[2]+v[2]*(i*0.001-t[0]-t[1])+0.5*a[2]*(i*0.001-t[0]-t[1])*(i*0.001-t[0]-t[1]);
-        }
-        else if(i*0.001<(t[0]+t[1]+t[2]+t[3]))
-        {
-            vIn[i+startCount][screwID]=v[3]+a[3]*(i*0.001-t[0]-t[1]-t[2]);
-            pIn[i+startCount][screwID]=s[3]+v[3]*(i*0.001-t[0]-t[1]-t[2])+0.5*a[3]*(i*0.001-t[0]-t[1]-t[2])*(i*0.001-t[0]-t[1]-t[2]);
-        }
-        else if(i*0.001<(t[0]+t[1]+t[2]+t[3]+t[4]))
-        {
-            vIn[i+startCount][screwID]=v[4]+a[4]*(i*0.001-t[0]-t[1]-t[2]-t[3]);
-            pIn[i+startCount][screwID]=s[4]+v[4]*(i*0.001-t[0]-t[1]-t[2]-t[3])+0.5*a[4]*(i*0.001-t[0]-t[1]-t[2]-t[3])*(i*0.001-t[0]-t[1]-t[2]-t[3]);
-        }
-        else if(i*0.001<(t[0]+t[1]+t[2]+t[3]+t[4]+t[5]))
-        {
-            vIn[i+startCount][screwID]=v[5]+a[5]*(i*0.001-t[0]-t[1]-t[2]-t[3]-t[4]);
-            pIn[i+startCount][screwID]=s[5]+v[5]*(i*0.001-t[0]-t[1]-t[2]-t[3]-t[4])+0.5*a[5]*(i*0.001-t[0]-t[1]-t[2]-t[3]-t[4])*(i*0.001-t[0]-t[1]-t[2]-t[3]-t[4]);
-        }
-//        else
-//        {
-//            vIn[i+startCount][screwID]=endV;
-//            pIn[i+startCount][screwID]=endP;
-//        }
-    }
-}
-
-void RTOptimal::screwInterpolationTraj()
-{
-    Robots::RobotTypeI rbt;
-    rbt.loadXml("/home/hex/Desktop/mygit/RobotVIII_demo/resource/RobotEDU2.xml");
-
-    timeval tpstart,tpend;
-    float tused;
-    gettimeofday(&tpstart,NULL);
-
-    double totalTime{1.5};
-//    double pEE[18];
-//    double pEE_B[18];
-//    double aEE[18];
-    double ratio {0};//control point, from middle to edge [0,1]
-
-//    int keyPointNum{3};
-    double keyPee_B[3][18];
-    double keyPin[3][18];
-    double keyVin[3][18];
-    double dir[3] {1,-1,1};
-
-    rbt.SetPeb(initPeb);
-    rbt.SetVb(initVeb);
-
-    for (int i=0;i<6;i++)
-    {
-        keyPee_B[0][3*i]=initPee[3*i];
-        keyPee_B[0][3*i+1]=initPee[3*i+1];
-        keyPee_B[0][3*i+2]=initPee[3*i+2]+stepD/4;
-
-        keyPee_B[1][3*i]=initPee[3*i];
-        keyPee_B[1][3*i+1]=initPee[3*i+1]+stepH;
-        if(i==0 || i==3)
-        {
-            keyPee_B[1][3*i+2]=initPee[3*i+2]+stepD/4*ratio;
-        }
-        else if (i==2 || i==5)
-        {
-            keyPee_B[1][3*i+2]=initPee[3*i+2]-stepD/4*ratio;
-        }
-        else
-        {
-            keyPee_B[1][3*i+2]=initPee[3*i+2];
-        }
-
-        keyPee_B[2][3*i]=initPee[3*i];
-        keyPee_B[2][3*i+1]=initPee[3*i+1];
-        keyPee_B[2][3*i+2]=initPee[3*i+2]-stepD/4;
-    }
-
-    double e{1};
-    int k{0};
-    double totalTmax {0};
-    double totalT[18] {0};
-    double totalT1[18] {0};
-    double totalT2[18] {0};
-    int totalCount1[18] {0};
-    int totalCount2[18] {0};
-    double t1[18][5] {0};
-    double t2[18][5] {0};
-    double a1[18][5] {0};
-    double a2[18][5] {0};
-
-    while(e>=0.0001)
-    {
-        for (int i=0;i<3;i++)
-        {
-            double maxVel[18];
-            double Vbody[3] {0,0,stepD/totalTime/2};
-            rbt.SetPee(*keyPee_B+18*i,rbt.body());
-            for(int j=0;j<6;j++)
-            {
-                double direction[3] {0,0,dir[i]};
-                FastWalk::maxCal(rbt,direction,j,vLmt,maxVel+3*j);
-            }
-            rbt.SetVee(maxVel,rbt.body());
-            if(i!=1)
-            {
-                for(int j=0;j<6;j++)
-                {
-                    rbt.pLegs[j]->SetVee(Vbody,rbt.body());
-                }
-            }
-            rbt.GetPin(*keyPin+18*i);
-            rbt.GetVin(*keyVin+18*i);
-
-            printf("keyPin: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f",
-                   keyPin[i][0],keyPin[i][1],keyPin[i][2],keyPin[i][3],keyPin[i][4],keyPin[i][5],keyPin[i][6],keyPin[i][7],keyPin[i][8],
-                   keyPin[i][9],keyPin[i][10],keyPin[i][11],keyPin[i][12],keyPin[i][13],keyPin[i][14],keyPin[i][15],keyPin[i][16],keyPin[i][17]);
-        }
-
-        totalTmax=0;
-        std::fill_n(*pIn,3000*18,0);
-        std::fill_n(*vIn,3000*18,0);
-
-        for (int i=0;i<18;i++)
-        {
-            //GetOptimalPTPMotion(keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
-            //GetOptimalPTPMotion(keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
-
-            std::fill_n(totalT1,18,0);
-            std::fill_n(totalT2,18,0);
-            for(int j=0;j<5;j++)
-            {
-                totalT1[i]+=t1[i][j];
-                totalT2[i]+=t2[i][j];
-            }
-            totalCount1[i]=(int)(totalT1[i]*1000)+1;
-            totalCount2[i]=(int)(totalT2[i]*1000)+1;
-
-            totalT[i]=totalT1[i]+totalT2[i];
-
-            if(totalT[i]>totalTmax)
-            {
-                totalTmax=totalT[i];
-                k=i;
-            }
-
-            GetTraj(i,0,totalCount1[i],keyPin[0][i],keyPin[1][i],keyVin[0][i],keyVin[1][i],*a1+5*i,*t1+5*i);
-            GetTraj(i,totalCount1[i],totalCount2[i],keyPin[1][i],keyPin[2][i],keyVin[1][i],keyVin[2][i],*a2+5*i,*t2+5*i);
-        }
-
-        e=fabs(totalTmax-totalTime);
-        totalTime=totalTmax;
-
-        printf("%.4f,screwID:%d\n",totalTmax,k);
-        printf("\n");
-    }
-
-    gettimeofday(&tpend,NULL);
-    tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
-    printf("UsedTime:%f\n",tused);
-
-//    totalTime=1;
-//    int totalCount=round(totalTime*1000);
-//    double vIn[3000][18];
-//    double pIn[3000][18];
-//    double vIn_adjust[totalCount][18];
-//    double pIn_adjust[totalCount][18];
-//    double pEE_adjust[totalCount][18];
-
-//    for (int i=0;i<18;i++)
-//    {
-//        s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 (vector with direction)
-//        s3[i]=-0.5*aLmt*t3[i]*t3[i];
-//        s2[i]=keyPin[1][i]-keyPin[0][i]-s1[i]-s3[i];
-//        s4[i]=0.5*aLmt*t4[i]*t4[i];
-//        s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
-//        s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
-//    }
-
-//    for (int i=0;i<18;i++)
-//    {
-//        printf("t:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",t1[i],t2[i],t3[i],t4[i],t5[i],t6[i],totalT[i]);
-//        printf("s:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",s1[i],s2[i],s3[i],s4[i],s5[i],s6[i]);
-//    }
-
-//    for (int i=0;i<3000;i++)
-//    {
-//        for (int j=0;j<18;j++)
-//        {
-//            if(((double)i/1000)<t1[0][j])
-//            {
-//                vIn[i][j]=keyVin[0][j]+a1[0][j]*i/1000;
-//                pIn[i][j]=keyPin[0][j]+keyVin[0][j]*i/1000+0.5*a1[0][j]*i/1000*i/1000;
-//            }
-//            else if(((double)i/1000)<(t1[0][j]+t1[1][j]))
-//            {
-//                vIn[i][j]=-vLmt;
-//                pIn[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000-t1[j]);
-//            }
-//            else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]))
-//            {
-//                vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*((double)i/1000-t1[j]-t2[j]);
-//                pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000-t1[j]-t2[j])+0.5*aLmt*((double)i/1000-t1[j]-t2[j])*((double)i/1000-t1[j]-t2[j]);
-//            }
-//            else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]))
-//            {
-//                vIn[i][j]=vLmt;
-//                pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000-(t1[j]+t2[j]+t3[j]+t4[j]));
-//            }
-//            else if(((double)i/1000)<(t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j]))
-//            {
-//                vIn[i][j]=keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j])-aLmt*((double)i/1000-t1[j]-t3[j]-t4[j]);
-//                pIn[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
-//            }
-//            else
-//            {
-//                vIn[i][j]=keyVin[2][j];
-//                pIn[i][j]=keyPin[2][j];
-//            }
-//        }
-//    }
-
-//    for (int i=0;i<totalCount;i++)
-//    {
-//        for (int j=0;j<18;j++)
-//        {
-//            if(((double)i/1000)<(t1[j]*totalTime/totalT[j]))
-//            {
-//                pIn_adjust[i][j]=keyPin[0][j]+keyVin[0][j]*((double)i/1000*totalT[j]/totalTime)-0.5*aLmt*((double)i/1000*totalT[j]/totalTime)*((double)i/1000*totalT[j]/totalTime);
-//            }
-//            else if(((double)i/1000)<((t1[j]+t2[j])*totalTime/totalT[j]))
-//            {
-//                pIn_adjust[i][j]=keyPin[0][j]+s1[j]-vLmt*((double)i/1000*totalT[j]/totalTime-t1[j]);
-//            }
-//            else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j])*totalTime/totalT[j]))
-//            {
-//                pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+(keyVin[0][j]-aLmt*t1[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j])+0.5*aLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]);
-//            }
-//            else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j]+t5[j])*totalTime/totalT[j]))
-//            {
-//                pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+vLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]);
-//            }
-//            else if(((double)i/1000)<((t1[j]+t2[j]+t3[j]+t4[j]+t5[j]+t6[j])*totalTime/totalT[j]))
-//            {
-//                pIn_adjust[i][j]=keyPin[0][j]+s1[j]+s2[j]+s3[j]+s4[j]+s5[j]+(keyVin[0][j]-aLmt*t1[j]+aLmt*(t3[j]+t4[j]))*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])-0.5*aLmt*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j])*((double)i/1000*totalT[j]/totalTime-t1[j]-t2[j]-t3[j]-t4[j]-t5[j]);
-//            }
-//            else
-//            {
-//                pIn_adjust[i][j]=keyPin[2][j];
-//            }
-//        }
-
-//        rbt.SetPin(*pIn_adjust+18*i);
-//        rbt.GetPee(*pEE_adjust+18*i,rbt.body());
-//    }
-
-    aris::dynamic::dlmwrite("./vIn.txt",*vIn,3000,18);
-    aris::dynamic::dlmwrite("./pIn.txt",*pIn,3000,18);
-//    aris::dynamic::dlmwrite("./pIn_adjust.txt",*pIn_adjust,totalCount,18);
-//    aris::dynamic::dlmwrite("./pEE_adjust.txt",*pEE_adjust,totalCount,18);
-
-}
-
-NormalGait::WalkState JointSpaceWalk::walkState;
-double JointSpaceWalk::bodyAcc;
-double JointSpaceWalk::bodyDec;
-int JointSpaceWalk::totalCount;
-double JointSpaceWalk::height;
-double JointSpaceWalk::beta;
-double JointSpaceWalk::beginPee[18];
-double JointSpaceWalk::beginVel;
-double JointSpaceWalk::endPee[18];
-double JointSpaceWalk::endVel;
-double JointSpaceWalk::distance;
-NormalGait::GaitPhase JointSpaceWalk::gaitPhase[6];//swing true, stance false
-bool JointSpaceWalk::constFlag;
-
-JointSpaceWalk::JointSpaceWalk()
-{
-}
-JointSpaceWalk::~JointSpaceWalk()
-{
-}
-
-void JointSpaceWalk::parseJointSpaceFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
-{
-    JointSpaceWalkParam param;
-
-    for(auto &i:params)
-    {
-        if(i.first=="init")
-        {
-            walkState=NormalGait::WalkState::Init;
-            msg.copyStruct(param);
-        }
-        else if(i.first=="acc")
-        {
-            bodyAcc=stod(i.second);
-            walkState=NormalGait::WalkState::ForwardAcc;
-        }
-        else if(i.first=="stop")
-        {
-            walkState=NormalGait::WalkState::Stop;
-        }
-        else if(i.first=="totalCount")
-        {
-            totalCount=stoi(i.second);
-        }
-        else if(i.first=="height")
-        {
-            height=stod(i.second);
-        }
-        else if(i.first=="beta")
-        {
-            beta=stod(i.second);
-        }
-        else
-        {
-            std::cout<<"parse failed"<<std::endl;
-        }
-    }
-
-    std::cout<<"finished parse"<<std::endl;
-}
-
-void JointSpaceWalk::swingLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
-{
-    auto &robot = static_cast<Robots::RobotBase &>(model);
-    auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
-
-    double ratio{0.7};//control point, from middle to edge [0,1]
-    double stepH=height;
-    double stepD=distance;
-    double vLmt{0.9};
-    double aLmt{3.2};
-
-    int keyPointNum{3};
-    double keyPee_B[keyPointNum][3];
-    double keyVee_B[keyPointNum][3];
-    std::fill_n(*keyVee_B,keyPointNum*3,0);
-    double keyPin[keyPointNum][3];
-    double keyVin[keyPointNum][3];
-
-    double halfGaitTime=(double)(param.count%totalCount)/1000;
-    double totalTime=(double)totalCount/1000;
-    double totalT[3];
-    double t1[3],t2[3],t3[3],t4[3],t5[3],t6[3];
-    double s1[3],s2[3],s3[3],s4[3],s5[3],s6[3];
-    double pIn_adjust[3];
-
-    //keyPee_B
-    keyPee_B[0][0]=beginPee[3*legID];
-    keyPee_B[0][1]=beginPee[3*legID+1];
-    keyPee_B[0][2]=beginPee[3*legID+2];
-
-    keyPee_B[1][0]=beginPee[3*legID];
-    keyPee_B[1][1]=beginPee[3*legID+1]+stepH;
-    if(legID==0 || legID==3)
-    {
-        keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2*(1-ratio);
-    }
-    else if (legID==2 || legID==5)
-    {
-        keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2*(1+ratio);
-    }
-    else
-    {
-        keyPee_B[1][2]=beginPee[3*legID+2]-stepD/2;
-    }
-
-    keyPee_B[2][0]=beginPee[3*legID];
-    keyPee_B[2][1]=beginPee[3*legID+1];
-    keyPee_B[2][2]=beginPee[3*legID+2]-stepD;
-
-    //keyVee_B
-    keyVee_B[0][2]=beginVel;
-    keyVee_B[2][2]=endVel;
-
-    //keyPin & keyVin
-    robot.pLegs[legID]->SetPee(*keyPee_B);
-    robot.pLegs[legID]->SetVee(*keyVee_B);
-    robot.pLegs[legID]->GetPin(*keyPin);
-    robot.pLegs[legID]->GetVin(*keyVin);
-
-    robot.pLegs[legID]->SetPee(*keyPee_B+3);
-    robot.pLegs[legID]->GetPin(*keyPin+3);
-
-    robot.pLegs[legID]->SetPee(*keyPee_B+6);
-    robot.pLegs[legID]->SetVee(*keyVee_B+6);
-    robot.pLegs[legID]->GetPin(*keyPin+6);
-    robot.pLegs[legID]->GetVin(*keyVin+6);
-
-    for (int i=0;i<3;i++)
-    {
-        //cal t1[i]~t6[i]
-        s1[i]=(vLmt*vLmt-keyVin[0][i]*keyVin[0][i])/2/aLmt;
-        s3[i]=vLmt*vLmt/2/aLmt;
-        s2[i]=keyPin[0]-keyPin[1]-s1[i]-s3[i];
-        if(s2[i]>=0)
-        {
-            //printf("s2_const exist, the s2 is %.4f\n",s2[i]);
-            t1[i]=(vLmt+keyVin[0][i])/aLmt;//dec
-            t2[i]=s2[i]/vLmt;//const
-            t3[i]=vLmt/aLmt;//acc
-        }
-        else
-        {
-            //printf("s2_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i]));
-            t1[i]=(sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])+keyVin[0][i])/aLmt;//dec
-            t2[i]=0;
-            t3[i]=sqrt(aLmt*(keyPin[0][i]-keyPin[1][i])+0.5*keyVin[0][i]*keyVin[0][i])/aLmt;//acc
-        }
-
-        s4[i]=vLmt*vLmt/2/aLmt;
-        s6[i]=(vLmt*vLmt-keyVin[2][i]*keyVin[2][i])/2/aLmt;
-        s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
-
-        if(s5[i]>=0)
-        {
-            //printf("s5_const exist, the s5 is %.4f\n",s5[i]);
-            t4[i]=vLmt/aLmt;
-            t5[i]=s5[i]/vLmt;
-            t6[i]=(vLmt-keyVin[2][i])/aLmt;
-        }
-        else
-        {
-            //printf("s5_const dont exist,the max vel is %f\n",sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i]));
-            t4[i]=sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])/aLmt;
-            t5[i]=0;
-            t6[i]=(sqrt(aLmt*(keyPin[2][i]-keyPin[1][i])+0.5*keyVin[2][i]*keyVin[2][i])-keyVin[2][i])/aLmt;
-        }
-
-        totalT[i]=t1[i]+t2[i]+t3[i]+t4[i]+t5[i]+t6[i];
-
-        //cal s1[i]~s6[i]
-        s1[i]=keyVin[0][i]*t1[i]-0.5*aLmt*t1[i]*t1[i];//shift in phase 1 ( vector with direction)
-        s3[i]=-0.5*aLmt*t3[i]*t3[i];
-        s2[i]=keyPin[1][i]-keyPin[0][i]-s1[i]-s3[i];
-        s4[i]=0.5*aLmt*t4[i]*t4[i];
-        s6[i]=keyVin[2][i]*t6[i]+0.5*aLmt*t6[i]*t6[i];
-        s5[i]=keyPin[2][i]-keyPin[1][i]-s4[i]-s6[i];
-
-        //scaling to adjust to the totalCount
-        if(halfGaitTime<(t1[i]*totalTime/totalT[i]))
-        {
-            pIn_adjust[i]=keyPin[0][i]+keyVin[0][i]*(halfGaitTime*totalT[i]/totalTime)-0.5*aLmt*(halfGaitTime*totalT[i]/totalTime)*(halfGaitTime*totalT[i]/totalTime);
-        }
-        else if(halfGaitTime<((t1[i]+t2[i])*totalTime/totalT[i]))
-        {
-            pIn_adjust[i]=keyPin[0][i]+s1[i]-vLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]);
-        }
-        else if(halfGaitTime<((t1[i]+t2[i]+t3[i]+t4[i])*totalTime/totalT[i]))
-        {
-            pIn_adjust[i]=keyPin[0][i]+s1[i]+s2[i]+(keyVin[0][i]-aLmt*t1[i])*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i])+0.5*aLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i])*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]);
-        }
-        else if(halfGaitTime<((t1[i]+t2[i]+t3[i]+t4[i]+t5[i])*totalTime/totalT[i]))
-        {
-            pIn_adjust[i]=keyPin[0][i]+s1[i]+s2[i]+s3[i]+s4[i]+vLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]);
-        }
-        else if(halfGaitTime<((t1[i]+t2[i]+t3[i]+t4[i]+t5[i]+t6[i])*totalTime/totalT[i]))
-        {
-            pIn_adjust[i]=keyPin[0][i]+s1[i]+s2[i]+s3[i]+s4[i]+s5[i]+(keyVin[0][i]-aLmt*t1[i]+aLmt*(t3[i]+t4[i]))*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]-t5[i])-0.5*aLmt*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]-t5[i])*(halfGaitTime*totalT[i]/totalTime-t1[i]-t2[i]-t3[i]-t4[i]-t5[i]);
-        }
-        else
-        {
-            pIn_adjust[i]=keyPin[2][i];
-        }
-    }
-
-    robot.pLegs[legID]->SetPin(pIn_adjust);
-}
-
-void JointSpaceWalk::stanceLegTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in, int legID)
-{
-    auto &robot = static_cast<Robots::RobotBase &>(model);
-    auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
-
-    double pEE_B[3];
-    double halfGaitTime=(double)(param.count%totalCount)/1000;
-
-    pEE_B[0]=beginPee[3*legID];
-    pEE_B[1]=beginPee[3*legID+1];
-    pEE_B[2]=beginPee[3*legID+2]+(beginVel*halfGaitTime+0.5*(endVel-beginVel)/totalCount*1000*halfGaitTime*halfGaitTime);
-
-    robot.pLegs[legID]->SetPee(pEE_B,robot.body());
-}
-
-int JointSpaceWalk::jointSpaceFastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
-{
-    auto &robot = static_cast<Robots::RobotBase &>(model);
-    auto &param = static_cast<const JointSpaceWalkParam &>(param_in);
-
-    FastWalk::outputParam OPP;
-
-    if(param.count%(2*totalCount)<totalCount)
-    {
-        for (int i=0;i<3;i++)
-        {
-            gaitPhase[2*i]=NormalGait::GaitPhase::Swing;//swing
-            gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;//stance
-        }
-    }
-    else
-    {
-        for (int i=0;i<3;i++)
-        {
-            gaitPhase[2*i]=NormalGait::GaitPhase::Stance;//stance
-            gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;//swing
-        }
-    }
-
-    if(param.count%totalCount==(totalCount-1))
-    {
-        if(walkState==NormalGait::WalkState::ForwardAcc && constFlag==true)
-        {
-            walkState=NormalGait::WalkState::Const;
-            constFlag=false;
-            rt_printf("Acc finished, the coming Const Vel is: %.4f\n",endVel);
-        }
-    }
-    if(param.count%totalCount==0)
-    {
-        beginVel=endVel;
-        memcpy(beginPee,endPee,sizeof(endPee));
-
-        switch(walkState)
-        {
-        case NormalGait::WalkState::Init:
-            robot.GetPee(beginPee,robot.body());
-            robot.GetPee(endPee,robot.body());
-            beginVel=0;
-            endVel=0;
-            constFlag=false;
-            break;
-
-        case NormalGait::WalkState::ForwardAcc:
-            endVel=beginVel+bodyAcc*totalCount/1000;
-            constFlag=true;
-            break;
-
-        case NormalGait::WalkState::Const:
-            endVel=beginVel;
-            break;
-        }
-        distance=(beginVel+endVel)/2*totalCount/1000;
-        for (int i=0;i<6;i++)
-        {
-            endPee[3*i]=beginPee[3*i];
-            endPee[3*i+1]=beginPee[3*i+1];
-            if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
-            {
-                endPee[3*i+2]=beginPee[3*i+2]-distance;
-            }
-            else
-            {
-                endPee[3*i+2]=beginPee[3*i+2]+distance;
-            }
-        }
-    }
-
-    double initPeb[6]{0,0,0,0,0,0};
-    double initVeb[6]{0,0,0,0,0,0};
-    robot.SetPeb(initPeb);
-    robot.SetVb(initVeb);
-
-    for (int i=0;i<6;i++)
-    {
-        if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
-        {
-            swingLegTg(robot,param,i);
-        }
-        else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
-        {
-            stanceLegTg(robot,param,i);
-        }
-    }
-
-    /*
-    //test IMU//
-    double eul[3];
-    param.imu_data->toEulBody2Ground(eul,"213");
-    rt_printf("eul:%.4f,%.4f,%.4f\n",eul[0],eul[1],eul[2]);*/
-
-    robot.GetPin(OPP.outputPin);
-    robot.GetPee(OPP.outputPee,robot.body());
-    fastWalkPipe.sendToNrt(OPP);
-
-    if(walkState==NormalGait::WalkState::Stop && param.count%totalCount==(totalCount-1))
-    {
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
+    nxtPntTime[count][3*screwID]=nxtParam.record_t1;
+    nxtPntTime[count][3*screwID+1]=nxtParam.record_t2;
+    nxtPntTime[count][3*screwID+2]=nxtParam.record_t1+nxtParam.record_t2;
 }
