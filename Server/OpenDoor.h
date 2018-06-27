@@ -92,7 +92,6 @@ private:
     static double ODBeginPeb[6];
     static double ODBeginPmb[4][4];
     static double adjustBeginPeb[6];
-    static double forwardBeginPeb[6];
     static double jumpBeginPeb[6];
     static double nowPeb[6];
     static double nowPmb[4][4];

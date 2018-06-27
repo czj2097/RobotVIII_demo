@@ -20,7 +20,6 @@ double OpenDoor::planeVerticalInB[3];
 double OpenDoor::ODBeginPeb[6];
 double OpenDoor::ODBeginPmb[4][4];
 double OpenDoor::adjustBeginPeb[6];
-double OpenDoor::forwardBeginPeb[6];
 double OpenDoor::jumpBeginPeb[6];
 double OpenDoor::nowPeb[6];
 double OpenDoor::nowPmb[4][4];
@@ -223,6 +222,7 @@ int OpenDoor::openDoor(aris::dynamic::Model &model, const aris::dynamic::PlanPar
         ret=adjustRobotPull2W(robot,param.count);
         if(ret==0)
         {
+            return 0;
             ODState=OpenDoorState::PullWork;
             PWState=PullWorkState::CircleWalk;
             GetPullWalkParam();
@@ -734,12 +734,12 @@ int OpenDoor::turnHandle(Robots::RobotBase &robot, int count)
 
 int OpenDoor::pushHandle(Robots::RobotBase &robot, int count)
 {
-    if(count-ODP.countIter<=2000)
+    if(count-ODP.countIter<=2500)
     {
         Fbody[2]=-1;
     }
     GenerateBodyMotionByFce(robot);
-    if (count-ODP.countIter>2000 && fabs(bodyLastVel[2])<1e-10)
+    if (count-ODP.countIter>2500 && fabs(bodyLastVel[2])<1e-10)
     {
         ODP.countIter=count+1;
         return 0;
@@ -806,7 +806,7 @@ void OpenDoor::GetAdjustPull2WParam(Robots::RobotBase &robot)
     robot.GetPee(nowPee);
     for(int i=0;i<3;i++)
     {
-        now2startDistance[i]=forwardBeginPeb[i]-nowPeb[i];
+        now2startDistance[i]=adjustBeginPeb[i]-nowPeb[i];
     }
 
     aris::dynamic::s_pm_dot_v3(*nowPmb,xBodyInB,xNowInG);
@@ -860,32 +860,44 @@ int OpenDoor::adjustRobotPull2W(Robots::RobotBase &robot, int count)
     double currentPeb[6] {0};
     double currentPee[18] {0};
     const int now2startCount {1000};
-    for (int i=0;i<6;i++)
-    {
-        currentPeb[i]=nowPeb[i]+(now2startPebDistInG[i])/2*(1-cos((count-ODP.countIter)*PI/(2*now2startCount)));
-    }
     if(count-ODP.countIter<now2startCount)
     {
+        for (int i=0;i<6;i++)
+        {
+            currentPeb[i]=nowPeb[i]+(now2startPebDistInG[i])/2*(1-cos((count-ODP.countIter)*PI/now2startCount));
+        }
+        memcpy(currentPee,nowPee,18*sizeof(double));
+    }
+    else if(count-ODP.countIter<2*now2startCount)
+    {
+        for (int i=0;i<6;i++)
+        {
+            currentPeb[i]=nowPeb[i]+now2startPebDistInG[i];
+        }
         for(int i=0;i<3;i++)
         {
             //leg 0,2,4
-            currentPee[6*i]=nowPee[6*i]+now2startPeeDistInG[0]/2*(1-cos((count-ODP.countIter)*PI/now2startCount));
-            currentPee[6*i+1]=nowPee[6*i+1]+0.025*(1-cos((count-ODP.countIter)*2*PI/now2startCount));
-            currentPee[6*i+2]=nowPee[6*i+2]+now2startPeeDistInG[2]/2*(1-cos((count-ODP.countIter)*PI/now2startCount));
+            currentPee[6*i]=nowPee[6*i]+now2startPeeDistInG[0]/2*(1-cos((count-ODP.countIter-now2startCount)*PI/now2startCount));
+            currentPee[6*i+1]=nowPee[6*i+1]+0.025*(1-cos((count-ODP.countIter-now2startCount)*2*PI/now2startCount));
+            currentPee[6*i+2]=nowPee[6*i+2]+now2startPeeDistInG[2]/2*(1-cos((count-ODP.countIter-now2startCount)*PI/now2startCount));
             //leg 1,3,5
             currentPee[6*i+3]=nowPee[6*i+3];
             currentPee[6*i+4]=nowPee[6*i+4];
             currentPee[6*i+5]=nowPee[6*i+5];
         }
     }
-    else if(count-ODP.countIter<2*now2startCount)
+    else if(count-ODP.countIter<3*now2startCount)
     {
+        for (int i=0;i<6;i++)
+        {
+            currentPeb[i]=nowPeb[i]+now2startPebDistInG[i];
+        }
         for(int i=0;i<3;i++)
         {
             //leg 1,3,5
-            currentPee[6*i+3]=nowPee[6*i+3]+now2startPeeDistInG[0]/2*(1-cos((count-ODP.countIter-now2startCount)*PI/now2startCount));
-            currentPee[6*i+4]=nowPee[6*i+4]+0.025*(1-cos((count-ODP.countIter-now2startCount)*2*PI/now2startCount));
-            currentPee[6*i+5]=nowPee[6*i+5]+now2startPeeDistInG[2]/2*(1-cos((count-ODP.countIter-now2startCount)*PI/now2startCount));
+            currentPee[6*i+3]=nowPee[6*i+3]+now2startPeeDistInG[0]/2*(1-cos((count-ODP.countIter-2*now2startCount)*PI/now2startCount));
+            currentPee[6*i+4]=nowPee[6*i+4]+0.025*(1-cos((count-ODP.countIter-2*now2startCount)*2*PI/now2startCount));
+            currentPee[6*i+5]=nowPee[6*i+5]+now2startPeeDistInG[2]/2*(1-cos((count-ODP.countIter-2*now2startCount)*PI/now2startCount));
             //leg 0,2,4
             currentPee[6*i]=nowPee[6*i]+now2startPeeDistInG[0];
             currentPee[6*i+1]=nowPee[6*i+1];
@@ -896,7 +908,7 @@ int OpenDoor::adjustRobotPull2W(Robots::RobotBase &robot, int count)
     robot.SetPeb(currentPeb);
     robot.SetPee(currentPee);
 
-    if(count-ODP.countIter==2*now2startCount-1)
+    if(count-ODP.countIter==3*now2startCount-1)
     {
         ODP.countIter=count+1;
         return 0;
@@ -906,7 +918,7 @@ int OpenDoor::adjustRobotPull2W(Robots::RobotBase &robot, int count)
 
 void OpenDoor::GetPushWalkParam()
 {
-    const double handle2MiddleDist {0.55};
+    const double handle2MiddleDist {0.50};
     walkParam.n=2;
     walkParam.alpha=(isLeft==true ? -PI/2 : PI/2);
     walkParam.beta=0;
@@ -940,10 +952,10 @@ int OpenDoor::pushWalkThrough(Robots::RobotBase &robot, int count)
             ODP.countIter=count+1;
 
             walkParam.totalCount=1500;
-            walkParam.n=2;
+            walkParam.n=6;
             walkParam.alpha=0;
             walkParam.beta=0;
-            walkParam.d=0.1;
+            walkParam.d=0.2;
         }
         break;
 
