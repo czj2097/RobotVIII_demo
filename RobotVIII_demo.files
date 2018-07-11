@@ -16,3 +16,7 @@ Server/NonRTOptimalBCS.cpp
 Server/NonRTOptimalBCS.h
 Server/NonRTOptimalGCS.cpp
 Server/NonRTOptimalGCS.h
+Server/RTOptimal.cpp
+Server/RTOptimal.h
+Server/Balance.cpp
+Server/Balance.h

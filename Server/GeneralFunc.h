@@ -3,6 +3,7 @@
 
 namespace GeneralFunc
 {
+    void GetPmOfU(double angle, double *axis, double *pm);
 }
 
 #endif
