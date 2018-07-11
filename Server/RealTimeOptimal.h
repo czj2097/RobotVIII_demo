@@ -54,14 +54,11 @@ struct PolylineParam
 };
 struct NextPointParam
 {
-    double min_t1;
-    double min_t2;
+    double minT[3];
     double min_vm;
-    double max_t1;
-    double max_t2;
+    double maxT[3];
     double max_vm;
-    double rch_t1;
-    double rch_t2;
+    double rchT[3];
     double rch_vm;
     double reachableVel[2];
     double optVel;
@@ -78,7 +75,7 @@ public:
     RTOptimal();
     ~RTOptimal();
     void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
-    bool GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, int count, double *pIn, double *pEE);
+    bool GetTrajOneLeg(int legID, int count, double *pIn, double *pEE);
 
 
     double nxtPntTime[3000][9];
@@ -116,7 +113,7 @@ private:
     bool isCurPntPassed;
     double lstPntTime;
 
-    //void GetParamInFromParamEE(double *pnts, int pntsNum, double *startV, double *endV, int legID);
+    void GetAllParamForNxtPin(int legID);
     void JudgeLineType(PolylineParam &lnParam);
 
     void GetTwoTimeTypeI(PolylineParam &lnParam, P2PMotionParam &p2pParam);
@@ -125,17 +122,19 @@ private:
     double GetBrkPntSndPassVel(double startP, double endP, double startV, double endV, double pnt);
     void GetThreeNxtPntTime(PolylineParam &lnParam, P2PMotionParam &p2pParam);
     double LocatePntInLmtInterval(P2PMotionParam &p2pParam, double pnt, double *limitedTimeInterval);
-    void DecideNxtPntTime(PolylineParam *lnParam);
+    void GetFinalNxtPntTime(PolylineParam *lnParam);
 
     void GetNxtPntOptVel(PolylineParam &lnParam, NextPointParam &nxtParam);
-    bool GetNxtPntReachableVel(PolylineParam &lnParam, NextPointParam &nxtParam, int screwID);
-    double GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam, int count);
+    void GetNxtPntReachableVel(PolylineParam *lnParam, NextPointParam *nxtParam);
+    bool GetNxtPntParam(PolylineParam &lnParam, NextPointParam &nxtParam, int screwID);
 
-    void GetP2PMotionParam(P2PMotionParam &p2pParam, double midV);
+    bool GetNxtPin(PolylineParam &lnParam, NextPointParam &nxtParam, int count, double &pIn);
+
+    void GetP2PMotionParamAcc(P2PMotionParam &p2pParam, double midV);
     void GetOptimalP2PMotionAcc(double startP, double endP, double startV, double endV, P2PMotionParam &p2pParam);
-    void GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV);
+    void ScaleP2PMotionAcc(P2PMotionParam &p2pParam, double scaleTime);
 
-    //void GetTrajOneLeg(double *pnts, int pntsNum, double *startV, double *endV, int legID, double *pIn);
+    void GetOptimalP2PMotionJerk(double startP, double endP, double startV, double endV);
 };
 
 #endif
