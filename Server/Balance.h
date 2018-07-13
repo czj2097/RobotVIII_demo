@@ -1,12 +1,22 @@
 #ifndef BALANCE_H
 #define BALANCE_H
 
-#define g 9.80665
-
-#include "GeneralFunc.h"
 #include <aris.h>
+#include <Robot_Type_I.h>
+#include "GeneralFunc.h"
+#include "Move_Gait.h"
 
-void GetAngleFromAcc(double *acc, double *angle);
-void GetDeltaAnglePID(double *fce, double *delta_angle);
+void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul);
+void GetReqAccInBFromFce(double *fce, double *reqAccInB);
+
+struct BalanceParam final :public aris::server::GaitParamBase
+{
+    int preCount;
+    int totalCount;
+    int n;
+    double d;
+};
+void parseBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+int balance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 #endif

@@ -118,36 +118,6 @@ namespace NormalGait
 			fileGait.close();
 		});
 	}
-
-	void inv3(double * matrix,double * invmatrix)
-	{
-		double a1=matrix[0];
-		double b1=matrix[1];
-		double c1=matrix[2];
-		double a2=matrix[3];
-		double b2=matrix[4];
-		double c2=matrix[5];
-		double a3=matrix[6];
-		double b3=matrix[7];
-		double c3=matrix[8];
-
-		double value_matrix=a1*(b2*c3-c2*b3)-a2*(b1*c3-c1*b3)+a3*(b1*c2-c1*b2);
-
-		invmatrix[0]=(b2*c3-c2*b3)/value_matrix;
-		invmatrix[1]=(c1*b3-b1*c3)/value_matrix;
-		invmatrix[2]=(b1*c2-c1*b2)/value_matrix;
-		invmatrix[3]=(c2*a3-a2*c3)/value_matrix;
-		invmatrix[4]=(a1*c3-c1*a3)/value_matrix;
-		invmatrix[5]=(a2*c1-a1*c2)/value_matrix;
-		invmatrix[6]=(a2*b3-a3*b2)/value_matrix;
-		invmatrix[7]=(b1*a3-a1*b3)/value_matrix;
-		invmatrix[8]=(a1*b2-b1*a2)/value_matrix;
-	}
-
-	double norm(double * vector_in)
-	{
-		return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
-	}
 }
 
 namespace FastWalk
@@ -3161,12 +3131,12 @@ namespace ForceTask
 					ODP.moveState=MoveState::LocateAjust;
 
 					//calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-					NormalGait::inv3(*ODP.location,*invLocation);
+                    GeneralFunc::inv3(*ODP.location,*invLocation);
 					aris::dynamic::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
 					aris::dynamic::s_inv_pm(*beginBodyPm,*invBeginBodyPm);//have not rotate, beginBodyPm is right here
 					aris::dynamic::s_pm_dot_v3(*invBeginBodyPm,planeVertical,planeVerticalInB);
 					ODP.planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
-					ODP.planeYPR[1]=-asin(planeVerticalInB[1]/NormalGait::norm(planeVerticalInB));
+                    ODP.planeYPR[1]=-asin(planeVerticalInB[1]/GeneralFunc::norm(planeVerticalInB));
 					ODP.planeYPR[2]=0;
 
 					//Set now param of now2start in LocateAjust
@@ -3418,9 +3388,9 @@ namespace ForceTask
 						ODP.vector2[i]=touchPE[i]-ODP.beginPE[i];
 					}
 
-					ODP.handleLocation[2]=-NormalGait::norm(ODP.vector0);
-					ODP.handleLocation[0]=NormalGait::norm(ODP.vector1);
-					ODP.handleLocation[1]=-NormalGait::norm(ODP.vector2);
+                    ODP.handleLocation[2]=-GeneralFunc::norm(ODP.vector0);
+                    ODP.handleLocation[0]=GeneralFunc::norm(ODP.vector1);
+                    ODP.handleLocation[1]=-GeneralFunc::norm(ODP.vector2);
 
 					rt_printf("handleLocation:%f,%f,%f\n",ODP.handleLocation[0],ODP.handleLocation[1],ODP.handleLocation[2]);
 				}

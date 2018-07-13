@@ -12,6 +12,7 @@
 #include <Robot_Type_I.h>
 #include <sys/time.h>
 #include "rtdk.h"
+#include "GeneralFunc.h"
 
 using namespace aris::control;
 
@@ -42,8 +43,6 @@ namespace NormalGait
 	int moveWithRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 	void StartRecordData();
-	void inv3(double * matrix,double * invmatrix);
-	double norm(double * vector_in);
 }
 
 namespace ForceTask
