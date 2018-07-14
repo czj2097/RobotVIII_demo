@@ -36,13 +36,12 @@ void GetReqAccInBFromFce(double *fce, double *reqAccInB)
 
 void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul)
 {
-    const double m=0.1;
     const double g=9.80665;
-    double FnInG[3];
-    double ballG[3] {0,-m*g,0};
+    double FnInG[3];//Fn/m, direction is the same, m can be not taken into account
+    double ballG[3] {0,-g,0};
     for(int i=0;i<3;i++)
     {
-        FnInG[i]=m*reqAccInG[i]+m*planAccInG[i]-ballG[i];
+        FnInG[i]=reqAccInG[i]+planAccInG[i]-ballG[i];
     }
     targetEul[0]=0;
     targetEul[1]=atan2(FnInG[2],FnInG[1]);
