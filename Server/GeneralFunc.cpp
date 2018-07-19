@@ -79,4 +79,39 @@ namespace GeneralFunc
     {
         return	sqrt(vec_in[0]*vec_in[0]+vec_in[1]*vec_in[1]+vec_in[2]*vec_in[2]);
     }
+
+
+}
+
+namespace Controller
+{
+    double ApplyPID(double err, double kp, double ki, double kd, double delta_t)
+    {
+        static double lstErr {0};
+        static double lstInter {0};
+
+        double output=kp*err+ki*(lstInter+err*delta_t)+kd*(err-lstErr)/delta_t;
+        lstErr=err;
+        lstInter=lstInter+err*delta_t;
+
+        return output;
+    }
+
+    double SndOrderLag(double startP, double input, double wn, double damping, double delta_t)
+    {
+        // 1/(s^2+k1*s+k2)
+        static double lstMid {0};
+        static double lstOut {0};
+
+        double k1=2*damping*wn;
+        double k2=wn*wn;
+
+        double midput=lstMid+(input-startP-k2*lstOut-k1*lstMid)*delta_t;
+        double output=lstOut+midput*delta_t;
+
+        lstMid=midput;
+        lstOut=output;
+
+        return startP+k2*output;
+    }
 }

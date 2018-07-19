@@ -19,4 +19,25 @@ struct BalanceParam final :public aris::server::GaitParamBase
 void parseBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
 int balance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
+
+enum BalanceState
+{
+    Init,
+    Balance,
+    Stop,
+};
+struct BallBalanceParam final:public aris::server::GaitParamBase{};
+
+class BallBalance
+{
+public:
+    static void parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    static int ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+private:
+    static BalanceState workState;
+    static int countIter;
+
+};
+
 #endif

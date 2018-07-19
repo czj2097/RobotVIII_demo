@@ -189,13 +189,111 @@ int balance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &par
 }
 
 /*
-<mb default="mb_param">
-    <mb_param type="group">
+<bl default="bl_param">
+    <bl_param type="group">
         <distance abbreviation="d" type="double" default="0.1"/>
         <totalCount abbreviation="t" type="int" default="1000"/>
         <n abbreviation="n" type="int" default="2"/>
-    </mb_param>
-</mb>
+    </bl_param>
+</bl>
 
-rs.addCmd("mb",parseMoveBody,moveBody);
+rs.addCmd("bl",parseBalance,balance);
  */
+
+
+BalanceState BallBalance::workState;
+int BallBalance::countIter;
+
+BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+{
+    BallBalanceParam param;
+
+    for(auto &i:params)
+    {
+        if(i.first=="init")
+        {
+            workState=BalanceState::Init;
+            msg.copyStruct(param);
+        }
+        else if(i.first=="balance")
+        {
+            workState=BalanceState::Balance;
+        }
+        else if(i.first=="stop")
+        {
+            workState=BalanceState::Stop;
+        }
+        else
+        {
+            std::cout<<"parse failed"<<std::endl;
+        }
+    }
+
+    std::cout<<"finished parse"<<std::endl;
+}
+
+BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+    auto &robot = static_cast<Robots::RobotBase &>(model);
+    auto &param = static_cast<const BallBalanceParam &>(param_in);
+
+    double fceInF[6];
+    double fceInB[6];
+    double fceInB_filtered[6];
+    static double fceMtx[10][6] {0};
+    ForceTask::forceInit(param.count,param.ruicong_data->at(0).force[0].fce,fceInF);
+    aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,fceInB);
+
+    for(int i=0;i<9;i++)
+    {
+        memcpy(*fceMtx+6*i,*fceMtx+6*i+6,6*sizeof(double));
+    }
+    memcpy(*fceMtx+6*9,fceInB,6*sizeof(double));
+    double fceSum[6] {0};
+    for(int i=0;i<6;i++)
+    {
+        for(int j=0;j<10;j++)
+        {
+            fceSum[i]+=fceMtx[j][i];
+        }
+        fceInB_filtered[i]=fceSum[i]/10;
+    }
+
+    double ballPosZ=-fceInB_filtered[3]/fceInB_filtered[1];
+    double ballPosX=fceInB_filtered[5]/fceInB_filtered[1];
+
+    static double beginPeb213[6];
+    static double beginPee[18];
+
+    double tarEul[3] {0};//213 eul
+    double actEul[3] {0};//213 eul
+
+    switch(workState)
+    {
+    case BalanceState::Init:
+        robot.GetPeb(beginPeb213,"213");
+        robot.GetPee(beginPee);
+        return 1;
+        break;
+
+    case BalanceState::Balance:
+        tarEul[1]=-Controller::ApplyPID(ballPosZ,3,0.5,3,0.001);
+        tarEul[2]=Controller::ApplyPID(ballPosX,3,0.5,3,0.001);
+
+        double f=1;
+        actEul[1]=Controller::SndOrderLag(0,tarEul[1],2*PI*f,1,0.001);
+        actEul[2]=Controller::SndOrderLag(0,tarEul[2],2*PI*f,1,0.001);
+        return 1;
+        break;
+
+    case BalanceState::Stop:
+
+
+        break;
+    default:
+        break;
+    }
+
+
+
+}
