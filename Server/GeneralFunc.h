@@ -7,13 +7,23 @@ namespace GeneralFunc
     void Get5thPolynomial(double startP, double startV, double startA, double endP, double endV, double endA, double endT, double *c);
     void inv3(double * mtrx,double * inv_mtrx);
     double norm(double *vec_in);
-
 }
 
 namespace Controller
 {
-    double ApplyPID(double err, double kp, double ki, double kd, double delta_t);
-    double SndOrderLag(double startP, double input, double wn, double damping, double delta_t);
+    struct lstPIDparam
+    {
+        double lstInt;
+        double lstErr;
+    };
+    double doPID(lstPIDparam &param, double err, double kp, double ki, double kd, double delta_t);
+
+    struct lstLagParam
+    {
+        double lstFstInt;
+        double lstSndInt;
+    };
+    double SndOrderLag(lstLagParam &param,double startP, double input, double wn, double damping, double delta_t);
 }
 
 #endif

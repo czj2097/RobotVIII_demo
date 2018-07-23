@@ -23,7 +23,7 @@ using namespace std;
 #include "GeneralFunc.h"
 #include "NonRTOptimalBCS.h"
 #include "NonRTOptimalGCS.h"
-#include "RealTimeOptimal.h"
+#include "RTOptimal.h"
 
 
 int main(int argc, char *argv[])
@@ -110,9 +110,6 @@ int main(int argc, char *argv[])
 //    optimalgait.OutputData();
 //    optimalgait.GetNormalGait();
 //    optimalgait.GetEntireGait();
-
-    RTOptimal realtimegait;
-    realtimegait.screwInterpolationTraj();
 
     //FastWalk::JointSpaceWalk jointspacewalker;
     //FastWalk::FastWalkPY pyfastwalker;

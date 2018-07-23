@@ -5,6 +5,7 @@
 #include <Robot_Type_I.h>
 #include "GeneralFunc.h"
 #include "Move_Gait.h"
+#include "EmergencyStop.h"
 
 void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul);
 void GetReqAccInBFromFce(double *fce, double *reqAccInB);
@@ -37,7 +38,7 @@ public:
 private:
     static BalanceState workState;
     static int countIter;
-
+    static double GetAngleFromAcc(double acc);
 };
 
 #endif

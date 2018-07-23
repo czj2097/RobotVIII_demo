@@ -203,8 +203,25 @@ rs.addCmd("bl",parseBalance,balance);
 
 BalanceState BallBalance::workState;
 int BallBalance::countIter;
+double BallBalance::GetAngleFromAcc(double acc)
+{
+    const double g=9.80665;
+    const double angleLmt=10;//degree
+    double accLmt=g*sin(angleLmt/180*PI);
 
-BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    if(acc>accLmt)
+    {
+        acc=accLmt;
+    }
+    else if(acc<-accLmt)
+    {
+        acc=-accLmt;
+    }
+
+    return asin(acc/g);
+}
+
+void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 {
     BallBalanceParam param;
 
@@ -232,11 +249,15 @@ BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string
     std::cout<<"finished parse"<<std::endl;
 }
 
-BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 {
     auto &robot = static_cast<Robots::RobotBase &>(model);
     auto &param = static_cast<const BallBalanceParam &>(param_in);
 
+    EmergencyStop stoper;
+    stoper.doRecord(robot);
+
+    const double m {0.4};
     double fceInF[6];
     double fceInB[6];
     double fceInB_filtered[6];
@@ -264,36 +285,72 @@ BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanP
 
     static double beginPeb213[6];
     static double beginPee[18];
+    static Controller::lstPIDparam zPIDparam;
+    static Controller::lstPIDparam xPIDparam;
+    static Controller::lstLagParam zLagParam;
+    static Controller::lstLagParam xLagParam;
 
+    double tarAcc[3] {0};
     double tarEul[3] {0};//213 eul
     double actEul[3] {0};//213 eul
+    double f {2};
 
     switch(workState)
     {
     case BalanceState::Init:
         robot.GetPeb(beginPeb213,"213");
         robot.GetPee(beginPee);
+
+        zPIDparam.lstErr=ballPosZ;
+        zPIDparam.lstInt=0;
+        xPIDparam.lstErr=ballPosX;
+        xPIDparam.lstInt=0;
+
+        zLagParam.lstFstInt=0;
+        zLagParam.lstSndInt=0;
+        xLagParam.lstFstInt=0;
+        zLagParam.lstSndInt=0;
+
         return 1;
         break;
 
     case BalanceState::Balance:
-        tarEul[1]=-Controller::ApplyPID(ballPosZ,3,0.5,3,0.001);
-        tarEul[2]=Controller::ApplyPID(ballPosX,3,0.5,3,0.001);
+        tarAcc[2]=Controller::doPID(zPIDparam,ballPosZ,3,0.5,3,0.001);
+        tarAcc[0]=Controller::doPID(xPIDparam,ballPosX,3,0.5,3,0.001);
 
-        double f=1;
-        actEul[1]=Controller::SndOrderLag(0,tarEul[1],2*PI*f,1,0.001);
-        actEul[2]=Controller::SndOrderLag(0,tarEul[2],2*PI*f,1,0.001);
+        tarEul[1]=-GetAngleFromAcc(tarAcc[2]);
+        tarEul[2]=GetAngleFromAcc(tarAcc[0]);
+
+        actEul[1]=Controller::SndOrderLag(zLagParam,0,tarEul[1],2*PI*f,1,0.001);
+        actEul[2]=Controller::SndOrderLag(xLagParam,0,tarEul[2],2*PI*f,1,0.001);
+
+        beginPeb213[3+1]=actEul[1];
+        beginPeb213[3+2]=actEul[2];
+
+        robot.SetPeb(beginPeb213,"213");
+        robot.SetPee(beginPee);
         return 1;
         break;
 
     case BalanceState::Stop:
-
-
+        return stoper.stop(robot,param.count,3.2);
         break;
+
     default:
         break;
     }
 
-
-
+    return 0;
 }
+
+/*
+<bb default="bb_param">
+    <bb_param type="unique">
+        <init abbreviation="i"/>
+        <balance abbreviation="b"/>
+        <stop abbreviation="s"/>
+    </bb_param>
+</bb>
+
+rs.addCmd("bb",BallBalance::parseBallBalance,BallBalance::ballBalance);
+ */
