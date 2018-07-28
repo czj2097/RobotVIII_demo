@@ -4,6 +4,13 @@
 #include <cstddef>
 #include <cmath>
 
+/*
+LowpassFilter<6> filter;
+filter.Initialize();
+filter.SetCutFrequency(0.03,1000);
+filter.DoFilter(raw_data,data_filtered);
+*/
+
 template <size_t WIDTH>
 class LowpassFilter
 {
