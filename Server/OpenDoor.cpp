@@ -339,7 +339,7 @@ int OpenDoor::locateDoor(Robots::RobotBase &robot, int count)
             memcpy(*Location+6,point3,sizeof(double)*3);
 
             //calculate the plane of the door. ax+by+cz=1,(a,b,c) is the vertical vector of the plane
-            NormalGait::inv3(*Location,*invLocation);
+            GeneralFunc::inv3(*Location,*invLocation);
             aris::dynamic::s_dgemm(3,1,3,1,*invLocation,3,planeConst,1,1,planeVertical,1);
             aris::dynamic::s_inv_pm_dot_v3(*ODBeginPmb,planeVertical,planeVerticalInB);
 
@@ -392,7 +392,7 @@ void OpenDoor::GetAdjustD2HParam(Robots::RobotBase &robot)
     double planeYPR[3] {0};
 
     planeYPR[0]=atan(planeVerticalInB[0]/planeVerticalInB[2]);
-    planeYPR[1]=-asin(planeVerticalInB[1]/NormalGait::norm(planeVerticalInB));
+    planeYPR[1]=-asin(planeVerticalInB[1]/GeneralFunc::norm(planeVerticalInB));
     planeYPR[2]=0;
 
     //Set now param of now2start in ajustRobot
@@ -691,9 +691,9 @@ int OpenDoor::locateHandle(Robots::RobotBase &robot, int count)
             }
 
             double handleLocation[3];
-            handleLocation[2]=-NormalGait::norm(vector0);
-            handleLocation[0]=NormalGait::norm(vector1);
-            handleLocation[1]=-NormalGait::norm(vector2);
+            handleLocation[2]=-GeneralFunc::norm(vector0);
+            handleLocation[0]=GeneralFunc::norm(vector1);
+            handleLocation[1]=-GeneralFunc::norm(vector2);
             rt_printf("HandleLocate Finished! (%.4f,%.4f,%.4f,0,0,0) to PebRefer (%.4f,%.4f,%.4f,%.4f,%.4f,%.4f).\n",
                       handleLocation[0],handleLocation[1],handleLocation[2],handlePebRefer[0],handlePebRefer[1],
                       handlePebRefer[2],handlePebRefer[3],handlePebRefer[4],handlePebRefer[5]);

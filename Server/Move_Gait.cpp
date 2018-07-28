@@ -66,6 +66,25 @@ namespace NormalGait
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const MoveRotateParam &>(param_in);
 
+        /*****test and calibrate imu*****/
+        double peImuGrnd2BodyGrnd[6] {0,0,0,PI/6,-PI/2,0};
+        double pmImuGrnd2BodyGrnd[16];
+        double pmBody2Imu[16];
+        double peImu2ImuGrnd[6] {0};
+        peImu2ImuGrnd[3]=param.imu_data->at(0).euler[2];
+        peImu2ImuGrnd[4]=param.imu_data->at(0).euler[1];
+        peImu2ImuGrnd[5]=param.imu_data->at(0).euler[0];
+        double pmImu2ImuGrnd[16];
+        double bodyPe[6];//213
+        double bodyPm[16];
+        aris::dynamic::s_pe2pm(peImuGrnd2BodyGrnd,pmImuGrnd2BodyGrnd,"213");
+        aris::dynamic::s_pe2pm(peImu2ImuGrnd,pmImu2ImuGrnd,"321");
+        aris::dynamic::s_inv_pm(pmImuGrnd2BodyGrnd,pmBody2Imu);
+        aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
+        aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
+        printf("bodyPe:%f,%f,%f\n",bodyPe[3],bodyPe[4],bodyPe[5]);
+        /*************************************/
+
 		static double beginBodyPE213[6];
 		static double pEE[18];
 		if(param.count==0)
@@ -296,36 +315,6 @@ namespace NormalGait
 
 			fileGait.close();
 		});
-	}
-
-	void inv3(double * matrix,double * invmatrix)
-	{
-		double a1=matrix[0];
-		double b1=matrix[1];
-		double c1=matrix[2];
-		double a2=matrix[3];
-		double b2=matrix[4];
-		double c2=matrix[5];
-		double a3=matrix[6];
-		double b3=matrix[7];
-		double c3=matrix[8];
-
-		double value_matrix=a1*(b2*c3-c2*b3)-a2*(b1*c3-c1*b3)+a3*(b1*c2-c1*b2);
-
-		invmatrix[0]=(b2*c3-c2*b3)/value_matrix;
-		invmatrix[1]=(c1*b3-b1*c3)/value_matrix;
-		invmatrix[2]=(b1*c2-c1*b2)/value_matrix;
-		invmatrix[3]=(c2*a3-a2*c3)/value_matrix;
-		invmatrix[4]=(a1*c3-c1*a3)/value_matrix;
-		invmatrix[5]=(a2*c1-a1*c2)/value_matrix;
-		invmatrix[6]=(a2*b3-a3*b2)/value_matrix;
-		invmatrix[7]=(b1*a3-a1*b3)/value_matrix;
-		invmatrix[8]=(a1*b2-b1*a2)/value_matrix;
-	}
-
-	double norm(double * vector_in)
-	{
-		return	sqrt(vector_in[0]*vector_in[0]+vector_in[1]*vector_in[1]+vector_in[2]*vector_in[2]);
 	}
 
     void testWorkSpace()

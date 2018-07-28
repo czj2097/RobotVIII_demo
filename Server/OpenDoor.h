@@ -15,6 +15,7 @@
 #include "LowPassFilter.h"
 #include "Move_Gait.h"
 #include "EmergencyStop.h"
+#include "GeneralFunc.h"
 
 struct OpenDoorParam
 {

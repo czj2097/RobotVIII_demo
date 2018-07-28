@@ -12,3 +12,16 @@ Server/OpenDoor.h
 Server/LowPassFilter.h
 Server/EmergencyStop.cpp
 Server/EmergencyStop.h
+Server/Balance.cpp
+Server/Balance.h
+Server/EmergencyStop.cpp
+Server/EmergencyStop.h
+Server/GeneralFunc.cpp
+Server/GeneralFunc.h
+Server/LogReader.cpp
+Server/LowPassFilter.h
+Server/main.cpp
+Server/Move_Gait.cpp
+Server/Move_Gait.h
+Server/OpenDoor.cpp
+Server/OpenDoor.h
