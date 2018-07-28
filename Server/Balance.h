@@ -27,18 +27,32 @@ enum BalanceState
     Balance,
     Stop,
 };
-struct BallBalanceParam final:public aris::server::GaitParamBase{};
+struct BallBalanceParam
+{
+    double fceInB[6];
+    double fceInB_filtered[6];
+    double bodyPos[3];
+    double ballPos[2];
+    double tarAcc[2];
+    double tarEul[2];
+    double actEul[2];
+    double imuEul[2];
+};
 
 class BallBalance
 {
 public:
     static void parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     static int ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+    static void recordData();
 
 private:
     static BalanceState workState;
     static int countIter;
     static double GetAngleFromAcc(double acc);
+
+    static Pipe<BallBalanceParam> bbPipe;
+    static std::thread bbThread;
 };
 
 #endif

@@ -1,5 +1,6 @@
 #include "Balance.h"
 #include "rtdk.h"
+#include "LowPassFilter.h"
 
 void GetReqAccInBFromFce(double *fce, double *reqAccInB)
 {
@@ -203,6 +204,10 @@ rs.addCmd("bl",parseBalance,balance);
 
 BalanceState BallBalance::workState;
 int BallBalance::countIter;
+Pipe<BallBalanceParam> BallBalance::bbPipe(true);
+std::thread BallBalance::bbThread;
+
+
 double BallBalance::GetAngleFromAcc(double acc)
 {
     const double g=9.80665;
@@ -223,7 +228,7 @@ double BallBalance::GetAngleFromAcc(double acc)
 
 void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 {
-    BallBalanceParam param;
+    aris::server::GaitParamBase param;
 
     for(auto &i:params)
     {
@@ -252,36 +257,56 @@ void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::s
 int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 {
     auto &robot = static_cast<Robots::RobotBase &>(model);
-    auto &param = static_cast<const BallBalanceParam &>(param_in);
+    auto &param = static_cast<const aris::server::GaitParamBase &>(param_in);
+
+    BallBalanceParam bbParam;
 
     EmergencyStop stoper;
     stoper.doRecord(robot);
 
-    const double m {0.4};
+    /*****IMU*****/
+    double peImuGrnd2BodyGrnd[6] {0,0,0,PI/6,-PI/2,0};//213
+    double pmImuGrnd2BodyGrnd[16];
+    double pmBody2Imu[16];
+    double peImu2ImuGrnd[6] {0};
+    peImu2ImuGrnd[3]=param.imu_data->at(0).euler[2];
+    peImu2ImuGrnd[4]=param.imu_data->at(0).euler[1];
+    peImu2ImuGrnd[5]=param.imu_data->at(0).euler[0];
+    double pmImu2ImuGrnd[16];
+    double bodyPe[6];//213
+    double bodyPm[16];
+    aris::dynamic::s_pe2pm(peImuGrnd2BodyGrnd,pmImuGrnd2BodyGrnd,"213");
+    aris::dynamic::s_pe2pm(peImu2ImuGrnd,pmImu2ImuGrnd,"321");
+    aris::dynamic::s_inv_pm(pmImuGrnd2BodyGrnd,pmBody2Imu);
+    aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
+    aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
+
+    const double m {400};
+    double mInG[3] {0,-m,0};
+    double mInB[3];
+    aris::dynamic::s_inv_pm_dot_v3(bodyPm,mInG,mInB);
+
+    /*****FSR*****/
     double fceInF[6];
     double fceInB[6];
-    double fceInB_filtered[6];
-    static double fceMtx[10][6] {0};
-    ForceTask::forceInit(param.count,param.ruicong_data->at(0).force[0].fce,fceInF);
+    ForceTask::forceInit(param.count,param.ruicong_data->at(0).force[6].fce,fceInF);
     aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,fceInB);
+    //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",fceInF[0],fceInF[1],fceInF[2],fceInB[0],fceInB[1],fceInB[2]);
 
-    for(int i=0;i<9;i++)
+    double fceInB_filtered[6];
+    static LowpassFilter<6> filter;
+    if(param.count==0)
     {
-        memcpy(*fceMtx+6*i,*fceMtx+6*i+6,6*sizeof(double));
+        filter.Initialize();
+        filter.SetCutFrequency(0.010,1000);
     }
-    memcpy(*fceMtx+6*9,fceInB,6*sizeof(double));
-    double fceSum[6] {0};
-    for(int i=0;i<6;i++)
-    {
-        for(int j=0;j<10;j++)
-        {
-            fceSum[i]+=fceMtx[j][i];
-        }
-        fceInB_filtered[i]=fceSum[i]/10;
-    }
+    filter.DoFilter(fceInB,fceInB_filtered);
 
-    double ballPosZ=-fceInB_filtered[3]/fceInB_filtered[1];
-    double ballPosX=fceInB_filtered[5]/fceInB_filtered[1];
+//    double ballPosZ=-fceInB_filtered[3]/fceInB_filtered[1];
+//    double ballPosX=fceInB_filtered[5]/fceInB_filtered[1];
+
+    double ballPosZ=-fceInB_filtered[3]/mInB[1];
+    double ballPosX=fceInB_filtered[5]/mInB[1];
 
     static double beginPeb213[6];
     static double beginPee[18];
@@ -290,10 +315,13 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     static Controller::lstLagParam zLagParam;
     static Controller::lstLagParam xLagParam;
 
-    double tarAcc[3] {0};
+    double tarAccZ {0};
+    double tarAccX {0};
+    double lagStartEul[3] {0};
     double tarEul[3] {0};//213 eul
     double actEul[3] {0};//213 eul
-    double f {2};
+    double fx { 0.8 };
+    double fz { 0.8 };
 
     switch(workState)
     {
@@ -309,26 +337,66 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
         zLagParam.lstFstInt=0;
         zLagParam.lstSndInt=0;
         xLagParam.lstFstInt=0;
-        zLagParam.lstSndInt=0;
+        xLagParam.lstSndInt=0;
+
+        countIter=param.count+1;
+	
+        memcpy(bbParam.fceInB,fceInB,6*sizeof(double));
+        memcpy(bbParam.fceInB_filtered,fceInB_filtered,6*sizeof(double));
+        memcpy(bbParam.bodyPos,bodyPe,3*sizeof(double));
+        bbParam.ballPos[0]=ballPosZ;
+        bbParam.ballPos[1]=ballPosX;
+        bbParam.tarAcc[0]=tarAccZ;
+        bbParam.tarAcc[1]=tarAccX;
+        bbParam.tarEul[0]=tarEul[1];
+        bbParam.tarEul[1]=tarEul[2];
+        bbParam.actEul[0]=tarEul[1];
+        bbParam.actEul[1]=tarEul[2];
+        bbParam.imuEul[0]=bodyPe[4];
+        bbParam.imuEul[1]=bodyPe[5];
+        bbPipe.sendToNrt(bbParam);
 
         return 1;
         break;
 
     case BalanceState::Balance:
-        tarAcc[2]=Controller::doPID(zPIDparam,ballPosZ,3,0.5,3,0.001);
-        tarAcc[0]=Controller::doPID(xPIDparam,ballPosX,3,0.5,3,0.001);
+        if((param.count-countIter)%1000==0)
+        {
+            memcpy(lagStartEul,bodyPe+3,3*sizeof(double));
+        }
 
-        tarEul[1]=-GetAngleFromAcc(tarAcc[2]);
-        tarEul[2]=GetAngleFromAcc(tarAcc[0]);
+        tarAccZ=Controller::doPID(zPIDparam,ballPosZ,3,0,3,0.001);
+        tarAccX=Controller::doPID(xPIDparam,ballPosX,3,0,3,0.001);
 
-        actEul[1]=Controller::SndOrderLag(zLagParam,0,tarEul[1],2*PI*f,1,0.001);
-        actEul[2]=Controller::SndOrderLag(xLagParam,0,tarEul[2],2*PI*f,1,0.001);
+        tarEul[1]=-GetAngleFromAcc(tarAccZ);
+        tarEul[2]=GetAngleFromAcc(tarAccX);
+
+        actEul[1]=Controller::SndOrderLag(zLagParam,0,tarEul[1]-lagStartEul[1],2*PI*fz,1,0.001);
+        actEul[2]=Controller::SndOrderLag(xLagParam,0,tarEul[2]-lagStartEul[2],2*PI*fx,1,0.001);
+
+        rt_printf("pos:%f, acc:%f, tarEul:%f, actEul:%f\n",ballPosZ,tarAccZ,tarEul[1],actEul[1]);
 
         beginPeb213[3+1]=actEul[1];
         beginPeb213[3+2]=actEul[2];
 
         robot.SetPeb(beginPeb213,"213");
         robot.SetPee(beginPee);
+
+        memcpy(bbParam.fceInB,fceInB,6*sizeof(double));
+        memcpy(bbParam.fceInB_filtered,fceInB_filtered,6*sizeof(double));
+        memcpy(bbParam.bodyPos,bodyPe,3*sizeof(double));
+        bbParam.ballPos[0]=ballPosZ;
+        bbParam.ballPos[1]=ballPosX;
+        bbParam.tarAcc[0]=tarAccZ;
+        bbParam.tarAcc[1]=tarAccX;
+        bbParam.tarEul[0]=tarEul[1];
+        bbParam.tarEul[1]=tarEul[2];
+        bbParam.actEul[0]=tarEul[1];
+        bbParam.actEul[1]=tarEul[2];
+        bbParam.imuEul[0]=bodyPe[4];
+        bbParam.imuEul[1]=bodyPe[5];
+        bbPipe.sendToNrt(bbParam);
+
         return 1;
         break;
 
@@ -343,6 +411,49 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     return 0;
 }
 
+void BallBalance::recordData()
+{
+    bbThread = std::thread([&]()
+    {
+        struct BallBalanceParam param;
+        static std::fstream fileGait;
+        std::string name = aris::core::logFileName();
+        name.replace(name.rfind("log.txt"), std::strlen("ballBalanceData.txt"), "ballBalanceData.txt");
+        fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
+
+        long long count = -1;
+        while (1)
+        {
+            bbPipe.recvInNrt(param);
+
+            fileGait << ++count << " ";
+            for (int i=0;i<6;i++)
+            {
+                fileGait << param.fceInB[i] << "  ";
+            }
+            for (int i=0;i<6;i++)
+            {
+                fileGait << param.fceInB_filtered[i] << "  ";
+            }
+            for (int i=0;i<3;i++)
+            {
+                fileGait << param.bodyPos[i] << "  ";
+            }
+            for(int i=0;i<2;i++)
+            {
+                fileGait << param.ballPos[i] << "  ";
+                fileGait << param.tarAcc[i] << "  ";
+                fileGait << param.tarEul[i] << "  ";
+                fileGait << param.actEul[i] << "  ";
+                fileGait << param.imuEul[i] << "  ";
+            }
+            fileGait << std::endl;
+        }
+
+        fileGait.close();
+    });
+}
+
 /*
 <bb default="bb_param">
     <bb_param type="unique">
@@ -353,4 +464,5 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
 </bb>
 
 rs.addCmd("bb",BallBalance::parseBallBalance,BallBalance::ballBalance);
+BallBalance::recordData();
  */

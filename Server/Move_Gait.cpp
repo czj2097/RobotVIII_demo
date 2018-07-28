@@ -2549,14 +2549,14 @@ namespace ForceTask
 		{
             std::fill_n(forceSum,6,0);
 		}
-		if(count<100)
-	{
-        for(int i=0;i<6;i++)
+        if(count<500)
         {
-            forceSum[i]+=forceRaw_in[i];
-            forceAvg[i]=forceSum[i]/(count+1);
+            for(int i=0;i<6;i++)
+            {
+                forceSum[i]+=forceRaw_in[i];
+                forceAvg[i]=forceSum[i]/(count+1);
+            }
         }
-	}
 
 		for(int i=0;i<6;i++)
 		{
