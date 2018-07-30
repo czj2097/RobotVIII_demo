@@ -17,7 +17,7 @@ Pipe<FastWalk::outputParam> fastWalkPipe(true);
 
 namespace NormalGait
 {
-	void parseMoveWithRotate(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void parseMoveWithRotate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		MoveRotateParam param;
 
@@ -66,6 +66,23 @@ namespace NormalGait
     {
 		auto &robot = static_cast<Robots::RobotBase &>(model);
 		auto &param = static_cast<const MoveRotateParam &>(param_in);
+
+    double peImuGrnd2BodyGrnd[6] {0,0,0,PI/6,-PI/2,0};
+    double pmImuGrnd2BodyGrnd[16];
+    double pmBody2Imu[16];
+    double peImu2ImuGrnd[6] {0};
+    peImu2ImuGrnd[3]=param.imu_data->at(0).euler[2];
+    peImu2ImuGrnd[4]=param.imu_data->at(0).euler[1];
+    peImu2ImuGrnd[5]=param.imu_data->at(0).euler[0];
+    double pmImu2ImuGrnd[16];
+    double bodyPe[6];//213
+    double bodyPm[16];
+    aris::dynamic::s_pe2pm(peImuGrnd2BodyGrnd,pmImuGrnd2BodyGrnd,"213");
+    aris::dynamic::s_pe2pm(peImu2ImuGrnd,pmImu2ImuGrnd,"321");
+    aris::dynamic::s_inv_pm(pmImuGrnd2BodyGrnd,pmBody2Imu);
+    aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
+    aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
+    printf("bodyPe:%f,%f,%f\n",bodyPe[3],bodyPe[4],bodyPe[5]);
 
 		static double beginBodyPE213[6];
 		static double pEE[18];
@@ -2302,7 +2319,7 @@ namespace FastWalk
 	FastWalkPY::~FastWalkPY()
 	{
 	}
-	void FastWalkPY::parseFastWalkByPY(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void FastWalkPY::parseFastWalkByPY(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		FastWalkByPYParam param;
 
@@ -2549,14 +2566,14 @@ namespace ForceTask
 		{
             std::fill_n(forceSum,6,0);
 		}
-        if(count<500)
+		if(count<100)
+	{
+        for(int i=0;i<6;i++)
         {
-            for(int i=0;i<6;i++)
-            {
-                forceSum[i]+=forceRaw_in[i];
-                forceAvg[i]=forceSum[i]/(count+1);
-            }
+            forceSum[i]+=forceRaw_in[i];
+            forceAvg[i]=forceSum[i]/(count+1);
         }
+	}
 
 		for(int i=0;i<6;i++)
 		{
@@ -2638,7 +2655,7 @@ namespace ForceTask
     std::atomic_bool isLeft;
 	std::atomic_bool isConfirm;
 
-	void parseContinueMoveBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void parseContinueMoveBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		ContinueMoveParam param;
 
@@ -2682,7 +2699,7 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
-	void parseContinueMoveJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void parseContinueMoveJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		for(auto &i:params)
 		{
@@ -2879,7 +2896,7 @@ namespace ForceTask
 		}
 	}
 
-	void parseOpenDoorBegin(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void parseOpenDoorBegin(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		ContinueMoveParam param;
 
@@ -2925,7 +2942,7 @@ namespace ForceTask
 		std::cout<<"finished parse"<<std::endl;
 	}
 
-	void parseOpenDoorJudge(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void parseOpenDoorJudge(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		for(auto &i:params)
 		{
@@ -3761,7 +3778,7 @@ namespace ForceTask
 	{
 	}
 
-	void ForceWalk::parseForceWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+	void ForceWalk::parseForceWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 	{
 		ForceWalkParam param;
 
@@ -3900,7 +3917,7 @@ namespace ForceTask
         {
             if(legID==0 || legID==1)
             {
-                param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
+                //param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
                 for (int i=0;i<3;i++)
                 {
                     if(bodyEul213[i]>PI)

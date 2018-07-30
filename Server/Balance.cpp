@@ -228,14 +228,25 @@ double BallBalance::GetAngleFromAcc(double acc)
 
 void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
 {
-    aris::server::GaitParamBase param;
+    BalanceParam param;
 
     for(auto &i:params)
     {
-        if(i.first=="init")
+	if(i.first=="distance")
+        {
+            param.d=stod(i.second);
+        }
+        else if(i.first=="n")
+        {
+            param.n=stoi(i.second);
+        }
+        else if(i.first=="totalCount")
+        {
+            param.totalCount=stoi(i.second);
+        }
+        else if(i.first=="init")
         {
             workState=BalanceState::Init;
-            msg.copyStruct(param);
         }
         else if(i.first=="balance")
         {
@@ -250,14 +261,18 @@ void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::s
             std::cout<<"parse failed"<<std::endl;
         }
     }
-
+    if(workState==BalanceState::Init)
+    {
+	printf("totalCount=%d,n=%d,d=%f\n",param.totalCount,param.n,param.d);
+        msg.copyStruct(param);
+    }
     std::cout<<"finished parse"<<std::endl;
 }
 
 int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 {
     auto &robot = static_cast<Robots::RobotBase &>(model);
-    auto &param = static_cast<const aris::server::GaitParamBase &>(param_in);
+    auto &param = static_cast<const BalanceParam &>(param_in);
 
     BallBalanceParam bbParam;
 
@@ -310,11 +325,14 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
 
     static double beginPeb213[6];
     static double beginPee[18];
+    double realPeb213[6];
     static Controller::lstPIDparam zPIDparam;
     static Controller::lstPIDparam xPIDparam;
     static Controller::lstLagParam zLagParam;
     static Controller::lstLagParam xLagParam;
 
+    double t;
+    double c[6];
     double tarAccZ {0};
     double tarAccX {0};
     double lagStartEul[3] {0};
@@ -360,6 +378,42 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
         break;
 
     case BalanceState::Balance:
+        /*****pos*****/
+        if((param.count-countIter)%param.totalCount==0)
+    	{
+        	robot.GetPeb(beginPeb213,"213");
+        	robot.GetPee(beginPee);
+    	}
+        memcpy(realPeb213,beginPeb213,6*sizeof(double));
+
+        t=(double)((param.count-countIter)%param.totalCount)/param.totalCount;
+        if(param.count-countIter<2*param.n*param.totalCount)
+        {
+            if((param.count-countIter)/param.totalCount==0)
+            {
+                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-param.d,0,0,0.001*param.totalCount,c);
+            }
+            else if((param.count-countIter)/param.totalCount==2*param.n-1)
+            {
+                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+param.d,0,0,0.001*param.totalCount,c);
+            }
+            else if(((param.count-countIter)/param.totalCount)%2==0)
+            {
+                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-2*param.d,0,0,0.001*param.totalCount,c);
+            }
+            else
+            {
+                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+2*param.d,0,0,0.001*param.totalCount,c);
+            }
+            realPeb213[2]=c[0]*(1-t)*(1-t)*(1-t)*(1-t)*(1-t)
+                       +5*c[1]*(1-t)*(1-t)*(1-t)*(1-t)*t
+                      +10*c[2]*(1-t)*(1-t)*(1-t)*t*t
+                      +10*c[3]*(1-t)*(1-t)*t*t*t
+                       +5*c[4]*(1-t)*t*t*t*t
+                         +c[5]*t*t*t*t*t;
+        }
+
+        /*****eul*****/
         if((param.count-countIter)%1000==0)
         {
             memcpy(lagStartEul,bodyPe+3,3*sizeof(double));
@@ -374,12 +428,12 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
         actEul[1]=Controller::SndOrderLag(zLagParam,0,tarEul[1]-lagStartEul[1],2*PI*fz,1,0.001);
         actEul[2]=Controller::SndOrderLag(xLagParam,0,tarEul[2]-lagStartEul[2],2*PI*fx,1,0.001);
 
-        rt_printf("pos:%f, acc:%f, tarEul:%f, actEul:%f\n",ballPosZ,tarAccZ,tarEul[1],actEul[1]);
+        //rt_printf("pos:%f, acc:%f, tarEul:%f, actEul:%f\n",ballPosZ,tarAccZ,tarEul[1],actEul[1]);
 
-        beginPeb213[3+1]=actEul[1];
-        beginPeb213[3+2]=actEul[2];
+        realPeb213[3+1]=actEul[1];
+        realPeb213[3+2]=actEul[2];
 
-        robot.SetPeb(beginPeb213,"213");
+        robot.SetPeb(realPeb213,"213");
         robot.SetPee(beginPee);
 
         memcpy(bbParam.fceInB,fceInB,6*sizeof(double));
@@ -456,10 +510,15 @@ void BallBalance::recordData()
 
 /*
 <bb default="bb_param">
-    <bb_param type="unique">
-        <init abbreviation="i"/>
-        <balance abbreviation="b"/>
-        <stop abbreviation="s"/>
+        <bb_param type="group">
+            <state_param type="unique"/>
+                <init abbreviation="i"/>
+                <balance abbreviation="b"/>
+                <stop abbreviation="s"/>
+            </state_param>
+            <distance abbreviation="d" type="double" default="0.1"/>
+            <totalCount abbreviation="t" type="int" default="1000"/>
+            <n abbreviation="n" type="int" default="2"/>
     </bb_param>
 </bb>
 
