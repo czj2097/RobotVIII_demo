@@ -44,13 +44,18 @@ class BallBalance
 public:
     static void parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     static int ballBalance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+    static void bodyPosTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+    static void bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
     static void recordData();
 
 private:
+    static double realPeb213[6];
     static BalanceState workState;
     static int countIter;
     static double GetAngleFromAcc(double acc);
 
+    static BallBalanceParam bbParam;
     static Pipe<BallBalanceParam> bbPipe;
     static std::thread bbThread;
 };

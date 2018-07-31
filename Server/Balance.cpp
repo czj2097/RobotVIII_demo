@@ -201,7 +201,7 @@ int balance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &par
 rs.addCmd("bl",parseBalance,balance);
  */
 
-
+double BallBalance::realPeb213[6];
 BalanceState BallBalance::workState;
 int BallBalance::countIter;
 Pipe<BallBalanceParam> BallBalance::bbPipe(true);
@@ -224,6 +224,84 @@ double BallBalance::GetAngleFromAcc(double acc)
     }
 
     return asin(acc/g);
+}
+
+void BallBalance::bodyPosTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+    auto &robot = static_cast<Robots::RobotBase &>(model);
+    auto &param = static_cast<const BalanceParam &>(param_in);
+
+    double c[6];
+    double t=(double)((param.count-countIter)%param.totalCount)/param.totalCount;
+    if(param.count-countIter<2*param.n*param.totalCount)
+    {
+        if((param.count-countIter)/param.totalCount==0)
+        {
+            GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-param.d,0,0,0.001*param.totalCount,c);
+        }
+        else if((param.count-countIter)/param.totalCount==2*param.n-1)
+        {
+            GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+param.d,0,0,0.001*param.totalCount,c);
+        }
+        else if(((param.count-countIter)/param.totalCount)%2==0)
+        {
+            GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-2*param.d,0,0,0.001*param.totalCount,c);
+        }
+        else
+        {
+            GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+2*param.d,0,0,0.001*param.totalCount,c);
+        }
+        realPeb213[2]=c[0]*(1-t)*(1-t)*(1-t)*(1-t)*(1-t)
+                   +5*c[1]*(1-t)*(1-t)*(1-t)*(1-t)*t
+                  +10*c[2]*(1-t)*(1-t)*(1-t)*t*t
+                  +10*c[3]*(1-t)*(1-t)*t*t*t
+                   +5*c[4]*(1-t)*t*t*t*t
+                     +c[5]*t*t*t*t*t;
+    }
+}
+
+void BallBalance::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+    auto &robot = static_cast<Robots::RobotBase &>(model);
+    auto &param = static_cast<const BalanceParam &>(param_in);
+
+    static Controller::lstPIDparam zPIDparam;
+    static Controller::lstPIDparam xPIDparam;
+    static Controller::lstLagParam zLagParam;
+    static Controller::lstLagParam xLagParam;
+    double lagStartEul[2] {0};
+    double fx { 0.8 };
+    double fz { 0.8 };
+
+    if(param.count==countIter)
+    {
+        zPIDparam.lstErr=bbParam.ballPos[0];
+        zPIDparam.lstInt=0;
+        xPIDparam.lstErr=bbParam.ballPos[1];
+        xPIDparam.lstInt=0;
+
+        zLagParam.lstFstInt=0;
+        zLagParam.lstSndInt=0;
+        xLagParam.lstFstInt=0;
+        xLagParam.lstSndInt=0;
+    }
+    if((param.count-countIter)%1000==0)
+    {
+        lagStartEul[0]=bbParam.imuEul[0];
+        lagStartEul[1]=bbParam.imuEul[1];
+    }
+
+    bbParam.tarAcc[0]=Controller::doPID(zPIDparam,bbParam.ballPos[0],3,0,3,0.001);
+    bbParam.tarAcc[1]=Controller::doPID(xPIDparam,bbParam.ballPos[1],3,0,3,0.001);
+
+    bbParam.tarEul[0]=-GetAngleFromAcc(bbParam.tarAcc[0]);
+    bbParam.tarEul[1]=GetAngleFromAcc(bbParam.tarAcc[1]);
+
+    bbParam.actEul[0]=Controller::SndOrderLag(zLagParam,0,bbParam.tarEul[0]-lagStartEul[0],2*PI*fz,1,0.001);
+    bbParam.actEul[1]=Controller::SndOrderLag(xLagParam,0,bbParam.tarEul[1]-lagStartEul[1],2*PI*fx,1,0.001);
+
+    realPeb213[3+1]=bbParam.actEul[0];
+    realPeb213[3+2]=bbParam.actEul[1];
 }
 
 void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
@@ -274,8 +352,6 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     auto &robot = static_cast<Robots::RobotBase &>(model);
     auto &param = static_cast<const BalanceParam &>(param_in);
 
-    BallBalanceParam bbParam;
-
     EmergencyStop stoper;
     stoper.doRecord(robot);
 
@@ -295,6 +371,7 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     aris::dynamic::s_inv_pm(pmImuGrnd2BodyGrnd,pmBody2Imu);
     aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
     aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
+    memcpy(bbParam.imuEul,bodyPe+4,2*sizeof(double));
 
     const double m {400};
     double mInG[3] {0,-m,0};
@@ -303,43 +380,26 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
 
     /*****FSR*****/
     double fceInF[6];
-    double fceInB[6];
     ForceTask::forceInit(param.count,param.ruicong_data->at(0).force[6].fce,fceInF);
-    aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,fceInB);
-    //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",fceInF[0],fceInF[1],fceInF[2],fceInB[0],fceInB[1],fceInB[2]);
+    aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,bbParam.fceInB);
+    //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",fceInF[0],fceInF[1],fceInF[2],bbParam.fceInB[0],bbParam.fceInB[1],bbParam.fceInB[2]);
 
-    double fceInB_filtered[6];
     static LowpassFilter<6> filter;
     if(param.count==0)
     {
         filter.Initialize();
         filter.SetCutFrequency(0.010,1000);
     }
-    filter.DoFilter(fceInB,fceInB_filtered);
+    filter.DoFilter(bbParam.fceInB,bbParam.fceInB_filtered);
 
-//    double ballPosZ=-fceInB_filtered[3]/fceInB_filtered[1];
-//    double ballPosX=fceInB_filtered[5]/fceInB_filtered[1];
+//    bbParam.ballPos[0]=-bbParam.fceInB_filtered[3]/bbParam.fceInB_filtered[1];
+//    bbParam.ballPos[1]=bbParam.fceInB_filtered[5]/bbParam.fceInB_filtered[1];
 
-    double ballPosZ=-fceInB_filtered[3]/mInB[1];
-    double ballPosX=fceInB_filtered[5]/mInB[1];
+    bbParam.ballPos[0]=-bbParam.fceInB_filtered[3]/mInB[1];
+    bbParam.ballPos[1]=bbParam.fceInB_filtered[5]/mInB[1];
 
     static double beginPeb213[6];
     static double beginPee[18];
-    double realPeb213[6];
-    static Controller::lstPIDparam zPIDparam;
-    static Controller::lstPIDparam xPIDparam;
-    static Controller::lstLagParam zLagParam;
-    static Controller::lstLagParam xLagParam;
-
-    double t;
-    double c[6];
-    double tarAccZ {0};
-    double tarAccX {0};
-    double lagStartEul[3] {0};
-    double tarEul[3] {0};//213 eul
-    double actEul[3] {0};//213 eul
-    double fx { 0.8 };
-    double fz { 0.8 };
 
     switch(workState)
     {
@@ -347,108 +407,35 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
         robot.GetPeb(beginPeb213,"213");
         robot.GetPee(beginPee);
 
-        zPIDparam.lstErr=ballPosZ;
-        zPIDparam.lstInt=0;
-        xPIDparam.lstErr=ballPosX;
-        xPIDparam.lstInt=0;
-
-        zLagParam.lstFstInt=0;
-        zLagParam.lstSndInt=0;
-        xLagParam.lstFstInt=0;
-        xLagParam.lstSndInt=0;
-
         countIter=param.count+1;
 	
-        memcpy(bbParam.fceInB,fceInB,6*sizeof(double));
-        memcpy(bbParam.fceInB_filtered,fceInB_filtered,6*sizeof(double));
-        memcpy(bbParam.bodyPos,bodyPe,3*sizeof(double));
-        bbParam.ballPos[0]=ballPosZ;
-        bbParam.ballPos[1]=ballPosX;
-        bbParam.tarAcc[0]=tarAccZ;
-        bbParam.tarAcc[1]=tarAccX;
-        bbParam.tarEul[0]=tarEul[1];
-        bbParam.tarEul[1]=tarEul[2];
-        bbParam.actEul[0]=tarEul[1];
-        bbParam.actEul[1]=tarEul[2];
-        bbParam.imuEul[0]=bodyPe[4];
-        bbParam.imuEul[1]=bodyPe[5];
+        memcpy(bbParam.bodyPos,beginPeb213,3*sizeof(double));
+        std::fill_n(bbParam.tarAcc,2,0);
+        std::fill_n(bbParam.tarEul,2,0);
+        std::fill_n(bbParam.actEul,2,0);
         bbPipe.sendToNrt(bbParam);
 
         return 1;
         break;
 
     case BalanceState::Balance:
-        /*****pos*****/
         if((param.count-countIter)%param.totalCount==0)
-    	{
-        	robot.GetPeb(beginPeb213,"213");
-        	robot.GetPee(beginPee);
-    	}
+        {
+            robot.GetPeb(beginPeb213,"213");
+            robot.GetPee(beginPee);
+        }
         memcpy(realPeb213,beginPeb213,6*sizeof(double));
 
-        t=(double)((param.count-countIter)%param.totalCount)/param.totalCount;
-        if(param.count-countIter<2*param.n*param.totalCount)
-        {
-            if((param.count-countIter)/param.totalCount==0)
-            {
-                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-param.d,0,0,0.001*param.totalCount,c);
-            }
-            else if((param.count-countIter)/param.totalCount==2*param.n-1)
-            {
-                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+param.d,0,0,0.001*param.totalCount,c);
-            }
-            else if(((param.count-countIter)/param.totalCount)%2==0)
-            {
-                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-2*param.d,0,0,0.001*param.totalCount,c);
-            }
-            else
-            {
-                GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+2*param.d,0,0,0.001*param.totalCount,c);
-            }
-            realPeb213[2]=c[0]*(1-t)*(1-t)*(1-t)*(1-t)*(1-t)
-                       +5*c[1]*(1-t)*(1-t)*(1-t)*(1-t)*t
-                      +10*c[2]*(1-t)*(1-t)*(1-t)*t*t
-                      +10*c[3]*(1-t)*(1-t)*t*t*t
-                       +5*c[4]*(1-t)*t*t*t*t
-                         +c[5]*t*t*t*t*t;
-        }
+        /*****pos*****/
+        bodyPosTg(robot,param);
 
         /*****eul*****/
-        if((param.count-countIter)%1000==0)
-        {
-            memcpy(lagStartEul,bodyPe+3,3*sizeof(double));
-        }
-
-        tarAccZ=Controller::doPID(zPIDparam,ballPosZ,3,0,3,0.001);
-        tarAccX=Controller::doPID(xPIDparam,ballPosX,3,0,3,0.001);
-
-        tarEul[1]=-GetAngleFromAcc(tarAccZ);
-        tarEul[2]=GetAngleFromAcc(tarAccX);
-
-        actEul[1]=Controller::SndOrderLag(zLagParam,0,tarEul[1]-lagStartEul[1],2*PI*fz,1,0.001);
-        actEul[2]=Controller::SndOrderLag(xLagParam,0,tarEul[2]-lagStartEul[2],2*PI*fx,1,0.001);
-
-        //rt_printf("pos:%f, acc:%f, tarEul:%f, actEul:%f\n",ballPosZ,tarAccZ,tarEul[1],actEul[1]);
-
-        realPeb213[3+1]=actEul[1];
-        realPeb213[3+2]=actEul[2];
+        bodyEulTg(robot,param);
 
         robot.SetPeb(realPeb213,"213");
         robot.SetPee(beginPee);
 
-        memcpy(bbParam.fceInB,fceInB,6*sizeof(double));
-        memcpy(bbParam.fceInB_filtered,fceInB_filtered,6*sizeof(double));
-        memcpy(bbParam.bodyPos,bodyPe,3*sizeof(double));
-        bbParam.ballPos[0]=ballPosZ;
-        bbParam.ballPos[1]=ballPosX;
-        bbParam.tarAcc[0]=tarAccZ;
-        bbParam.tarAcc[1]=tarAccX;
-        bbParam.tarEul[0]=tarEul[1];
-        bbParam.tarEul[1]=tarEul[2];
-        bbParam.actEul[0]=tarEul[1];
-        bbParam.actEul[1]=tarEul[2];
-        bbParam.imuEul[0]=bodyPe[4];
-        bbParam.imuEul[1]=bodyPe[5];
+        memcpy(bbParam.bodyPos,realPeb213,3*sizeof(double));
         bbPipe.sendToNrt(bbParam);
 
         return 1;
