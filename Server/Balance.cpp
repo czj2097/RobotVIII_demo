@@ -681,7 +681,7 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
     aris::dynamic::s_inv_pm_dot_v3(bodyPm,mInG,mInB);
 
     /*****FSR*****/
-    memcpy(forceRaw+6*6,param.ruicong_data->at(0).force[6].fce,6*sizeof(double));
+    //memcpy(forceRaw+6*6,param.ruicong_data->at(0).force[6].fce,6*sizeof(double));
     BalanceWalk::forceInit(param.count,6);
     aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF+6*6,bwParam.fceInB);
     //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",forceInF[0],forceInF[1],forceInF[2],bwParam.fceInB[0],bwParam.fceInB[1],bwParam.fceInB[2]);
@@ -773,7 +773,7 @@ void BalanceWalk::swingLegTg(const aris::dynamic::PlanParamBase &param_in, int l
     //if((legID==1 || legID==4) && period_count>=(totalCount/2-100) && period_count<(totalCount/2+100))
     //rt_printf("count:%d,leg:%d,forceInF:%.4f\n",period_count,legID,forceInF[6*legID+2]);
 
-    const double delayTouch=asin(0/height);
+    const double delayTouch=asin(0.01/height);
     double s=-(PI/2+delayTouch/2)*cos(PI*(period_count+1)/totalCount)+PI/2+delayTouch/2;//0-PI
     swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
     swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2])/2*cos(s);
@@ -815,10 +815,17 @@ void BalanceWalk::followLegTg(const aris::dynamic::PlanParamBase &param_in, int 
         }
         decCount[i]=(int)(-followBeginVee[3*legID+i]/acc[i]*1000)+1;
     }
+    if(period_count==followBeginCount[legID] && (decCount[0]>totalCount-followBeginCount[legID] || decCount[1]>totalCount-followBeginCount[legID] || decCount[2]>totalCount-followBeginCount[legID]))
+    {
+        rt_printf("leg %d going to dec within count %d, %d, %d\n",legID,decCount[0],decCount[1],decCount[2]);
+        rt_printf("followBeginVee:%f, %f, %f\n",followBeginVee[3*legID],followBeginVee[3*legID+1],followBeginVee[3*legID+2]);
+    }
     if(period_count==followBeginCount[legID])
     {
-        rt_printf("leg %d going to dec within count %d, %d, %d",legID,decCount[0],decCount[1],decCount[2]);
-    }
+        rt_printf("followRecordPee:%f, %f, %f\n",followRecordPee[3*legID],followRecordPee[3*legID+1],followRecordPee[3*legID+2]);
+        rt_printf("followBeginPee:%f, %f, %f\n",followBeginPee[3*legID],followBeginPee[3*legID+1],followBeginPee[3*legID+2]);
+   }
+
     for(int i=0;i<3;i++)
     {
         acc[i]=-followBeginVee[3*legID+i]/(decCount[i]*0.001);
@@ -1009,13 +1016,13 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
                 filterCount[i]=0;
             }
 
-            if(param.count==filterCount[i]+pntsNum-1)
+            if(filterFlag[i]==true && param.count==filterCount[i]+pntsNum-1)
             {
                 robot.pLegs[i]->GetPee(followRecordPee+3*i,beginMak);
             }
-            if(filterCount[i]!=0 && param.count>(filterCount[i]+pntsNum-1))
+            if(filterFlag[i]==true && param.count>(filterCount[i]+pntsNum-1))
             {
-                rt_printf("leg %d detects force:%.4f, transfer into Follow at count %d\n",i,param.count);
+                rt_printf("leg %d detects force:%.4f, transfer into Follow at count %d\n",i,forceInF[6*i+2],param.count);
                 gaitPhase[i]=NormalGait::GaitPhase::Follow;
                 followFlag[i]=true;
                 robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
@@ -1031,6 +1038,7 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
         }
         if(gaitPhase[i]==NormalGait::GaitPhase::Stance && param.count%totalCount==0)
         {
+	    filterFlag[i]=false;
             if(followFlag[i]==false)
             {
                 robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
