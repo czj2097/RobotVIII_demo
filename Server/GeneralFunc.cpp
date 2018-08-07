@@ -1,5 +1,6 @@
 #include "GeneralFunc.h"
 #include <cmath>
+#include <algorithm>
 #include <stdio.h>
 
 namespace GeneralFunc
@@ -79,6 +80,29 @@ namespace GeneralFunc
     double norm(double *vec_in)
     {
         return	sqrt(vec_in[0]*vec_in[0]+vec_in[1]*vec_in[1]+vec_in[2]*vec_in[2]);
+    }
+
+    void forceInit(int count, const double* forceRaw_in, double* forceInF_out)
+    {
+        static double forceSum[6];
+        static double forceAvg[6] {0};
+        if(count==0)
+        {
+            std::fill_n(forceSum,6,0);
+        }
+        if(count<100)
+        {
+            for(int i=0;i<6;i++)
+            {
+                forceSum[i]+=forceRaw_in[i];
+                forceAvg[i]=forceSum[i]/(count+1);
+            }
+        }
+
+        for(int i=0;i<6;i++)
+        {
+            forceInF_out[i]=forceRaw_in[i]-forceAvg[i];
+        }
     }
 }
 

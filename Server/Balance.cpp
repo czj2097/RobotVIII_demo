@@ -2,39 +2,6 @@
 #include "rtdk.h"
 #include "LowPassFilter.h"
 
-void GetReqAccInBFromFce(double *fce, double *reqAccInB)
-{
-    static double lstDistX {0};
-    static double lstDistZ {0};
-
-    double ballDistX=fce[5]/fce[1];
-    double ballDistZ=-fce[3]/fce[1];
-
-    double ballVx=ballDistX-lstDistX;
-    double ballVz=ballDistZ-lstDistZ;
-
-    if(ballDistX==0)
-    {
-        reqAccInB[0]=0;
-    }
-    else
-    {
-        reqAccInB[0]=-ballVx*ballVx/(2*ballDistX);
-    }
-    reqAccInB[1]=0;
-    if(ballDistZ==0)
-    {
-        reqAccInB[2]=0;
-    }
-    else
-    {
-        reqAccInB[2]=-ballVz*ballVz/(2*ballDistZ);
-    }
-
-    lstDistX=ballDistX;
-    lstDistZ=ballDistZ;
-}
-
 void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul)
 {
     const double g=9.80665;
@@ -62,152 +29,13 @@ void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEu
 //    aris::dynamic::s_pm2pe(*Pmb,eul213,"213");
 }
 
-void parseBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
-{
-    BalanceParam param;
-
-    for(auto &i:params)
-    {
-        if(i.first=="distance")
-        {
-            param.d=stod(i.second);
-        }
-        else if(i.first=="n")
-        {
-            param.n=stoi(i.second);
-        }
-        else if(i.first=="totalCount")
-        {
-            param.totalCount=stoi(i.second);
-        }
-        else
-        {
-            std::cout<<"parse failed"<<std::endl;
-        }
-    }
-    param.preCount=120;
-
-    msg.copyStruct(param);
-
-    std::cout<<"finished parse"<<std::endl;
-}
-
-int balance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
-{
-    auto &robot = static_cast<Robots::RobotBase &>(model);
-    auto &param = static_cast<const BalanceParam &>(param_in);
-
-    static double beginPeb213[6];
-    static double beginPee[18];
-
-    if(param.count==0 || (param.count-param.preCount)%param.totalCount==0)
-    {
-        robot.GetPeb(beginPeb213,"213");
-        robot.GetPee(beginPee);
-    }
-
-    //fce init
-    double fceInF[6];
-    double fceInB[6];
-    double fceInB_filtered[6];
-    static double fceMtx[10][6] {0};
-    ForceTask::forceInit(param.count,param.ruicong_data->at(0).force[0].fce,fceInF);
-    aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,fceInB);
-
-    for(int i=0;i<9;i++)
-    {
-        memcpy(*fceMtx+6*i,*fceMtx+6*i+6,6*sizeof(double));
-    }
-    memcpy(*fceMtx+6*9,fceInB,6*sizeof(double));
-    double fceSum[6] {0};
-    for(int i=0;i<6;i++)
-    {
-        for(int j=0;j<10;j++)
-        {
-            fceSum[i]+=fceMtx[j][i];
-        }
-        fceInB_filtered[i]=fceSum[i]/10;
-    }
-
-    if(param.count<param.preCount)
-    {
-        robot.SetPeb(beginPeb213,"213");
-        robot.SetPee(beginPee);
-        return 1;
-    }
-
-    double realPeb213[6];
-    memcpy(realPeb213,beginPeb213,6*sizeof(double));
-    double t=(double)((param.count-param.preCount)%param.totalCount)/param.totalCount;
-    double c[6];
-    if((param.count-param.preCount)/param.totalCount==0)
-    {
-        GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-param.d,0,0,0.001*param.totalCount,c);
-    }
-    else if((param.count-param.preCount)/param.totalCount==2*param.n-1)
-    {
-        GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+param.d,0,0,0.001*param.totalCount,c);
-    }
-    else if(((param.count-param.preCount)/param.totalCount)%2==0)
-    {
-        GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]-2*param.d,0,0,0.001*param.totalCount,c);
-    }
-    else
-    {
-        GeneralFunc::Get5thPolynomial(beginPeb213[2],0,0,beginPeb213[2]+2*param.d,0,0,0.001*param.totalCount,c);
-    }
-    realPeb213[2]=c[0]*(1-t)*(1-t)*(1-t)*(1-t)*(1-t)
-               +5*c[1]*(1-t)*(1-t)*(1-t)*(1-t)*t
-              +10*c[2]*(1-t)*(1-t)*(1-t)*t*t
-              +10*c[3]*(1-t)*(1-t)*t*t*t
-               +5*c[4]*(1-t)*t*t*t*t
-                 +c[5]*t*t*t*t*t;
-
-    double fce[6] {0,1,0,0,0,0};
-    double reqAccInB[3] {0};
-    double reqAccInG[3] {0};
-    double lstPmb[4][4];
-    robot.GetPmb(*lstPmb);
-    GetReqAccInBFromFce(fce,reqAccInB);
-    aris::dynamic::s_pm_dot_v3(*lstPmb,reqAccInB,reqAccInG);
-    //rt_printf("reqAccInB:%f,%f,%f\n",reqAccInB[0],reqAccInB[1],reqAccInB[2]);
-    //rt_printf("reqAccInG:%f,%f,%f\n",reqAccInG[0],reqAccInG[1],reqAccInG[2]);
-
-    double planAccInG[3] {0};
-    planAccInG[2]=(20*c[0]-40*c[1]+20*c[2])*(1-t)*(1-t)*(1-t)
-                 +(60*c[1]-120*c[2]+60*c[3])*(1-t)*(1-t)*t
-                 +(60*c[2]-120*c[3]+60*c[4])*(1-t)*t*t
-                 +(20*c[3]-40*c[4]+20*c[5])*t*t*t;
-    rt_printf("planAcc:%f,%f,%f\n",planAccInG[0],planAccInG[1],planAccInG[2]);
-    GetTargetEulFromAcc(planAccInG,reqAccInG,realPeb213+3);
-
-    rt_printf("peb:%f,%f,%f,%f,%f,%f\n",realPeb213[0],realPeb213[1],realPeb213[2],realPeb213[3],realPeb213[4],realPeb213[5]);
-    //rt_printf("pee:%f,%f,%f,%f,%f,%f\n",beginPee[0],beginPee[1],beginPee[2],beginPee[3],beginPee[4],beginPee[5]);
-    robot.SetPeb(realPeb213,"213");
-    robot.SetPee(beginPee);
-
-    return 2*param.n*param.totalCount+param.preCount-param.count-1;
-}
-
-/*
-<bl default="bl_param">
-    <bl_param type="group">
-        <distance abbreviation="d" type="double" default="0.1"/>
-        <totalCount abbreviation="t" type="int" default="1000"/>
-        <n abbreviation="n" type="int" default="2"/>
-    </bl_param>
-</bl>
-
-rs.addCmd("bl",parseBalance,balance);
- */
 
 double BallBalance::realPeb213[6];
-BalanceState BallBalance::workState;
+BalanceWalkState BallBalance::workState;
 int BallBalance::countIter;
 BallBalanceParam BallBalance::bbParam;
 Pipe<BallBalanceParam> BallBalance::bbPipe(true);
 std::thread BallBalance::bbThread;
-
 
 double GetAngleFromAcc(double acc)
 {
@@ -294,8 +122,8 @@ void BallBalance::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
     }
     if((param.count-countIter)%1000==0)
     {
-        lagStartEul[0]=bbParam.imuEul[0];
-        lagStartEul[1]=bbParam.imuEul[1];
+        lagStartEul[0]=bbParam.imuEul[1];
+        lagStartEul[1]=bbParam.imuEul[2];
     }
 
     bbParam.tarAcc[0]=Controller::doPID(zPIDparam,bbParam.ballPos[0],3,0,3,0.001);
@@ -331,22 +159,22 @@ void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::s
         }
         else if(i.first=="init")
         {
-            workState=BalanceState::Init;
+            workState=BalanceWalkState::Init;
         }
         else if(i.first=="balance")
         {
-            workState=BalanceState::Balance;
+            workState=BalanceWalkState::Balance;
         }
         else if(i.first=="stop")
         {
-            workState=BalanceState::Stop;
+            workState=BalanceWalkState::Stop;
         }
         else
         {
             std::cout<<"parse failed"<<std::endl;
         }
     }
-    if(workState==BalanceState::Init)
+    if(workState==BalanceWalkState::Init)
     {
 	printf("totalCount=%d,n=%d,d=%f\n",param.totalCount,param.n,param.d);
         msg.copyStruct(param);
@@ -378,7 +206,7 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     aris::dynamic::s_inv_pm(pmImuGrnd2BodyGrnd,pmBody2Imu);
     aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
     aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
-    memcpy(bbParam.imuEul,bodyPe+4,2*sizeof(double));
+    memcpy(bbParam.imuEul,bodyPe+3,3*sizeof(double));
 
     const double m {400};
     double mInG[3] {0,-m,0};
@@ -387,7 +215,7 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
 
     /*****FSR*****/
     double fceInF[6];
-    ForceTask::forceInit(param.count,param.ruicong_data->at(0).force[6].fce,fceInF);
+    GeneralFunc::forceInit(param.count,param.ruicong_data->at(0).force[6].fce,fceInF);
     aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,bbParam.fceInB);
     //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",fceInF[0],fceInF[1],fceInF[2],bbParam.fceInB[0],bbParam.fceInB[1],bbParam.fceInB[2]);
 
@@ -410,7 +238,7 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
 
     switch(workState)
     {
-    case BalanceState::Init:
+    case BalanceWalkState::Init:
         robot.GetPeb(beginPeb213,"213");
         robot.GetPee(beginPee);
 
@@ -425,7 +253,7 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
         return 1;
         break;
 
-    case BalanceState::Balance:
+    case BalanceWalkState::Balance:
         if((param.count-countIter)%param.totalCount==0)
         {
             robot.GetPeb(beginPeb213,"213");
@@ -448,7 +276,7 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
         return 1;
         break;
 
-    case BalanceState::Stop:
+    case BalanceWalkState::Stop:
         return stoper.stop(robot,param.count,3.2);
         break;
 
@@ -503,6 +331,8 @@ void BallBalance::recordData()
 }
 
 /*
+{ 0,0,0,PI,PI/2,PI*3/2 }
+
 <bb default="bb_param">
         <bb_param type="group">
             <state_param type="unique"/>
@@ -530,7 +360,7 @@ double BalanceWalk::height_tmp;
 double BalanceWalk::alpha;
 double BalanceWalk::alpha_tmp;
 
-NormalGait::WalkState BalanceWalk::walkState;
+BalanceWalkState BalanceWalk::walkState;
 bool BalanceWalk::constFlag;
 double BalanceWalk::beginXVel;
 double BalanceWalk::endXVel;
@@ -541,7 +371,7 @@ double BalanceWalk::endOmega;
 
 double BalanceWalk::beginPeb[6];
 double BalanceWalk::pEB[6];
-NormalGait::GaitPhase BalanceWalk::gaitPhase[6];
+GaitPhase BalanceWalk::gaitPhase[6];
 double BalanceWalk::swingPee[18];
 double BalanceWalk::swingBeginPee[18];
 double BalanceWalk::swingEndPee[18];
@@ -586,22 +416,22 @@ void BalanceWalk::parseBalanceWalk(const std::string &cmd, const std::map<std::s
     {
         if(i.first=="init")
         {
-            walkState=NormalGait::WalkState::Init;
+            walkState=BalanceWalkState::Init;
             msg.copyStruct(param);
         }
         else if(i.first=="forwardAcc")
         {
             forwardAcc=stod(i.second);
-            walkState=NormalGait::WalkState::ForwardAcc;
+            walkState=BalanceWalkState::ForwardAcc;
         }
         else if(i.first=="betaAcc")
         {
             turnAcc=stod(i.second);
-            walkState=NormalGait::WalkState::TurnAcc;
+            walkState=BalanceWalkState::TurnAcc;
         }
         else if(i.first=="stop")
         {
-            walkState=NormalGait::WalkState::Stop;
+            walkState=BalanceWalkState::Stop;
         }
         else if(i.first=="totalCount")
         {
@@ -673,7 +503,7 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
     aris::dynamic::s_inv_pm(pmImuGrnd2BodyGrnd,pmBody2Imu);
     aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
     aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
-    memcpy(bwParam.imuEul,bodyPe+4,2*sizeof(double));
+    memcpy(bwParam.imuEul,bodyPe+3,3*sizeof(double));
 
     const double m {400};
     double mInG[3] {0,-m,0};
@@ -726,10 +556,10 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
             xLagParam.lstFstInt=0;
             xLagParam.lstSndInt=0;
         }
-        if(param.count%totalCount==0)
+        if(param.count%totalCount==0)//must do this
         {
-            lagStartEul[0]=bwParam.imuEul[0];
-            lagStartEul[1]=bwParam.imuEul[1];
+            lagStartEul[0]=bwParam.imuEul[1];
+            lagStartEul[1]=bwParam.imuEul[2];
         }
 
         bwParam.tarAcc[0]=Controller::doPID(zPIDparam,bwParam.ballPos[0],3,0,3,0.001);
@@ -773,7 +603,7 @@ void BalanceWalk::swingLegTg(const aris::dynamic::PlanParamBase &param_in, int l
     //if((legID==1 || legID==4) && period_count>=(totalCount/2-100) && period_count<(totalCount/2+100))
     //rt_printf("count:%d,leg:%d,forceInF:%.4f\n",period_count,legID,forceInF[6*legID+2]);
 
-    const double delayTouch=asin(0.01/height);
+    const double delayTouch=asin(0.00/height);
     double s=-(PI/2+delayTouch/2)*cos(PI*(period_count+1)/totalCount)+PI/2+delayTouch/2;//0-PI
     swingPee[3*legID]=(swingBeginPee[3*legID]+swingEndPee[3*legID])/2-(swingEndPee[3*legID]-swingBeginPee[3*legID])/2*cos(s);
     swingPee[3*legID+2]=(swingBeginPee[3*legID+2]+swingEndPee[3*legID+2])/2-(swingEndPee[3*legID+2]-swingBeginPee[3*legID+2])/2*cos(s);
@@ -840,6 +670,77 @@ void BalanceWalk::followLegTg(const aris::dynamic::PlanParamBase &param_in, int 
         }
     }
 }
+/*
+void BalanceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
+{
+    auto &param = static_cast<const ForceWalkParam &>(param_in);
+
+    int period_count = param.count%totalCount;
+    double pe[6]{0,0,0,0,0,0};
+    double pm[4][4];
+    double stanceEul[3];
+    double stancePee_tmp[3];
+    memcpy(stancePee,stanceBeginPee,sizeof(stanceBeginPee));
+
+    if(period_count==0)
+    {
+        std::fill_n(sumEul,3,0);
+    }
+    else if(period_count>=(totalCount/4-50) && period_count<totalCount/4)
+    {
+        if(legID==0 || legID==1)
+        {
+            //param.imu_data->toEulBody2Ground(bodyEul213,PI,"213");
+            for (int i=0;i<3;i++)
+            {
+                if(bodyEul213[i]>PI)
+                {
+                    bodyEul213[i]-=2*PI;
+                }
+                sumEul[i]+=bodyEul213[i];
+                if(period_count==(totalCount/4-1))
+                {
+                    avgEul[i]=sumEul[i]/50;
+                    //inputEul[i]=inputEul_tmp[i];
+                    if(param.count/totalCount==0)
+                    {
+                        targetEul[i]=avgEul[i];
+                    }
+                }
+            }
+        }
+    }
+    else if(period_count>=totalCount/4 && period_count<3*totalCount/4)
+    {
+        stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH)/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
+
+        for(int i=0;i<3;i++)
+        {
+            stanceEul[i]=(avgEul[i]-targetEul[i]-inputEul[i])/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
+        }
+        memcpy(pe+3,stanceEul,sizeof(stanceEul));
+        aris::dynamic::s_pe2pm(pe,*pm,"213");
+        memcpy(stancePee_tmp,stancePee+3*legID,sizeof(stancePee_tmp));
+        aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tmp,stancePee+3*legID);
+    }
+    else if(period_count>=3*totalCount/4)
+    {
+        stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH);
+
+        for(int i=0;i<3;i++)
+        {
+            stanceEul[i]=avgEul[i]-targetEul[i]-inputEul[i];
+        }
+        memcpy(pe+3,stanceEul,sizeof(stanceEul));
+        aris::dynamic::s_pe2pm(pe,*pm,"213");
+        memcpy(stancePee_tmp,stancePee+3*legID,sizeof(stancePee_tmp));
+        aris::dynamic::s_pm_dot_pnt(*pm,stancePee_tmp,stancePee+3*legID);
+    }
+    if(period_count==totalCount-1)
+    {
+        //rt_printf("leg:%d, stancePee:%.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
+    }
+}*/
 
 void BalanceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
 {
@@ -847,15 +748,8 @@ void BalanceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int 
 
     int period_count = param.count%totalCount;
     memcpy(stancePee+3*legID,stanceBeginPee+3*legID,3*sizeof(double));
+    stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH)/2*(1-cos(PI*period_count/totalCount));
 
-    if(period_count>=totalCount/4 && period_count<3*totalCount/4)
-    {
-        stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH)/2*(1-cos(PI*(period_count-totalCount/4)/(totalCount/2)));
-    }
-    else if(period_count>=3*totalCount/4)
-    {
-        stancePee[3*legID+1]=stanceBeginPee[3*legID+1]+(planH-avgRealH);
-    }
     if(period_count==totalCount-1)
     {
         //rt_printf("leg:%d, stancePee:%.4f,%.4f,%.4f\n",legID,stancePee[3*legID],stancePee[3*legID+1],stancePee[3*legID+2]);
@@ -886,7 +780,8 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
         inputEul_tmp[0]=0;//set yaw const 0
         //totalCount=totalCount_tmp;//param.count%totalCount illegal at count 0
 
-        planH=initPee[1]-0.005;
+        //planH=initPee[1]-0.005;
+        planH=initPee[1]-0.000;
     }
 
     if(param.count%totalCount==0)
@@ -911,7 +806,7 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
         beginOmega=endOmega;
         switch(walkState)
         {
-        case NormalGait::WalkState::Init:
+        case BalanceWalkState::Init:
             beginXVel=0;
             endXVel=0;
             beginZVel=0;
@@ -921,21 +816,21 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
             constFlag=false;
             break;
 
-        case NormalGait::WalkState::ForwardAcc:
+        case BalanceWalkState::ForwardAcc:
             endXVel=beginXVel+sin(alpha)*forwardAcc*totalCount/1000;
             endZVel=beginZVel+cos(alpha)*forwardAcc*totalCount/1000;
             endOmega=beginOmega;
             constFlag=true;
             break;
 
-        case NormalGait::WalkState::TurnAcc:
+        case BalanceWalkState::TurnAcc:
             endXVel=beginXVel;
             endZVel=beginZVel;
             endOmega=beginOmega+turnAcc*totalCount/1000;
             constFlag=true;
             break;
 
-        case NormalGait::WalkState::Const:
+        case BalanceWalkState::Const:
             endXVel=beginXVel;
             endZVel=beginZVel;
             endOmega=beginOmega;
@@ -948,15 +843,15 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
     }
     if(param.count%totalCount==(totalCount-1))
     {
-        if(walkState==NormalGait::WalkState::ForwardAcc && constFlag==true)
+        if(walkState==BalanceWalkState::ForwardAcc && constFlag==true)
         {
-            walkState=NormalGait::WalkState::Const;
+            walkState=BalanceWalkState::Const;
             constFlag=false;
             rt_printf("ForwardAcc finished, the coming Const Vel is:(-x)%.4f,(-z)%.4f,Omega is:%.4f\n",endXVel,endZVel,endOmega);
         }
-        if(walkState==NormalGait::WalkState::TurnAcc && constFlag==true)
+        if(walkState==BalanceWalkState::TurnAcc && constFlag==true)
         {
-            walkState=NormalGait::WalkState::Const;
+            walkState=BalanceWalkState::Const;
             constFlag=false;
             rt_printf("TurnAcc finished, the coming Const Vel is:(-x)%.4f,(-z)%.4f,Omega is:%.4f\n",endXVel,endZVel,endOmega);
         }
@@ -967,8 +862,8 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
         double min{0};
         for (int i=0;i<3;i++)
         {
-            gaitPhase[2*i]=NormalGait::GaitPhase::Swing;
-            gaitPhase[2*i+1]=NormalGait::GaitPhase::Stance;
+            gaitPhase[2*i]=GaitPhase::Swing;
+            gaitPhase[2*i+1]=GaitPhase::Stance;
             robot.pLegs[2*i]->GetPee(swingBeginPee+6*i,beginMak);
             robot.pLegs[2*i+1]->GetPee(stanceBeginPee+6*i+3,beginMak);
             if(stanceBeginPee[6*i+4]<min)
@@ -984,8 +879,8 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
         double min{0};
         for (int i=0;i<3;i++)
         {
-            gaitPhase[2*i]=NormalGait::GaitPhase::Stance;
-            gaitPhase[2*i+1]=NormalGait::GaitPhase::Swing;
+            gaitPhase[2*i]=GaitPhase::Stance;
+            gaitPhase[2*i+1]=GaitPhase::Swing;
             robot.pLegs[2*i]->GetPee(stanceBeginPee+6*i,beginMak);
             robot.pLegs[2*i+1]->GetPee(swingBeginPee+6*i+3,beginMak);
             if(stanceBeginPee[6*i+1]<min)
@@ -999,7 +894,7 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
 
     for(int i=0;i<6;i++)
     {
-        if(gaitPhase[i]==NormalGait::GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false)
+        if(gaitPhase[i]==GaitPhase::Swing  && param.count%totalCount>(3*totalCount/4) && followFlag[i]==false)
         {
             //detect 5 points to confirm touching ground
             int pntsNum {5};
@@ -1023,7 +918,7 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
             if(filterFlag[i]==true && param.count>(filterCount[i]+pntsNum-1))
             {
                 rt_printf("leg %d detects force:%.4f, transfer into Follow at count %d\n",i,forceInF[6*i+2],param.count);
-                gaitPhase[i]=NormalGait::GaitPhase::Follow;
+                gaitPhase[i]=GaitPhase::Touch;
                 followFlag[i]=true;
                 robot.pLegs[i]->GetPee(followBeginPee+3*i,beginMak);
                 for(int j=0;j<3;j++)
@@ -1036,7 +931,7 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
                 filterCount[i]=0;
             }
         }
-        if(gaitPhase[i]==NormalGait::GaitPhase::Stance && param.count%totalCount==0)
+        if(gaitPhase[i]==GaitPhase::Stance && param.count%totalCount==0)
         {
 	    filterFlag[i]=false;
             if(followFlag[i]==false)
@@ -1064,17 +959,17 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
 
     for (int i=0;i<6;i++)
     {
-        if(gaitPhase[i]==NormalGait::GaitPhase::Swing)
+        if(gaitPhase[i]==GaitPhase::Swing)
         {
             swingLegTg(param,i);
             robot.pLegs[i]->SetPee(swingPee+3*i,beginMak);
         }
-        else if(gaitPhase[i]==NormalGait::GaitPhase::Follow)
+        else if(gaitPhase[i]==GaitPhase::Touch)
         {
             followLegTg(param,i);
             robot.pLegs[i]->SetPee(followPee+3*i,beginMak);
         }
-        else if(gaitPhase[i]==NormalGait::GaitPhase::Stance)
+        else if(gaitPhase[i]==GaitPhase::Stance)
         {
             stanceLegTg(param,i);
             robot.pLegs[i]->SetPee(stancePee+3*i,beginMak);
@@ -1092,7 +987,7 @@ int BalanceWalk::balanceWalk(aris::dynamic::Model &model, const aris::dynamic::P
     robot.GetPee(bwParam.footPos,beginMak);
     bwPipe.sendToNrt(bwParam);
 
-    if(walkState==NormalGait::WalkState::Stop)
+    if(walkState==BalanceWalkState::Stop)
     {
         int ret=stoper.stop(robot,param.count,3.2);
         return ret;
@@ -1161,6 +1056,8 @@ void BalanceWalk::recordData()
 }
 
 /*
+{ 0,0,0,PI,PI/2,PI*3/2 }
+
 <bw>
     <bw_param type="group">
         <state_param type="unique">

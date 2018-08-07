@@ -2,13 +2,15 @@
 #define BALANCE_H
 
 #include <aris.h>
+#include <aris_control_pipe.h>
 #include <Robot_Type_I.h>
 #include "GeneralFunc.h"
-#include "Move_Gait.h"
+#include "NormalGait.h"
 #include "EmergencyStop.h"
 
+using namespace aris::control;
+
 void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul);
-void GetReqAccInBFromFce(double *fce, double *reqAccInB);
 double GetAngleFromAcc(double acc);
 
 struct BalanceParam final :public aris::server::GaitParamBase
@@ -18,16 +20,23 @@ struct BalanceParam final :public aris::server::GaitParamBase
     int n;
     double d;
 };
-void parseBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
-int balance(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
-
-enum BalanceState
+enum BalanceWalkState
 {
     Init,
     Balance,
+    ForwardAcc,
+    TurnAcc,
+    Const,
     Stop,
 };
+enum GaitPhase
+{
+    Swing,
+    Stance,
+    Touch,
+};
+
 struct BallBalanceParam
 {
     double fceInB[6];
@@ -52,7 +61,7 @@ public:
 
 private:
     static double realPeb213[6];
-    static BalanceState workState;
+    static BalanceWalkState workState;
     static int countIter;
 
     static BallBalanceParam bbParam;
@@ -82,7 +91,7 @@ private:
     static double alpha;
     static double alpha_tmp;
 
-    static NormalGait::WalkState walkState;
+    static BalanceWalkState walkState;
     static bool constFlag;
     static double beginXVel;
     static double endXVel;
@@ -93,7 +102,7 @@ private:
 
     static double beginPeb[6];
     static double pEB[6];
-    static NormalGait::GaitPhase gaitPhase[6];
+    static GaitPhase gaitPhase[6];
     static double swingPee[18];
     static double swingBeginPee[18];
     static double swingEndPee[18];

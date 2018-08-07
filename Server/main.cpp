@@ -21,6 +21,11 @@ using namespace std;
 
 #include "Move_Gait.h"
 #include "GeneralFunc.h"
+#include "NormalGait.h"
+
+#include "Balance.h"
+#include "OpenDoor.h"
+
 #include "NonRTOptimalBCS.h"
 #include "NonRTOptimalGCS.h"
 #include "RTOptimal.h"
@@ -151,8 +156,6 @@ int main(int argc, char *argv[])
 
     rs.addCmd("cmb",ForceTask::parseContinueMoveBegin,ForceTask::continueMove);
     rs.addCmd("cmj",ForceTask::parseContinueMoveJudge,ForceTask::continueMove);
-    rs.addCmd("odb",ForceTask::parseOpenDoorBegin,ForceTask::openDoor);
-    rs.addCmd("odj",ForceTask::parseOpenDoorJudge,ForceTask::openDoor);
     rs.addCmd("ffd",Robots::walkParse, ForceTask::forceForward);
 
     //rs.addCmd("jfw",jointspacewalker.parseJointSpaceFastWalk,jointspacewalker.jointSpaceFastWalk);

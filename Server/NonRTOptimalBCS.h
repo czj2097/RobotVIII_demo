@@ -94,7 +94,7 @@ namespace time_optimal
     {
     public:
         static int  fastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-        static void parseFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+        static void parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
         static bool GetScalingPath(Robots::WalkParam &param, int leg_id);
 
     private:

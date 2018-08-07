@@ -7,6 +7,7 @@ namespace GeneralFunc
     void Get5thPolynomial(double startP, double startV, double startA, double endP, double endV, double endA, double endT, double *c);
     void inv3(double * mtrx,double * inv_mtrx);
     double norm(double *vec_in);
+    void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
 }
 
 namespace Controller

@@ -1125,7 +1125,7 @@ namespace time_optimal
     double FastWalk::initTipPos[18];
     double FastWalk::swingPee_scale[3001][18];
 
-    void FastWalk::parseFastWalk(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+    void FastWalk::parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
     {
         Robots::WalkParam param;
 
