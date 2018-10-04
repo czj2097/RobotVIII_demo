@@ -13,13 +13,18 @@ public:
 
     void GetStanceLegParam(int count, int legID, double s);
     void GetStanceDsBound(int count);
+    void GetStanceDsBoundByNewton(int count);
     void GetStanceSwitchPoint();
     void GetStanceOptimalDsBySwitchPoint();
     void GetStanceOptimalDsByDirectNI();
+    void GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_b3, double s_b4);
     void GetStanceOptimalDsByMinorIteration();
+    void GetStanceOptimalDsByNewton();
+    void AnalyseStanceOptimalTime();
 
     void GetSwingLegParam(int count, int legID, double sw, double *pva_body);
     void GetSwingDsBound(int count, int legID);
+    void GetSwingDsBoundByNewton(int count, int legID);
     void GetSwingSwitchPoint(int legID);
     void GetSwingOptimalDsBySwitchPoint(int legID);
     void GetSwingOptimalDsByDirectNI(int legID);
@@ -40,6 +45,7 @@ private:
     void GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint);
     double GetStanceMaxDec(int count, double ds);
     double GetStanceMinAcc(int count, double ds);
+    void ApplyStanceExtraItegration();
 
     double GetSwingSwitchMaxDec(int switchID, double ds, int legID);
     double GetSwingSwitchMinAcc(int switchID, double ds, int legID);
@@ -47,8 +53,6 @@ private:
     void GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint);
     double GetSwingMaxDec(int count, double ds, int legID);
     double GetSwingMinAcc(int count, double ds, int legID);
-
-    void ApplyExtraItegration();
 
     Robots::RobotTypeI rbt;
 

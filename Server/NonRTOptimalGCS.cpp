@@ -234,9 +234,78 @@ void NonRTOptimalGCS::GetStanceDsBound(int count)
     ds_upBound_body[count]=std::min(ds_upBound_aLmt_body[count],ds_upBound_vLmt_body[count]);
 }
 
+void NonRTOptimalGCS::GetStanceDsBoundByNewton(int count)
+{
+    double ds0 {1e6};
+    double value0;
+    double ds1;
+    double value_up;
+    double value_low;
+    double slope;
+
+    int k {0};
+    value0=GetStanceMinAcc(count,ds0)-GetStanceMaxDec(count,ds0);
+    while (value0<0 && k<10)
+    {
+        k++;
+        ds0/=10;
+        value0=GetStanceMinAcc(count,ds0)-GetStanceMaxDec(count,ds0);
+    }
+    if(k==0)
+    {
+        printf("ds0=%f too small, please set it larger and try again!",ds0);
+        std::abort();
+    }
+    else
+    {
+        ds1=ds0*10;
+    }
+    //printf("ds0=%f,ds1=%f\n",ds0,ds1);
+
+    k=0;
+    value_low=-1;
+    while(value_low<=0 && k<50)
+    {
+        k++;
+        ds0=ds1;
+        value_low=GetStanceMinAcc(count,ds0-1e-3)-GetStanceMaxDec(count,ds0-1e-3);
+        value_up=GetStanceMinAcc(count,ds0+1e-3)-GetStanceMaxDec(count,ds0+1e-3);
+//        value0=GetStanceMinAcc(count,ds0)-GetStanceMaxDec(count,ds0);
+//        slope=(value_up-value_low)/2e-3;
+//        ds1=ds0-value0/slope;
+        ds1=(value_up*(ds0-1e-3)-value_low*(ds0+1e-3))/(value_up-value_low);
+    }
+    //printf("First Newton Iteration of StanceLeg stops at k=%d, value_low=%f, value_up=%f, ds0=%f, ds1=%f\n",k,value_low,value_up,ds0,ds1);
+
+    ds1=ds0;
+    k=0;
+    value_low=-1;
+    while(value_low<=0 && k<50)
+    {
+        k++;
+        ds0=ds1;
+        value_low=GetStanceMinAcc(count,ds0-1e-6)-GetStanceMaxDec(count,ds0-1e-6);
+        value_up=GetStanceMinAcc(count,ds0+1e-6)-GetStanceMaxDec(count,ds0+1e-6);
+//        value0=GetStanceMinAcc(count,ds0)-GetStanceMaxDec(count,ds0);
+//        slope=(value_up-value_low)/2e-6;
+//        ds1=ds0-value0/slope;
+        ds1=(value_up*(ds0-1e-6)-value_low*(ds0+1e-6))/(value_up-value_low);
+    }
+    //if(count>1000 && count<=1100)
+    //printf("%d,Second Newton Iteration of StanceLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",count,k,value_low,value_up,ds0,ds1);
+
+    ds_upBound_aLmt_body[count]=ds1;
+    ds_upBound_vLmt_body[count]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+18));
+    ds_upBound_body[count]=std::min(ds_upBound_aLmt_body[count],ds_upBound_vLmt_body[count]);
+
+    dds_lowBound_body[count]=GetStanceMaxDec(count,ds_upBound_body[count]);
+    dds_upBound_body[count]=GetStanceMinAcc(count,ds_upBound_body[count]);
+}
+
 void NonRTOptimalGCS::GetStanceSwitchPoint()
 {
-    double slopedsBound_body[2201] {0};
+    double slopedsBound_for_body[2201] {0};
+    double slopedsBound_back_body[2201] {0};
     double paramdds0Point_body[2201] {0};
     int paramdds0Count_body {0};
 
@@ -258,34 +327,38 @@ void NonRTOptimalGCS::GetStanceSwitchPoint()
     switchPoint_body[switchCount_body]=0;
     switchType_body[switchCount_body]='b';
     switchCount_body++;
-    switchPoint_body[switchCount_body] = ds_upBound_body[count1]>ds_upBound_body[count1-1] ? (count1-1) : count1;
-    switchType_body[switchCount_body]='d';
-    switchCount_body++;
-    switchPoint_body[switchCount_body] = ds_upBound_body[count2]>ds_upBound_body[count2-1] ? (count2-1) : count2;
-    switchType_body[switchCount_body]='d';
-    switchCount_body++;
-    switchPoint_body[switchCount_body] = ds_upBound_body[count3]>ds_upBound_body[count3-1] ? (count3-1) : count3;
-    switchType_body[switchCount_body]='d';
-    switchCount_body++;
-    switchPoint_body[switchCount_body] = ds_upBound_body[count4]>ds_upBound_body[count4-1] ? (count4-1) : count4;
-    switchType_body[switchCount_body]='d';
-    switchCount_body++;
+//    switchPoint_body[switchCount_body]=count5/2;
+//    switchType_body[switchCount_body]='b';
+//    switchCount_body++;
     switchPoint_body[switchCount_body]=count5;
     switchType_body[switchCount_body]='b';
     switchCount_body++;
 
-    //calculate the slope of ds_upBound
-    slopedsBound_body[0]=(ds_upBound_body[1]-ds_upBound_body[0])/(s_b[1]-s_b[0]);
+    switchPoint_body[switchCount_body] = count1;//discontinuous form count1-1 to count1
+    switchType_body[switchCount_body]='d';
+    switchCount_body++;
+    switchPoint_body[switchCount_body] = count2;
+    switchType_body[switchCount_body]='d';
+    switchCount_body++;
+    switchPoint_body[switchCount_body] = count3;
+    switchType_body[switchCount_body]='d';
+    switchCount_body++;
+    switchPoint_body[switchCount_body] = count4;
+    switchType_body[switchCount_body]='d';
+    switchCount_body++;
+
+    //calculate the slope of ds_upBound, devided by t, not s
+    slopedsBound_for_body[0]=slopedsBound_back_body[0]=(ds_upBound_body[1]*ds_upBound_body[1]-ds_upBound_body[0]*ds_upBound_body[0])/2/(s_b[1]-s_b[0]);
     for(int i=1;i<count5;i++)
     {
-        slopedsBound_body[i]=( (ds_upBound_body[i+1]-ds_upBound_body[i])/(s_b[i+1]-s_b[i])
-                              +(ds_upBound_body[i]-ds_upBound_body[i-1])/(s_b[i]-s_b[i-1]) )/2;
+        slopedsBound_for_body[i]=(ds_upBound_body[i+1]*ds_upBound_body[i+1]-ds_upBound_body[i]*ds_upBound_body[i])/2/(s_b[i+1]-s_b[i]);
+        slopedsBound_back_body[i]=(ds_upBound_body[i]*ds_upBound_body[i]-ds_upBound_body[i-1]*ds_upBound_body[i-1])/2/(s_b[i]-s_b[i-1]);
     }
-    slopedsBound_body[count5]=(ds_upBound_body[count5]-ds_upBound_body[count5-1])/(s_b[count5]-s_b[count5-1]);
-    for(int i=0;i<count5+1;i++)
-    {
-        slopeDelta_body[i]=slopedsBound_body[i]-(dds_upBound_body[i]+dds_lowBound_body[i])/2;
-    }
+    slopedsBound_for_body[count5]=slopedsBound_back_body[count5]=(ds_upBound_body[count5]*ds_upBound_body[count5]-ds_upBound_body[count5-1]*ds_upBound_body[count5-1])/2/(s_b[count5]-s_b[count5-1]);
+//    for(int i=0;i<count5+1;i++)
+//    {
+//        slopeDelta_body[i]=slopedsBound_for_body[i]-dds_upBound_body[i];
+//    }
 
     for(int i=0;i<count5;i++)
     {
@@ -327,15 +400,19 @@ void NonRTOptimalGCS::GetStanceSwitchPoint()
             }
         }
 
-        //if((slopeDelta_body[i+1]*slopeDelta_body[i]<0 || slopeDelta_body[i]==0) && isParamdds0==false)
-        if(slopeDelta_body[i]<=0 && slopeDelta_body[i+1]>0 && isParamdds0==false
-           && i!=switchPoint_body[1] && (i+1)!=switchPoint_body[1]
-           && i!=switchPoint_body[2] && (i+1)!=switchPoint_body[2]
-           && i!=switchPoint_body[3] && (i+1)!=switchPoint_body[3]
-           && i!=switchPoint_body[4] && (i+1)!=switchPoint_body[4])
+        if(slopedsBound_for_body[i]<=dds_upBound_body[i] && slopedsBound_for_body[i+1]>dds_upBound_body[i+1]
+                && isParamdds0==false && i!=count1-1 && i!=count2-1  && i!=count3-1  && i!=count4-1)
         {
             tangentPoint_body[tangentCount_body]=i
-                    +fabs(slopeDelta_body[i])/(fabs(slopeDelta_body[i])+fabs(slopeDelta_body[i+1]));
+                    +fabs(slopedsBound_for_body[i]-dds_upBound_body[i])/(fabs(slopedsBound_for_body[i]-dds_upBound_body[i])+fabs(slopedsBound_for_body[i+1]-dds_upBound_body[i+1]));
+            tangentCount_body++;
+        }
+        //special switch point on vel bound curve
+        if(slopedsBound_back_body[i]<=dds_lowBound_body[i] && slopedsBound_back_body[i+1]>dds_lowBound_body[i+1]
+                && isParamdds0==false && i!=count1-1 && i!=count2-1 && i!=count3-1 && i!=count4-1)
+        {
+            tangentPoint_body[tangentCount_body]=i
+                    +fabs(slopedsBound_back_body[i]-dds_lowBound_body[i])/(fabs(slopedsBound_back_body[i]-dds_lowBound_body[i])+fabs(slopedsBound_back_body[i+1]-dds_lowBound_body[i+1]));
             tangentCount_body++;
         }
     }
@@ -793,7 +870,7 @@ void NonRTOptimalGCS::GetStanceOptimalDsBySwitchPoint()
     delete [] upPoint;
 }
 
-void NonRTOptimalGCS::ApplyExtraItegration()
+void NonRTOptimalGCS::ApplyStanceExtraItegration()
 {
     bool stopFlag {false};
     int k_st {0};
@@ -982,20 +1059,108 @@ void NonRTOptimalGCS::GetStanceOptimalDsByDirectNI()
     }
 }
 
+void NonRTOptimalGCS::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_b3, double s_b4)
+{
+    std::fill_n(ds_backward_body,count5+1,0);
+    std::fill_n(ds_forward_body,count5+1,0);
+    Tstep=0;
+    switchCount_body=0;
+    std::fill_n(switchPoint_body,count5+1,-1);
+    std::fill_n(switchType_body,count5+1,'0');
+    std::fill_n(switchScrewID_body,count5+1,-1);
+    std::fill_n(*isParamddsExact0_body,(count5+1)*18,-1);
+
+    for (int i=0;i<count5+1;i++)
+    {
+        std::fill_n(abs_param_dds,18,0);
+        if(i<count1)
+        {
+            s_b[i]=s_b1/count1*i;
+            for(int j=0;j<6;j++)
+            {
+                GetStanceLegParam(i,j,s_b[i]);
+            }
+        }
+        else if(i<count2)
+        {
+            s_b[i]=s_b1+(s_b2-s_b1)/(count2-count1)*(i-count1);
+            for(int j=0;j<3;j++)
+            {
+                GetStanceLegParam(i,2*j+1,s_b[i]);//135
+            }
+        }
+        else if(i<count5/2)
+        {
+            s_b[i]=s_b2+(0.5-s_b2)/(count5/2-count2)*(i-count2);
+            for(int j=0;j<6;j++)
+            {
+                GetStanceLegParam(i,j,s_b[i]);
+            }
+        }
+        else if(i<count3)
+        {
+            s_b[i]=0.5+(s_b3-0.5)/(count3-count5/2)*(i-count5/2);
+            for(int j=0;j<6;j++)
+            {
+                GetStanceLegParam(i,j,s_b[i]);
+            }
+        }
+        else if(i<count4)
+        {
+            s_b[i]=s_b3+(s_b4-s_b3)/(count4-count3)*(i-count3);
+            for(int j=0;j<3;j++)
+            {
+                GetStanceLegParam(i,2*j,s_b[i]);//024
+            }
+        }
+        else
+        {
+            s_b[i]=s_b4+(1-s_b4)/(count5-count4)*(i-count4);
+            for(int j=0;j<6;j++)
+            {
+                GetStanceLegParam(i,j,s_b[i]);
+            }
+        }
+
+        //GetStanceDsBound(i);
+        GetStanceDsBoundByNewton(i);
+
+    }
+
+    GetStanceSwitchPoint();
+    GetStanceOptimalDsBySwitchPoint();
+    ApplyStanceExtraItegration();
+    //GetStanceOptimalDsByDirectNI();
+
+    for(int i=0;i<count5+1;i++)
+    {
+        if(i!=0)
+        {
+            Tstep+=2*(s_b[i]-s_b[i-1])/(real_ds_body[i-1]+real_ds_body[i]);
+            timeArray_body[i]=Tstep;
+        }
+    }
+
+}
+
 void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
 {
-    double Tsb1 {0};
-    double Tsb2 {0};
-    double Tsb3 {0};
-    double Tsb4 {0};
+    double t1 {0};
+    double t2 {0};
+    double t3 {0};
+    double t4 {0};
     int k {0};
-    s_b1=0.5*dutyCycle-0.25;//(dutyCycle-0.5)/2;
-    s_b2=0.75-0.5*dutyCycle;//(dutyCycle-0.5)/2+(1-dutyCycle);
-    s_b3=0.5*dutyCycle+0.25;//(dutyCycle-0.5)/2+0.5;
-    s_b4=1.25-0.5*dutyCycle;//1-(dutyCycle-0.5)/2;
+//    s_b1=0.5*dutyCycle-0.25;/*(dutyCycle-0.5)/2*/
+//    s_b2=0.75-0.5*dutyCycle;/*(dutyCycle-0.5)/2+(1-dutyCycle)*/
+//    s_b3=0.5*dutyCycle+0.25;/*(dutyCycle-0.5)/2+0.5*/
+//    s_b4=1.25-0.5*dutyCycle;/*1-(dutyCycle-0.5)/2*/
+    s_b1=0;
+    s_b2=0.5;
+    s_b3=0.5;
+    s_b4=1;
 
-    while((fabs(Tsb1-(0.5*dutyCycle-0.25)*Tstep)>1e-4 || fabs(Tsb2-(0.75-0.5*dutyCycle)*Tstep)>1e-4 ||
-           fabs(Tsb3-(0.5*dutyCycle+0.25)*Tstep)>1e-4 || fabs(Tsb4-(1.25-0.5*dutyCycle)*Tstep)>1e-4) && k<30)
+    while((fabs(t1-(0.5*dutyCycle-0.25)*Tstep)>1e-6 || fabs(t2-(0.75-0.5*dutyCycle)*Tstep)>1e-6 ||
+           fabs(t3-(0.5*dutyCycle+0.25)*Tstep)>1e-6 || fabs(t4-(1.25-0.5*dutyCycle)*Tstep)>1e-6) && k<30)
     {
         if(k!=0)
         {
@@ -1019,6 +1184,115 @@ void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
                 }
             }
         }
+
+        GetStanceOptimalDsAtSb(s_b1, s_b2, s_b3, s_b4);
+
+        t1=timeArray_body[count1];
+        t2=timeArray_body[count2];
+        t3=timeArray_body[count3];
+        t4=timeArray_body[count4];
+        k++;
+
+        printf("Tsb1=%.6f,Tsb2=%.6f,Tsb3=%.6f,Tsb4=%.6f,Tstep=%.6f\n",t1,t2,t3,t4,Tstep);
+    }
+
+    printf("Minor iteration count: %d, s_b1=%.4f, s_b2=%.4f, s_b3=%.4f, s_b4=%.4f\n",k,s_b1,s_b2,s_b3,s_b4);
+    //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_body.txt",s_b,count5+1,1);
+}
+
+void NonRTOptimalGCS::GetStanceOptimalDsByNewton()
+{
+    double t1 {0};
+    double t2 {0};
+    double t3 {0};
+    double t4 {0};
+    double D1 {1};
+    double D2 {1};
+    double D3 {1};
+    double D4 {1};
+
+    int k {0};
+//    s_b1=0.5*dutyCycle-0.25;/*(dutyCycle-0.5)/2*/
+//    s_b2=0.75-0.5*dutyCycle;/*(dutyCycle-0.5)/2+(1-dutyCycle)*/
+//    s_b3=0.5*dutyCycle+0.25;/*(dutyCycle-0.5)/2+0.5*/
+//    s_b4=1.25-0.5*dutyCycle;/*1-(dutyCycle-0.5)/2*/
+    s_b1=0;
+    s_b2=0.5;
+    s_b3=0.5;
+    s_b4=1;
+    GetStanceOptimalDsAtSb(s_b1, s_b2, s_b3, s_b4);
+    t1=timeArray_body[count1]-(0.5*dutyCycle-0.25)*Tstep;
+    t2=timeArray_body[count2]-(0.75-0.5*dutyCycle)*Tstep;
+    t3=timeArray_body[count3]-(0.5*dutyCycle+0.25)*Tstep;
+    t4=timeArray_body[count4]-(1.25-0.5*dutyCycle)*Tstep;
+
+    while(fabs(t1)>1e-6 || fabs(t2)>1e-6 || fabs(t3)>1e-6 || fabs(t4)>1e-6 && k<30)
+    {
+        timeval tpstart,tpend;
+        float tused;
+        gettimeofday(&tpstart,NULL);
+
+        double d1=-D1*t1;
+        double d2=-D2*t2;
+        double d3=-D3*t3;
+        double d4=-D4*t4;
+        s_b1+=d1;
+        s_b2+=d2;
+        s_b3+=d3;
+        s_b4+=d4;
+        printf("\n\nsb:%f,%f,%f,%f\n",s_b1,s_b2,s_b3,s_b4);
+
+        GetStanceOptimalDsAtSb(s_b1, s_b2, s_b3, s_b4);
+        double t1_tmp=timeArray_body[count1]-(0.5*dutyCycle-0.25)*Tstep;
+        double t2_tmp=timeArray_body[count2]-(0.75-0.5*dutyCycle)*Tstep;
+        double t3_tmp=timeArray_body[count3]-(0.5*dutyCycle+0.25)*Tstep;
+        double t4_tmp=timeArray_body[count4]-(1.25-0.5*dutyCycle)*Tstep;
+
+        D1=d1/(t1_tmp-t1);
+        D2=d2/(t2_tmp-t2);
+        D3=d3/(t3_tmp-t3);
+        D4=d4/(t4_tmp-t4);
+        t1=t1_tmp;
+        t2=t2_tmp;
+        t3=t3_tmp;
+        t4=t4_tmp;
+        k++;
+
+        printf("Tsb1=%.7f,Tsb2=%.7f,Tsb3=%.7f,Tsb4=%.7f,Tstep=%.7f\n",t1,t2,t3,t4,Tstep);
+
+        gettimeofday(&tpend,NULL);
+        tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+        printf("UsedTime:%f\n",tused);
+    }
+
+    printf("Quasi-Newton Method count: %d, s_b1=%.4f, s_b2=%.4f, s_b3=%.4f, s_b4=%.4f\n",k,s_b1,s_b2,s_b3,s_b4);
+}
+
+void NonRTOptimalGCS::AnalyseStanceOptimalTime()
+{
+    double Tsb1 {0};
+    double Tsb2 {0};
+    double Tsb3 {0};
+    double Tsb4 {0};
+    double s_b1;//(dutyCycle-0.5)/2;
+    double s_b2;//(dutyCycle-0.5)/2+(1-dutyCycle);
+    double s_b3;//(dutyCycle-0.5)/2+0.5;
+    double s_b4;//1-(dutyCycle-0.5)/2;
+    double data[100][100];
+    double data1[100][100];
+    double data2[100][100];
+    int kLen {100};
+
+    int k1=20;
+    int k2=0;
+    //for(int k1=0;k1<kLen;k1++)
+    {
+        //for(int k2=0;k2<kLen;k2++)
+        {
+        s_b1=0.25/kLen*k1;
+        s_b2=0.25+0.25/kLen*(k2+1);
+        s_b3=0.5+s_b1;
+        s_b4=0.5+s_b2;
 
         std::fill_n(ds_backward_body,count5+1,0);
         std::fill_n(ds_forward_body,count5+1,0);
@@ -1048,9 +1322,17 @@ void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
                     GetStanceLegParam(i,2*j+1,s_b[i]);//135
                 }
             }
+            else if(i<count5/2)
+            {
+                s_b[i]=s_b2+(0.5-s_b2)/(count5/2-count2)*(i-count2);
+                for(int j=0;j<6;j++)
+                {
+                    GetStanceLegParam(i,j,s_b[i]);
+                }
+            }
             else if(i<count3)
             {
-                s_b[i]=s_b2+(s_b3-s_b2)/(count3-count2)*(i-count2);
+                s_b[i]=0.5+(s_b3-0.5)/(count3-count5/2)*(i-count5/2);
                 for(int j=0;j<6;j++)
                 {
                     GetStanceLegParam(i,j,s_b[i]);
@@ -1073,13 +1355,14 @@ void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
                 }
             }
 
-            GetStanceDsBound(i);
+            //GetStanceDsBound(i);
+            GetStanceDsBoundByNewton(i);
 
         }
 
         GetStanceSwitchPoint();
         GetStanceOptimalDsBySwitchPoint();
-        ApplyExtraItegration();
+        ApplyStanceExtraItegration();
         //GetStanceOptimalDsByDirectNI();
 
         for(int i=0;i<count5+1;i++)
@@ -1094,12 +1377,17 @@ void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
         Tsb2=timeArray_body[count2];
         Tsb3=timeArray_body[count3];
         Tsb4=timeArray_body[count4];
-        k++;
 
-        printf("Tsb1=%.4f,Tsb2=%.4f,Tsb3=%.4f,Tsb4=%.4f,Tstep=%.4f\n",Tsb1,Tsb2,Tsb3,Tsb4,Tstep);
+        data[k1][k2]=Tsb1/Tstep;
+        data1[k1][k2]=Tstep;
+        data2[k1][k2]=Tsb1;
+        }
     }
 
-    printf("Minor iteration count: %d, s_b1=%.4f, s_b2=%.4f, s_b3=%.4f, s_b4=%.4f\n",k,s_b1,s_b2,s_b3,s_b4);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeRatio.txt",*data,kLen,kLen);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Tstep.txt",*data1,kLen,kLen);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Tsb1.txt",*data2,kLen,kLen);
+    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_body.txt",s_b,count5+1,1);
 }
 
 void NonRTOptimalGCS::GetSwingLegParam(int count, int legID, double sw, double *pva_body)
@@ -1370,9 +1658,143 @@ void NonRTOptimalGCS::GetSwingDsBound(int count, int legID)
     ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
 }
 
+void NonRTOptimalGCS::GetSwingDsBoundByNewton(int count, int legID)
+{
+    int swCount = count<count3 ? (count-count1) : (count-count3);
+
+    //lowBound
+    double ds0 {0};
+    double value0;
+    double ds1;
+    double value_up;
+    double value_low;
+    double slope;
+
+    int k;
+    value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+    if(value0>=0)
+    {
+        ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID]=0;
+    }
+    else
+    {
+        k=0;
+        value_up=-1;
+        ds1=1e-3;
+        while(value_up<=0 && k<50)
+        {
+            k++;
+            ds0=ds1;
+            value_low=GetSwingMinAcc(count,ds0-1e-3,legID)-GetSwingMaxDec(count,ds0-1e-3,legID);
+            value_up=GetSwingMinAcc(count,ds0+1e-3,legID)-GetSwingMaxDec(count,ds0+1e-3,legID);
+//            value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+//            slope=(value_up-value_low)/2e-3;
+//            ds1=ds0-value0/slope;
+            ds1=(value_up*(ds0-1e-3)-value_low*(ds0+1e-3))/(value_up-value_low);
+        }
+        //printf("First Newton Iteration of lowBound for SwingLeg stops at k=%d, value_low=%f, value_up=%f, ds0=%f, ds1=%f\n",k,value_low,value_up,ds0,ds1);
+
+        ds1=ds0;
+        k=0;
+        while(value_up<=0 && k<50)
+        {
+            k++;
+            ds0=ds1;
+            value_low=GetSwingMinAcc(count,ds0-1e-6,legID)-GetSwingMaxDec(count,ds0-1e-6,legID);
+            value_up=GetSwingMinAcc(count,ds0+1e-6,legID)-GetSwingMaxDec(count,ds0+1e-6,legID);
+//            value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+//            slope=(value_up-value_low)/2e-6;
+//            ds1=ds0-value0/slope;
+            ds1=(value_up*(ds0-1e-6)-value_low*(ds0+1e-6))/(value_up-value_low);
+        }
+        //printf("Second Newton Iteration of lowBound for SwingLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",k,value_low,value_up,ds0,ds1);
+        ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID]=ds1;
+    }
+
+    //upBound
+    ds0=ds_lowBound[swCount][legID]+1e-3;//when ds_lowBound=0, ds0=ds1=0 all the time. use +1e-3 to avoid this.
+    value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+    k=0;
+    while (value0>=0 && k<10)
+    {
+        k++;
+        ds0*=10;
+        value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+    }
+    if(k==0)
+    {
+        printf("Error, ds_lowBound=%f not right, please check!",ds0);
+        std::abort();
+    }
+    else
+    {
+        ds1=ds0;
+    }
+    //printf("ds0=%f,ds1=%f,value0=%f\n",ds0,ds1,value0);
+
+    k=0;
+    value_low=-1;
+    while(value_low<=0 && k<50)
+    {
+        k++;
+        ds0=ds1;
+        value_low=GetSwingMinAcc(count,ds0-1e-3,legID)-GetSwingMaxDec(count,ds0-1e-3,legID);
+        value_up=GetSwingMinAcc(count,ds0+1e-3,legID)-GetSwingMaxDec(count,ds0+1e-3,legID);
+//        value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+//        slope=(value_up-value_low)/2e-3;
+//        ds1=ds0-value0/slope;
+        ds1=(value_up*(ds0-1e-3)-value_low*(ds0+1e-3))/(value_up-value_low);
+    }
+    //printf("First Newton iteration of upBound for SwingLeg stops at k=%d, value_low=%f, value_up=%f, ds0=%f, ds1=%f\n",k,value_low,value_up,ds0,ds1);
+
+    ds1=ds0;
+    k=0;
+    value_low=-1;
+    while(value_low<=0 && k<50)
+    {
+        k++;
+        ds0=ds1;
+        value_low=GetSwingMinAcc(count,ds0-1e-6,legID)-GetSwingMaxDec(count,ds0-1e-6,legID);
+        value_up=GetSwingMinAcc(count,ds0+1e-6,legID)-GetSwingMaxDec(count,ds0+1e-6,legID);
+//        value0=GetSwingMinAcc(count,ds0,legID)-GetSwingMaxDec(count,ds0,legID);
+//        slope=(value_up-value_low)/2e-6;
+//        ds1=ds0-value0/slope;
+        ds1=(value_up*(ds0-1e-6)-value_low*(ds0+1e-6))/(value_up-value_low);
+    }
+    //printf("Second Newton iteration of upBound for SwingLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",k,value_low,value_up,ds0,ds1);
+    ds_upBound_aLmt[swCount][legID]=ds1;
+
+    double vLmt_value[3] {0};
+    double Jvi_dot_vb[3] {0};
+    double vb_sw3[3] {0};
+    vb_sw3[2]=pva_b[count][1];
+    aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
+    for (int k=0;k<3;k++)
+    {
+        if(output_dds[count][3*legID+k]>0)
+        {
+            vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/output_dds[count][3*legID+k];
+        }
+        else if(output_dds[count][3*legID+k]<0)
+        {
+            vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/output_dds[count][3*legID+k];
+        }
+        else
+        {
+            printf("WARNING!!! param_dds equals zero!!! SwingLeg : %d \n",count);
+        }
+    }
+    ds_upBound_vLmt[swCount][legID]=*std::min_element(vLmt_value,vLmt_value+3);
+
+    ds_upBound[swCount][legID]=std::min(ds_upBound_aLmt[swCount][legID],ds_upBound_vLmt[swCount][legID]);
+    dds_lowBound[swCount][legID]=GetSwingMaxDec(count,ds_upBound[swCount][legID],legID);
+    dds_upBound[swCount][legID]=GetSwingMinAcc(count,ds_upBound[swCount][legID],legID);
+}
+
 void NonRTOptimalGCS::GetSwingSwitchPoint(int legID)
 {
-    double slopedsBound[901] {0};
+    double slopedsBound_for[901] {0};
+    double slopedsBound_back[901] {0};
     double paramdds0Point[901] {0};
     double tangentPoint[901] {0};
     int paramdds0Count {0};
@@ -1389,18 +1811,18 @@ void NonRTOptimalGCS::GetSwingSwitchPoint(int legID)
         paramdds0Point[i]=-1;
     }
 
-    slopedsBound[0]=(ds_upBound[1][legID]-ds_upBound[0][legID])/(s_w[1][legID]-s_w[0][legID]);
+    slopedsBound_for[0]=slopedsBound_back[0]=(ds_upBound[1][legID]*ds_upBound[1][legID]-ds_upBound[0][legID]*ds_upBound[0][legID])/2/(s_w[1][legID]-s_w[0][legID]);
     for(int i=1;i<swingCount;i++)
     {
-        slopedsBound[i]=( (ds_upBound[i+1][legID]-ds_upBound[i][legID])/(s_w[i+1][legID]-s_w[i][legID])
-                         +(ds_upBound[i][legID]-ds_upBound[i-1][legID])/(s_w[i][legID]-s_w[i-1][legID]) )/2;
+        slopedsBound_for[i]=(ds_upBound[i+1][legID]*ds_upBound[i+1][legID]-ds_upBound[i][legID]*ds_upBound[i][legID])/2/(s_w[i+1][legID]-s_w[i][legID]);
+        slopedsBound_back[i]=(ds_upBound[i][legID]*ds_upBound[i][legID]-ds_upBound[i-1][legID]*ds_upBound[i-1][legID])/2/(s_w[i][legID]-s_w[i-1][legID]);
     }
-    slopedsBound[swingCount]=(ds_upBound[swingCount][legID]-ds_upBound[swingCount-1][legID])/(s_w[swingCount][legID]-s_w[swingCount-1][legID]);
+    slopedsBound_for[swingCount]=slopedsBound_back[swingCount]=(ds_upBound[swingCount][legID]*ds_upBound[swingCount][legID]-ds_upBound[swingCount-1][legID]*ds_upBound[swingCount-1][legID])/2/(s_w[swingCount][legID]-s_w[swingCount-1][legID]);
 
-    for(int i=0;i<swingCount+1;i++)
-    {
-        slopeDelta[i][legID]=slopedsBound[i]-(dds_upBound[i][legID]+dds_lowBound[i][legID])/2;
-    }
+//    for(int i=0;i<swingCount+1;i++)
+//    {
+//        slopeDelta[i][legID]=slopedsBound_for[i]-dds_upBound[i][legID];
+//    }
 
     for(int i=0;i<swingCount;i++)
     {
@@ -1422,15 +1844,21 @@ void NonRTOptimalGCS::GetSwingSwitchPoint(int legID)
         }
 
         //if((slopeDelta[i+1][legID]*slopeDelta[i][legID]<0 || slopeDelta[i][legID]==0) && isParamdds0==false)
-        if(slopeDelta[i][legID]<=0 && slopeDelta[i+1][legID]>0 && isParamdds0==false)
+        if(slopedsBound_for[i]<=dds_upBound[i][legID] && slopedsBound_for[i+1]>dds_upBound[i+1][legID] && isParamdds0==false)
         {
             tangentPoint[tangentCount]=i
-                    +fabs(slopeDelta[i][legID])/(fabs(slopeDelta[i][legID])+fabs(slopeDelta[i+1][legID]));
+                    +fabs(slopedsBound_for[i]-dds_upBound[i][legID])/(fabs(slopedsBound_for[i]-dds_upBound[i][legID])+fabs(slopedsBound_for[i+1]-dds_upBound[i+1][legID]));
             tangentCount++;
-            if((fabs(slopeDelta[i][legID])+fabs(slopeDelta[i+1][legID]))==0)
+            if(fabs(slopedsBound_for[i]-dds_upBound[i][legID])+fabs(slopedsBound_for[i+1]-dds_upBound[i+1][legID])==0)
             {
                 printf("WARNING! tangentPoint!!!\n");
             }
+        }
+        if(slopedsBound_back[i]<=dds_lowBound[i][legID] && slopedsBound_back[i+1]>dds_lowBound[i+1][legID]  && isParamdds0==false)
+        {
+            tangentPoint[tangentCount]=i
+                    +fabs(slopedsBound_back[i]-dds_lowBound[i][legID])/(fabs(slopedsBound_back[i]-dds_lowBound[i][legID])+fabs(slopedsBound_back[i+1]-dds_lowBound[i+1][legID]));
+            tangentCount++;
         }
     }
 
@@ -2026,7 +2454,9 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
     float tused;
     gettimeofday(&tpstart,NULL);
 
-    GetStanceOptimalDsByMinorIteration();
+    //AnalyseStanceOptimalTime();
+    //GetStanceOptimalDsByMinorIteration();
+    GetStanceOptimalDsByNewton();
 
     //pva_b & s_w initialized here, and need to be updated during major iteration
     for (int i=0;i<count5+1;i++)
@@ -2053,10 +2483,15 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
     bool stopFlag {false};
     double Tstep_tmp {Tstep};
     double totalTime[6] {0};
-    double totalTime_last[6] {0};
+    double maxTime_last {0};
+    //double totalTime_last[6] {0};
     double real_ds_scale_tmp[901][6] {0};
     while(stopFlag==false && iterCount<=30)
     {
+        timeval tpstart1,tpend1;
+        float tused1;
+        gettimeofday(&tpstart1,NULL);
+
         printf("\n");
         iterCount++;
 
@@ -2076,7 +2511,8 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
             {
                 int count = (j%2==0) ? (i+count1) : (i+count3);
                 GetSwingLegParam(count,j,s_w[i][j],*pva_b+3*count);
-                GetSwingDsBound(count,j);
+                //GetSwingDsBound(count,j);
+                GetSwingDsBoundByNewton(count,j);
             }
 
             GetSwingSwitchPoint(j);
@@ -2096,14 +2532,19 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
                totalTime[0],totalTime[1],totalTime[2],totalTime[3],totalTime[4],totalTime[5],maxTime);
 
         stopFlag=true;
-        for(int i=0;i<6;i++)
+//        for(int i=0;i<6;i++)
+//        {
+//            //if((int)(totalTime_last[i]*1000)!=(int)(totalTime[i]*1000))
+//            if(fabs(totalTime_last[i]-totalTime[i])>1e-4)
+//            {
+//                stopFlag=false;
+//                //printf("totalTime_last=%.5f,totalTime=%.5f\n",totalTime_last[i],totalTime[i]);
+//            }
+//        }
+        if(fabs(maxTime_last-maxTime)>1e-4)
         {
-            //if((int)(totalTime_last[i]*1000)!=(int)(totalTime[i]*1000))
-            if(fabs(totalTime_last[i]-totalTime[i])>1e-4)
-            {
-                stopFlag=false;
-                //printf("totalTime_last=%.5f,totalTime=%.5f\n",totalTime_last[i],totalTime[i]);
-            }
+            stopFlag=false;
+            //printf("totalTime_last=%.5f,totalTime=%.5f\n",totalTime_last[i],totalTime[i]);
         }
 
         //update pva_b & s_w here
@@ -2179,22 +2620,15 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
             real_dds_scale[swingCount][i]=real_dds[swingCount][i]*totalTime[i]/maxTime*totalTime[i]/maxTime;
         }
 
-        for(int i=0;i<swingCount+1;i++)
-        {
-            for(int j=0;j<6;j++)
-            {
-                if(fabs(s_w_tmp[i][j]-s_w[i][j])>1e-4 || fabs(real_ds_scale_tmp[i][j]-real_ds_scale[i][j])>1e-4)
-                {
-                    stopFlag=false;
-                    //printf("s_w_tmp=%.5f,s_w=%.5f\n",s_w_tmp[i][j],s_w[i][j]);
-                }
-            }
-        }
-
         memcpy(*real_ds_scale_tmp,*real_ds_scale,(swingCount+1)*6*sizeof(double));
         memcpy(*s_w,*s_w_tmp,(swingCount+1)*6*sizeof(double));
         memcpy(*pva_b,*pva_b_tmp,(count5+1)*3*sizeof(double));
-        memcpy(totalTime_last,totalTime,6*sizeof(double));
+        maxTime_last=maxTime;
+        //memcpy(totalTime_last,totalTime,6*sizeof(double));
+
+        gettimeofday(&tpend1,NULL);
+        tused1=tpend1.tv_sec-tpstart1.tv_sec+(double)(tpend1.tv_usec-tpstart1.tv_usec)/1000000;
+        printf("UsedTime:%f\n",tused1);
     }
 
     printf("Iteration finished, iterCount=%d, maxTime=%.4f, Tstep_tmp:%.4f\n\n",iterCount,maxTime,Tstep_tmp);

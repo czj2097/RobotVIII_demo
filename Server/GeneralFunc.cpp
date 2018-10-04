@@ -104,6 +104,17 @@ namespace GeneralFunc
             forceInF_out[i]=forceRaw_in[i]-forceAvg[i];
         }
     }
+
+    bool FitCycle2D(double *pnts, int pntsNum, double *cycle)
+    {
+        if(pntsNum<3)
+        {
+            printf("Need more Points!\n");
+            return false;
+        }
+
+
+    }
 }
 
 namespace Controller

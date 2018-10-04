@@ -8,6 +8,7 @@ namespace GeneralFunc
     void inv3(double * mtrx,double * inv_mtrx);
     double norm(double *vec_in);
     void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
+    void FitCycle2D(double *pnts, int pntsNum, double *cycle);
 }
 
 namespace Controller
