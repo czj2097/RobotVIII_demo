@@ -53,6 +53,7 @@ private:
     void GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint);
     double GetSwingMaxDec(int count, double ds, int legID);
     double GetSwingMinAcc(int count, double ds, int legID);
+    void ApplySwingExtraIntegration(int legID);
 
     Robots::RobotTypeI rbt;
 

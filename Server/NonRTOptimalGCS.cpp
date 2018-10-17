@@ -291,8 +291,6 @@ void NonRTOptimalGCS::GetStanceDsBoundByNewton(int count)
 //        ds1=ds0-value0/slope;
         ds1=(value_up*(ds0-1e-6)-value_low*(ds0+1e-6))/(value_up-value_low);
     }
-    //if(count>1000 && count<=1100)
-    //printf("%d,Second Newton Iteration of StanceLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",count,k,value_low,value_up,ds0,ds1);
 
     ds_upBound_aLmt_body[count]=ds1;
     ds_upBound_vLmt_body[count]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+18));
@@ -300,6 +298,9 @@ void NonRTOptimalGCS::GetStanceDsBoundByNewton(int count)
 
     dds_lowBound_body[count]=GetStanceMaxDec(count,ds_upBound_body[count]);
     dds_upBound_body[count]=GetStanceMinAcc(count,ds_upBound_body[count]);
+
+    //if(count>1000 && count<=1100)
+    //printf("%d,Second Newton Iteration of StanceLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",count,k,value_low,value_up,ds0,ds1);
 }
 
 void NonRTOptimalGCS::GetStanceSwitchPoint()
@@ -1070,6 +1071,10 @@ void NonRTOptimalGCS::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_
     std::fill_n(switchScrewID_body,count5+1,-1);
     std::fill_n(*isParamddsExact0_body,(count5+1)*18,-1);
 
+    timeval tpstart,tpend;
+    float tused;
+    gettimeofday(&tpstart,NULL);
+
     for (int i=0;i<count5+1;i++)
     {
         std::fill_n(abs_param_dds,18,0);
@@ -1124,8 +1129,11 @@ void NonRTOptimalGCS::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_
 
         //GetStanceDsBound(i);
         GetStanceDsBoundByNewton(i);
-
     }
+
+    gettimeofday(&tpend,NULL);
+    tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
+    printf("UsedTime param:%f\n",tused);
 
     GetStanceSwitchPoint();
     GetStanceOptimalDsBySwitchPoint();
@@ -1262,7 +1270,7 @@ void NonRTOptimalGCS::GetStanceOptimalDsByNewton()
 
         gettimeofday(&tpend,NULL);
         tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
-        printf("UsedTime:%f\n",tused);
+        printf("UsedTime body:%f\n",tused);
     }
 
     printf("Quasi-Newton Method count: %d, s_b1=%.4f, s_b2=%.4f, s_b3=%.4f, s_b4=%.4f\n",k,s_b1,s_b2,s_b3,s_b4);
@@ -2059,8 +2067,10 @@ double NonRTOptimalGCS::GetSwingSwitchDsBound(int switchID, int legID, double *p
 void NonRTOptimalGCS::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint)
 {
     lowPoint[0]=-1;
-    lowPoint[switchCount[legID]-1]=0;
-    upPoint[0]=0;
+    //lowPoint[switchCount[legID]-1]=0;
+    lowPoint[switchCount[legID]-1]=ds_upBound[count2-count1][legID];
+    //upPoint[0]=0;
+    upPoint[0]=ds_upBound[0][legID];
     upPoint[switchCount[legID]-1]=-1;
 
     for(int i=1;i<switchCount[legID]-1;i++)
@@ -2313,6 +2323,56 @@ void NonRTOptimalGCS::GetSwingOptimalDsBySwitchPoint(int legID)
     delete [] upPoint;
 }
 
+void NonRTOptimalGCS::ApplySwingExtraIntegration(int legID)
+{
+    bool stopFlag {false};
+    int k_sw {0};
+    int k_sw_start {0};
+    double real_ds_tmp {0};
+
+    //forward
+    real_ds[0][legID]=0;
+    k_sw_start=k_sw=0;
+    stopFlag=false;
+    while(stopFlag==false)
+    {
+        int count=(legID%2==0) ? (k_sw+count1) : (k_sw+count3);
+        real_dds[k_sw][legID]=GetSwingMinAcc(count,real_ds[k_sw][legID],legID);
+        real_ds_tmp=sqrt(real_ds[k_sw][legID]*real_ds[k_sw][legID]+2*real_dds[k_sw][legID]*(s_w[k_sw+1][legID]-s_w[k_sw][legID]));
+
+        if(real_ds_tmp>real_ds[k_sw+1][legID])
+        {
+            stopFlag=true;
+        }
+        else
+        {
+            real_ds[k_sw+1][legID]=real_ds_tmp;
+            k_sw++;
+        }
+    }
+
+    //backward
+    real_ds[count2-count1][legID]=0;
+    k_sw_start=k_sw=count2-count1;
+    stopFlag=false;
+    while(stopFlag==false)
+    {
+        int count=(legID%2==0) ? (k_sw+count1) : (k_sw+count3);
+        real_dds[k_sw][legID]=GetSwingMaxDec(count,real_ds[k_sw][legID],legID);
+        real_ds_tmp=sqrt(real_ds[k_sw][legID]*real_ds[k_sw][legID]-2*real_dds[k_sw][legID]*(s_w[k_sw][legID]-s_w[k_sw-1][legID]));
+
+        if(real_ds_tmp>real_ds[k_sw-1][legID])
+        {
+            stopFlag=true;
+        }
+        else
+        {
+            real_ds[k_sw-1][legID]=real_ds_tmp;
+            k_sw--;
+        }
+    }
+}
+
 void NonRTOptimalGCS::GetSwingOptimalDsByDirectNI(int legID)
 {
     bool stopFlag {false};
@@ -2517,6 +2577,7 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
 
             GetSwingSwitchPoint(j);
             GetSwingOptimalDsBySwitchPoint(j);
+            ApplySwingExtraIntegration(j);
             //GetSwingOptimalDsByDirectNI(j);
 
             for (int i=1;i<swingCount+1;i++)
@@ -2628,7 +2689,7 @@ void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
 
         gettimeofday(&tpend1,NULL);
         tused1=tpend1.tv_sec-tpstart1.tv_sec+(double)(tpend1.tv_usec-tpstart1.tv_usec)/1000000;
-        printf("UsedTime:%f\n",tused1);
+        printf("UsedTime leg:%f\n",tused1);
     }
 
     printf("Iteration finished, iterCount=%d, maxTime=%.4f, Tstep_tmp:%.4f\n\n",iterCount,maxTime,Tstep_tmp);
