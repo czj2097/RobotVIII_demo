@@ -52,7 +52,22 @@ namespace GeneralFunc
         c[5]=endP;
     }
 
-    void inv3(double * mtrx,double * inv_mtrx)
+    void inv2(double *mtrx, double *inv_mtrx)
+    {
+        double a1=mtrx[0];
+        double b1=mtrx[1];
+        double a2=mtrx[2];
+        double b2=mtrx[3];
+
+        double value_mtrx=a1*b2-a2*b1;
+
+        inv_mtrx[0]=b2/value_mtrx;
+        inv_mtrx[1]=-b1/value_mtrx;
+        inv_mtrx[2]=-a2/value_mtrx;
+        inv_mtrx[3]=a1/value_mtrx;
+    }
+
+    void inv3(double *mtrx,double *inv_mtrx)
     {
         double a1=mtrx[0];
         double b1=mtrx[1];
@@ -105,7 +120,7 @@ namespace GeneralFunc
         }
     }
 
-    bool FitCycle2D(double *pnts, int pntsNum, double *cycle)
+    bool FitCycle2d(double *pnts, int pntsNum, double *cycle)
     {
         if(pntsNum<3)
         {
@@ -129,6 +144,11 @@ namespace Controller
         param.lstInt+=err*delta_t;
 
         return output;
+    }
+
+    double doPD(double err, double d_err, double kp, double kd)
+    {
+        return kp*err+kd*d_err;
     }
 
     double SndOrderLag(lstLagParam &param, double startP, double input, double wn, double damping, double delta_t)

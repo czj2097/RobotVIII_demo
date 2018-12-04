@@ -5,10 +5,11 @@ namespace GeneralFunc
 {
     void GetPmOfU(double angle, double *axis, double *pm);
     void Get5thPolynomial(double startP, double startV, double startA, double endP, double endV, double endA, double endT, double *c);
-    void inv3(double * mtrx,double * inv_mtrx);
+    void inv2(double *mtrx, double *inv_mtrx);
+    void inv3(double *mtrx, double *inv_mtrx);
     double norm(double *vec_in);
     void forceInit(int count, const double* forceRaw_in, double* forceInF_out);
-    void FitCycle2D(double *pnts, int pntsNum, double *cycle);
+    bool FitCycle2d(double *pnts, int pntsNum, double *cycle);
 }
 
 namespace Controller
@@ -19,6 +20,7 @@ namespace Controller
         double lstErr;
     };
     double doPID(lstPIDparam &param, double err, double kp, double ki, double kd, double delta_t);
+    double doPD(double err, double d_err, double kp, double kd);
 
     struct lstLagParam
     {

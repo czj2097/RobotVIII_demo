@@ -1,8 +1,10 @@
 #include "Balance.h"
 #include "rtdk.h"
 #include "LowPassFilter.h"
+#include "Calman2d.h"
+#include "Calman1d.h"
 
-void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul)
+void GetTarEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul)
 {
     const double g=9.80665;
     double FnInG[3];//Fn/m, direction is the same, m can be not taken into account
@@ -29,13 +31,67 @@ void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEu
 //    aris::dynamic::s_pm2pe(*Pmb,eul213,"213");
 }
 
+void GetTarEulFromAcc(double *reqAccInB, double *tarEul)
+{
+    const double g=9.80665;
+    double FnInG[3];//Fn/m, direction is the same, m can be not taken into account
+    double ballG[3] {0,-g,0};
+    for(int i=0;i<3;i++)
+    {
+        FnInG[i]=reqAccInB[i]-ballG[i];
+    }
+    tarEul[0]=0;
+    tarEul[1]=atan2(FnInG[2],FnInG[1]);
+    tarEul[2]=-asin(FnInG[0]/GeneralFunc::norm(FnInG));
+    for(int i=0;i<3;i++)
+    {
+        if(tarEul[i]>(10*PI/180))
+        {
+            tarEul[i]=10*PI/180;
+        }
+        if(tarEul[i]<(-10*PI/180))
+        {
+            tarEul[i]=-10*PI/180;
+        }
+    }
+    rt_printf("%f,%f,%f\n",tarEul[0],tarEul[1],tarEul[2]);
+}
 
-double BallBalance::realPeb213[6];
-BalanceWalkState BallBalance::workState;
-int BallBalance::countIter;
-BallBalanceParam BallBalance::bbParam;
-Pipe<BallBalanceParam> BallBalance::bbPipe(true);
-std::thread BallBalance::bbThread;
+void GetAccFromActEul(double *actAccInB, double *actEul)
+{
+    const double g=9.80665;
+    double ballG[3] {0,-g,0};
+    double actPm[16];
+    aris::dynamic::s_pe2pm(actEul,actPm,"213");
+    aris::dynamic::s_inv_pm_dot_v3(actPm,ballG,actAccInB);
+}
+
+void GetAlphaFromEul(double *eul, double *w, double *alpha)
+{
+    static double lst_u[3] {0};
+    static double lst_w[3] {0};
+    double cur_u[3] {eul[2],eul[1],eul[0]};//312
+    double cur_w[3] {0};
+    double d_u[3] {0};
+
+    double mtrx[9] {0, cos(cur_u[0]),sin(cur_u[0])*cos(cur_u[1]),
+                    0,-sin(cur_u[0]),cos(cur_u[0])*cos(cur_u[1]),
+                    1, 0            ,-sin(cur_u[1]) };
+    for(int i=0;i<3;i++)//312
+    {
+        d_u[i]=(cur_u[i]-lst_u[i])/0.001;
+    }
+    aris::dynamic::s_dgemm(3,1,3,1,mtrx,3,d_u,1,0,cur_w,1);
+
+    for(int i=0;i<3;i++)//123
+    {
+        w[i]=cur_w[i];
+        alpha[i]=(cur_w[i]-lst_w[i])/0.001;
+    }
+
+    memcpy(lst_u,cur_u,3*sizeof(double));
+    memcpy(lst_w,cur_w,3*sizeof(double));
+}
 
 double GetAngleFromAcc(double acc)
 {
@@ -55,6 +111,14 @@ double GetAngleFromAcc(double acc)
     return asin(acc/g);
 }
 
+double BallBalance::realPeb213[6];
+BalanceWalkState BallBalance::workState;
+int BallBalance::countIter;
+BallBalanceParam BallBalance::bbParam;
+Pipe<BallBalanceParam> BallBalance::bbPipe(true);
+std::thread BallBalance::bbThread;
+
+
 void BallBalance::bodyPosTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 {
     auto &robot = static_cast<Robots::RobotBase &>(model);
@@ -62,9 +126,9 @@ void BallBalance::bodyPosTg(aris::dynamic::Model &model, const aris::dynamic::Pl
 	
 	double beginPeb213[6];
 	if((param.count-countIter)%param.totalCount==0)
-        {
-            robot.GetPeb(beginPeb213,"213");
-        }
+    {
+        robot.GetPeb(beginPeb213,"213");
+    }
 
     double c[6];
     double t=(double)((param.count-countIter)%param.totalCount)/param.totalCount;
@@ -110,15 +174,17 @@ void BallBalance::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
 
     if(param.count==countIter)
     {
-        zPIDparam.lstErr=bbParam.ballPos[0];
+        zPIDparam.lstErr=bbParam.ballPos[0];//pos on z-axis
         zPIDparam.lstInt=0;
-        xPIDparam.lstErr=bbParam.ballPos[1];
+        xPIDparam.lstErr=bbParam.ballPos[1];//pos on x-axis
         xPIDparam.lstInt=0;
 
         zLagParam.lstFstInt=0;
         zLagParam.lstSndInt=0;
         xLagParam.lstFstInt=0;
         xLagParam.lstSndInt=0;
+
+        std::fill_n(bbParam.ballPos_filtered,2,0);
     }
     if((param.count-countIter)%1000==0)
     {
@@ -126,17 +192,122 @@ void BallBalance::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
         lagStartEul[1]=bbParam.imuEul[2];
     }
 
-    bbParam.tarAcc[0]=Controller::doPID(zPIDparam,bbParam.ballPos[0],3,0,3,0.001);
-    bbParam.tarAcc[1]=Controller::doPID(xPIDparam,bbParam.ballPos[1],3,0,3,0.001);
+    static double lst_calmanPos[2] {0};
+    bbParam.ballVel[0]=(bbParam.ballPos_filtered[0]-lst_calmanPos[0])/0.001;
+    bbParam.ballVel[1]=(bbParam.ballPos_filtered[1]-lst_calmanPos[1])/0.001;
+    memcpy(lst_calmanPos,bbParam.ballPos_filtered,2*sizeof(double));
+    doCalman2d();
+    //bbParam.tarAcc[0]=3*bbParam.ballPos_filtered[0]+3*bbParam.ballVel_filtered[0];
+    //bbParam.tarAcc[1]=3*bbParam.ballPos_filtered[1]+3*bbParam.ballVel_filtered[1];
 
-    bbParam.tarEul[0]=-GetAngleFromAcc(bbParam.tarAcc[0]);
-    bbParam.tarEul[1]=GetAngleFromAcc(bbParam.tarAcc[1]);
+    bbParam.tarAcc[0]=Controller::doPID(zPIDparam,bbParam.ballPos[0],3,0,3,0.001);//acc on z-axis
+    bbParam.tarAcc[1]=Controller::doPID(xPIDparam,bbParam.ballPos[1],3,0,3,0.001);//acc on x-axis
+
+    double ratio[2];//change from 1/3 to 1 as ballPos change from 0 to 0.2m;
+    for(int i=0;i<2;i++)
+    {
+        if(fabs(bbParam.ballPos[i])>0.01)
+        {
+            ratio[i]=1;
+        }
+        else
+        {
+            ratio[i]=0.3;
+        }
+        bbParam.tarAcc[i]*=ratio[i];
+    }
+
+//    bbParam.tarEul[0]=-GetAngleFromAcc(bbParam.tarAcc[0]);//angle around x-axis
+//    bbParam.tarEul[1]=GetAngleFromAcc(bbParam.tarAcc[1]);//angle around z-axis
+    double tarAcc_tmp[3] {bbParam.tarAcc[1],0,bbParam.tarAcc[0]};
+    double tarEul_tmp[3];
+    GetTarEulFromAcc(tarAcc_tmp,tarEul_tmp);
+    bbParam.tarEul[0]=-tarEul_tmp[1];
+    bbParam.tarEul[1]=-tarEul_tmp[2];
 
     bbParam.actEul[1]=Controller::SndOrderLag(zLagParam,0,bbParam.tarEul[0]-lagStartEul[0],2*PI*fz,1,0.001);
     bbParam.actEul[2]=Controller::SndOrderLag(xLagParam,0,bbParam.tarEul[1]-lagStartEul[1],2*PI*fx,1,0.001);
 
     realPeb213[3+1]=bbParam.actEul[1];
     realPeb213[3+2]=bbParam.actEul[2];
+}
+
+void BallBalance::doCalman1d()
+{
+    double acc[3];
+    GetAccFromActEul(acc,bbParam.imuEul);
+
+    const double delta_t {0.001};
+    static double lst_x1 {0};
+    static double lst_P1 {0};
+    static double lst_x2 {0};
+    static double lst_P2 {0};
+    static double pre_x1 {0};
+    static double pre_x2 {0};
+
+    double mtrx_F {1};
+    double input_u1 {delta_t*acc[0]};//vel on x
+    double input_u2 {delta_t*acc[2]};//vel on z
+    double noise_Q {9e-4*9e-4};
+    double mtrx_H {1};
+    double noise_R {0.4*0.4};
+    double input_z1 {bbParam.ballVel[1]};//vel on x
+    double input_z2 {bbParam.ballVel[0]};//vel on z
+
+    Calman1d filter1;
+    filter1.init(mtrx_F,noise_Q,mtrx_H,noise_R,input_u1,input_z1);
+    filter1.doFilter(lst_x1,pre_x1,lst_P1);
+
+    Calman1d filter2;
+    filter2.init(mtrx_F,noise_Q,mtrx_H,noise_R,input_u2,input_z2);
+    filter2.doFilter(lst_x2,pre_x2,lst_P2);
+
+    bbParam.predictVel[1]=pre_x1;
+    bbParam.predictVel[0]=pre_x2;
+    bbParam.ballVel_filtered[1]=lst_x1;//pos on x
+    bbParam.ballVel_filtered[0]=lst_x2;//pos on z
+}
+
+void BallBalance::doCalman2d()
+{
+    double acc[3];
+    GetAccFromActEul(acc,bbParam.imuEul);
+
+    const double delta_t {0.001};
+    static double lst_x1[2] {0};
+    static double lst_P1[2][2] {0};
+    static double lst_x2[2] {0};
+    static double lst_P2[2][2] {0};
+    static double pre_x1[2] {0};
+    static double pre_x2[2] {0};
+
+    double mtrx_F[2][2] {1, delta_t, 0, 1};
+    double input_u1[2] {delta_t*delta_t/2*acc[0], delta_t*acc[0]};//pos on x
+    double input_u2[2] {delta_t*delta_t/2*acc[2], delta_t*acc[2]};//pos on z
+    double noise_Q[2][2] {5e-4*5e-4, 0, 0, 9e-3*9e-3};
+    double mtrx_H[2][2] {1, 0, 0, 1};
+    double noise_R[2][2] {0.08*0.08, 0, 0, 0.4*0.4};
+    double input_z1[2] {bbParam.ballPos[1], bbParam.ballVel[1]};
+    double input_z2[2] {bbParam.ballPos[0], bbParam.ballVel[0]};
+
+    Calman2d filter1;
+    filter1.init(*mtrx_F,*noise_Q,*mtrx_H,*noise_R,input_u1,input_z1);
+    filter1.doFilter(lst_x1,pre_x1,*lst_P1);
+
+    Calman2d filter2;
+    filter2.init(*mtrx_F,*noise_Q,*mtrx_H,*noise_R,input_u2,input_z2);
+    filter2.doFilter(lst_x2,pre_x2,*lst_P2);
+
+
+    bbParam.ballPos_filtered[1]=lst_x1[0];//pos on x
+    bbParam.ballVel_filtered[1]=lst_x1[1];
+    bbParam.ballPos_filtered[0]=lst_x2[0];//pos on z
+    bbParam.ballVel_filtered[0]=lst_x2[1];
+
+    bbParam.predictPos[1]=pre_x1[0];
+    bbParam.predictVel[1]=pre_x1[1];
+    bbParam.predictPos[0]=pre_x2[0];
+    bbParam.predictVel[0]=pre_x2[1];
 }
 
 void BallBalance::parseBallBalance(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
@@ -207,6 +378,13 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
     aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
     memcpy(bbParam.imuEul,bodyPe+3,3*sizeof(double));
+    for(int i=0;i<3;i++)
+    {
+        if(bbParam.imuEul[i]>PI)
+        {
+            bbParam.imuEul[i]-=2*PI;
+        }
+    }
 
     const double m {400};
     double mInG[3] {0,-m,0};
@@ -218,6 +396,13 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
     GeneralFunc::forceInit(param.count,param.ruicong_data->at(0).force[6].fce,fceInF);
     aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),fceInF,bbParam.fceInB);
     //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",fceInF[0],fceInF[1],fceInF[2],bbParam.fceInB[0],bbParam.fceInB[1],bbParam.fceInB[2]);
+
+    //inertial force of the table
+//    double J=0.045238;
+//    GetAlphaFromEul(bbParam.actEul,bbParam.w,bbParam.alpha);
+//    memcpy(bbParam.fceInB_inertia,bbParam.fceInB,6*sizeof(double));
+//    bbParam.fceInB_inertia[3]-=J*bbParam.alpha[0];
+//    bbParam.fceInB_inertia[5]-=J*bbParam.alpha[2];
 
     static LowpassFilter<6> filter;
     if(param.count==0)
@@ -232,6 +417,16 @@ int BallBalance::ballBalance(aris::dynamic::Model &model, const aris::dynamic::P
 
     bbParam.ballPos[0]=-bbParam.fceInB_filtered[3]/mInB[1];
     bbParam.ballPos[1]=bbParam.fceInB_filtered[5]/mInB[1];
+
+    static LowpassFilter<6> filter2;
+    if(param.count==0)
+    {
+        filter2.Initialize();
+        filter2.SetCutFrequency(0.004,1000);
+    }
+    filter2.DoFilter(bbParam.fceInB,bbParam.fceInB_calman);
+    bbParam.ballPos_calman[0]=-bbParam.fceInB_calman[3]/mInB[1];
+    bbParam.ballPos_calman[1]=bbParam.fceInB_calman[5]/mInB[1];
 
     static double beginPeb213[6];
     static double beginPee[18];
@@ -307,10 +502,18 @@ void BallBalance::recordData()
             {
                 fileGait << param.fceInB[i] << "  ";
             }
+//            for (int i=0;i<6;i++)
+//            {
+//                fileGait << param.fceInB_inertia[i] << "  ";
+//            }
             for (int i=0;i<6;i++)
             {
                 fileGait << param.fceInB_filtered[i] << "  ";
             }
+//            for (int i=0;i<6;i++)
+//            {
+//                fileGait << param.fceInB_calman[i] << "  ";
+//            }
             for (int i=0;i<3;i++)
             {
                 fileGait << param.bodyPos[i] << "  ";
@@ -322,6 +525,15 @@ void BallBalance::recordData()
                 fileGait << param.tarEul[i] << "  ";
                 fileGait << param.actEul[i+1] << "  ";
                 fileGait << param.imuEul[i+1] << "  ";
+            }
+            for(int i=0;i<2;i++)
+            {
+                fileGait << param.ballPos_calman[i] << "  ";
+                fileGait << param.predictPos[i] << "  ";
+                fileGait << param.ballPos_filtered[i] << "  ";
+                fileGait << param.ballVel[i] << "  ";
+                fileGait << param.predictVel[i] << "  ";
+                fileGait << param.ballVel_filtered[i] << "  ";
             }
             fileGait << std::endl;
         }
@@ -466,7 +678,7 @@ void BalanceWalk::forceInit(int count,int legID)
 {
     if(count==0)
     {
-        std::fill(forceSum+6*legID,forceSum+6*legID+5,0);
+        std::fill(forceSum+6*legID,forceSum+6*legID+6,0);
     }
     if(count<100)
     {
@@ -504,6 +716,13 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
     aris::dynamic::s_pm_dot_pm(pmImuGrnd2BodyGrnd,pmImu2ImuGrnd,pmBody2Imu,bodyPm);
     aris::dynamic::s_pm2pe(bodyPm,bodyPe,"213");
     memcpy(bwParam.imuEul,bodyPe+3,3*sizeof(double));
+    for(int i=0;i<3;i++)
+    {
+        if(bwParam.imuEul[i]>PI)
+        {
+            bwParam.imuEul[i]-=2*PI;
+        }
+    }
 
     const double m {400};
     double mInG[3] {0,-m,0};
@@ -511,7 +730,7 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
     aris::dynamic::s_inv_pm_dot_v3(bodyPm,mInG,mInB);
 
     /*****FSR*****/
-    //memcpy(forceRaw+6*6,param.ruicong_data->at(0).force[6].fce,6*sizeof(double));
+    memcpy(forceRaw+6*6,param.ruicong_data->at(0).force[6].fce,6*sizeof(double));
     BalanceWalk::forceInit(param.count,6);
     aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(),forceInF+6*6,bwParam.fceInB);
     //rt_printf("fceInF:%f,%f,%f,fceInB:%f,%f,%f\n",forceInF[0],forceInF[1],forceInF[2],bwParam.fceInB[0],bwParam.fceInB[1],bwParam.fceInB[2]);
@@ -562,11 +781,32 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
             lagStartEul[1]=bwParam.imuEul[2];
         }
 
+        doCalman();
+
         bwParam.tarAcc[0]=Controller::doPID(zPIDparam,bwParam.ballPos[0],3,0,3,0.001);
         bwParam.tarAcc[1]=Controller::doPID(xPIDparam,bwParam.ballPos[1],3,0,3,0.001);
 
-        bwParam.tarEul[0]=-GetAngleFromAcc(bwParam.tarAcc[0]);
-        bwParam.tarEul[1]=GetAngleFromAcc(bwParam.tarAcc[1]);
+        double ratio[2];//change from 1/3 to 1 as ballPos change from 0 to 0.2m;
+        for(int i=0;i<2;i++)
+        {
+            if(fabs(bwParam.ballPos[i])>0.01)
+	    {
+                ratio[i]=1;
+            }
+            else
+            {
+                ratio[i]=0.3;
+            }
+            bwParam.tarAcc[i]*=ratio[i];
+        }
+
+    //    bbParam.tarEul[0]=-GetAngleFromAcc(bbParam.tarAcc[0]);//angle around x-axis
+    //    bbParam.tarEul[1]=GetAngleFromAcc(bbParam.tarAcc[1]);//angle around z-axis
+        double tarAcc_tmp[3] {bwParam.tarAcc[1],0,bwParam.tarAcc[0]};
+        double tarEul_tmp[3];
+        GetTarEulFromAcc(tarAcc_tmp,tarEul_tmp);
+        bwParam.tarEul[0]=-tarEul_tmp[1];
+        bwParam.tarEul[1]=-tarEul_tmp[2];
 
         bwParam.actEul[1]=Controller::SndOrderLag(zLagParam,0,bwParam.tarEul[0]-lagStartEul[0],2*PI*fz,1,0.001);
         bwParam.actEul[2]=Controller::SndOrderLag(xLagParam,0,bwParam.tarEul[1]-lagStartEul[1],2*PI*fx,1,0.001);
@@ -574,6 +814,46 @@ void BalanceWalk::bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::Pl
         pEB[4]=bwParam.actEul[1];
         pEB[5]=bwParam.actEul[2];
     }
+}
+
+void BalanceWalk::doCalman()
+{
+    double acc[3];
+    GetAccFromActEul(acc,bwParam.imuEul);
+
+    const double delta_t {0.001};
+    const double m {400};
+    static double lst_fceInB[2] {bwParam.fceInB_filtered[5], bwParam.fceInB_filtered[3]};
+    static double lst_x1[2] {0};
+    static double lst_P1[2][2] {0};
+    static double lst_x2[2] {0};
+    static double lst_P2[2][2] {0};
+    static double pre_x1[2] {0};
+    static double pre_x2[2] {0};
+
+    double mtrx_F[2][2] {1, delta_t, 0, 1};
+    double input_u1[2] {delta_t*delta_t/2*acc[0], delta_t*acc[0]};//pos on x
+    double input_u2[2] {delta_t*delta_t/2*acc[2], delta_t*acc[2]};//pos on z
+    double noise_Q[2][2] {5e-5*5e-5, 0, 0, 9e-4*9e-4};
+    double mtrx_H1[2][2] {-m*acc[1], 0, 0, -m*acc[1]*delta_t};//torque around z
+    double mtrx_H2[2][2] {m*acc[1], 0, 0, m*acc[1]*delta_t};//torque around x
+    double noise_R[2][2] {0.027*0.027, 0, 0, 4e-4*4e-4};
+    double input_z1[2] {bwParam.fceInB_filtered[5], bwParam.fceInB_filtered[5]-lst_fceInB[0]};
+    double input_z2[2] {bwParam.fceInB_filtered[3], bwParam.fceInB_filtered[3]-lst_fceInB[1]};
+
+    Calman2d filter1;
+    filter1.init(*mtrx_F,*noise_Q,*mtrx_H1,*noise_R,input_u1,input_z1);
+    filter1.doFilter(lst_x1,pre_x1,*lst_P1);
+
+    Calman2d filter2;
+    filter2.init(*mtrx_F,*noise_Q,*mtrx_H2,*noise_R,input_u2,input_z2);
+    filter2.doFilter(lst_x2,pre_x2,*lst_P2);
+
+    lst_fceInB[0]=bwParam.fceInB_filtered[5];
+    lst_fceInB[1]=bwParam.fceInB_filtered[3];
+
+    bwParam.ballPos_filtered[1]=lst_x1[0];//pos on x
+    bwParam.ballPos_filtered[0]=lst_x2[0];//pos on z
 }
 
 void BalanceWalk::swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
@@ -626,6 +906,7 @@ void BalanceWalk::swingLegTg(const aris::dynamic::PlanParamBase &param_in, int l
 void BalanceWalk::followLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
 {
     auto &param = static_cast<const aris::server::GaitParamBase &>(param_in);
+    forceInit(1000,legID);
 
     int period_count = param.count%totalCount;
     memcpy(followPee+3*legID,followBeginPee+3*legID,3*sizeof(double));
@@ -745,6 +1026,7 @@ void BalanceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int 
 void BalanceWalk::stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID)
 {
     auto &param = static_cast<const aris::server::GaitParamBase &>(param_in);
+    forceInit(1000,legID);
 
     int period_count = param.count%totalCount;
     memcpy(stancePee+3*legID,stanceBeginPee+3*legID,3*sizeof(double));
@@ -1045,6 +1327,8 @@ void BalanceWalk::recordData()
             for(int i=0;i<2;i++)
             {
                 fileGait << param.ballPos[i] << "  ";
+                fileGait << param.ballVel[i] << "  ";
+                fileGait << param.ballVel_filtered[i] << "  ";
                 fileGait << param.tarAcc[i] << "  ";
                 fileGait << param.tarEul[i] << "  ";
             }

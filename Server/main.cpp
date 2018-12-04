@@ -23,7 +23,7 @@ using namespace std;
 #include "GeneralFunc.h"
 #include "NormalGait.h"
 
-#include "Balance.h"
+//#include "Balance.h"
 #include "OpenDoor.h"
 
 #include "NonRTOptimalBCS.h"

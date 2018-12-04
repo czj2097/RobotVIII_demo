@@ -10,7 +10,10 @@
 
 using namespace aris::control;
 
-void GetTargetEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul);
+void GetTarEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul);
+void GetTarEulFromAcc(double *reqAccInB, double *tarEul);
+void GetAccFromActEul(double *actAccInB, double *actEul);
+void GetAlphaFromEul(double *eul, double *w, double *alpha);
 double GetAngleFromAcc(double acc);
 
 struct BalanceParam final :public aris::server::GaitParamBase
@@ -40,9 +43,19 @@ enum GaitPhase
 struct BallBalanceParam
 {
     double fceInB[6];
+    double fceInB_inertia[6];
+    double fceInB_calman[6];
     double fceInB_filtered[6];
+    double w[3];
+    double alpha[3];
     double bodyPos[3];
+    double ballPos_calman[2];
     double ballPos[2];
+    double predictPos[2];
+    double ballPos_filtered[2];
+    double ballVel[2];
+    double predictVel[2];
+    double ballVel_filtered[2];
     double tarAcc[2];
     double tarEul[2];
     double actEul[3];
@@ -57,6 +70,8 @@ public:
 
     static void bodyPosTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
     static void bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+    static void doCalman2d();
+    static void doCalman1d();
     static void recordData();
 
 private:
@@ -139,6 +154,7 @@ private:
     static void stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
     static void followLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
     static void bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+    static void doCalman();
 
     static BalanceWalkParam bwParam;
     static Pipe<BalanceWalkParam> bwPipe;
