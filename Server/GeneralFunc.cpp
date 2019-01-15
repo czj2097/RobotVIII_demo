@@ -134,14 +134,14 @@ namespace GeneralFunc
 
 namespace Controller
 {
-    double doPID(lstPIDparam &param, double err, double kp, double ki, double kd, double delta_t)
+    double doPID(lstPIDparam &param, double err, double kp, double ki, double kd, double dt)
     {
 //        static double lstErr {err};
 //        static double lstInt {0};
 
-        double output=kp*err+ki*(param.lstInt+err*delta_t)+kd*(err-param.lstErr)/delta_t;
+        double output=kp*err+ki*(param.lstInt+err*dt)+kd*(err-param.lstErr)/dt;
         param.lstErr=err;
-        param.lstInt+=err*delta_t;
+        param.lstInt+=err*dt;
 
         return output;
     }
@@ -151,7 +151,7 @@ namespace Controller
         return kp*err+kd*d_err;
     }
 
-    double SndOrderLag(lstLagParam &param, double startP, double input, double wn, double damping, double delta_t)
+    double SndOrderLag(lstLagParam &param, double startP, double input, double wn, double damping, double dt)
     {
         // 1/(s^2+k1*s+k2)
 //        static double lstFstInt {0};
@@ -160,12 +160,23 @@ namespace Controller
         double k1=2*damping*wn;
         double k2=wn*wn;
 
-        double midput=param.lstFstInt+(input-startP-k2*param.lstSndInt-k1*param.lstFstInt)*delta_t;
-        double output=param.lstSndInt+midput*delta_t;
+        double midput=param.lstFstInt+(input-startP-k2*param.lstSndInt-k1*param.lstFstInt)*dt;
+        double output=param.lstSndInt+midput*dt;
 
         param.lstFstInt=midput;
         param.lstSndInt=output;
 
         return startP+k2*output;
+    }
+
+    double LeadCompensator(lstLeadParam &param, double input, double Kc, double T, double alpha, double dt)
+    {
+        double y1=(input-param.lstInput)/dt+1/T*input;
+        double y2=param.lstInt+(y1-param.lstInt/(alpha*T))*dt;
+
+        param.lstInput=input;
+        param.lstInt=y2;
+
+        return Kc*y2;
     }
 }

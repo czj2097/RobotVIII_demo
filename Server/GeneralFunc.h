@@ -19,7 +19,7 @@ namespace Controller
         double lstInt;
         double lstErr;
     };
-    double doPID(lstPIDparam &param, double err, double kp, double ki, double kd, double delta_t);
+    double doPID(lstPIDparam &param, double err, double kp, double ki, double kd, double dt);
     double doPD(double err, double d_err, double kp, double kd);
 
     struct lstLagParam
@@ -27,7 +27,14 @@ namespace Controller
         double lstFstInt;
         double lstSndInt;
     };
-    double SndOrderLag(lstLagParam &param,double startP, double input, double wn, double damping, double delta_t);
+    double SndOrderLag(lstLagParam &param,double startP, double input, double wn, double damping, double dt);
+
+    struct lstLeadParam
+    {
+        double lstInput;
+        double lstInt;
+    };
+    double LeadCompensator(lstLeadParam &param, double input, double Kc, double T, double alpha, double dt);
 }
 
 #endif

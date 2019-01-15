@@ -14,7 +14,6 @@ void GetTarEulFromAcc(double *planAccInG, double *reqAccInG, double *targetEul);
 void GetTarEulFromAcc(double *reqAccInB, double *tarEul);
 void GetAccFromActEul(double *actAccInB, double *actEul);
 void GetAlphaFromEul(double *eul, double *w, double *alpha);
-double GetAngleFromAcc(double acc);
 
 struct BalanceParam final :public aris::server::GaitParamBase
 {
@@ -37,7 +36,7 @@ enum GaitPhase
 {
     Swing,
     Stance,
-    Touch,
+    Follow,
 };
 
 struct BallBalanceParam
@@ -46,6 +45,7 @@ struct BallBalanceParam
     double fceInB_inertia[6];
     double fceInB_calman[6];
     double fceInB_filtered[6];
+    double fceInB_lead[6];
     double w[3];
     double alpha[3];
     double bodyPos[3];
@@ -86,8 +86,13 @@ private:
 
 struct BalanceWalkParam:public BallBalanceParam
 {
+    double imuRaw[3];
+    double PebInG[6];
+    double Pin[18];
+    GaitPhase phase[6];
     double legForce[6];
     double footPos[18];
+    double input[6];
 };
 class BalanceWalk
 {
@@ -110,10 +115,13 @@ private:
     static bool constFlag;
     static double beginXVel;
     static double endXVel;
+    static double endXVelinB;
     static double beginZVel;
     static double endZVel;
+    static double endZVelinB;
     static double beginOmega;
     static double endOmega;
+    static double endGama;
 
     static double beginPeb[6];
     static double pEB[6];
@@ -129,9 +137,11 @@ private:
     static double followBeginPee[18];
     static double followBeginVee[18];
     static int followBeginCount[6];
-    static bool followFlag[6];
-    static bool filterFlag[6];
-    static int filterCount[6];
+    static bool isSndHalf[6];
+    static bool isTrans2Follow[6];
+    static bool isPreTrans2Follow[6];
+    static bool isFollowEnd[6];
+    static int preTrans2FollowCount[6];
 
     static double initPee[18];
     static double avgRealH;
@@ -149,12 +159,19 @@ private:
     static double forceSum[42];
     static double forceAvg[42];
 
+    static double imuRaw[3];
+    static double imuInB[3];
+    static double imuSum[3];
+    static double imuAvg[3];
+
     static void forceInit(int count, int legID);
+    static void imuInit(int count);
     static void swingLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
     static void stanceLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
     static void followLegTg(const aris::dynamic::PlanParamBase &param_in, int legID);
     static void bodyEulTg(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
     static void doCalman();
+    static void GetAngleFromAcc(double *acc, double *angle);
 
     static BalanceWalkParam bwParam;
     static Pipe<BalanceWalkParam> bwPipe;
