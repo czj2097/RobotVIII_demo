@@ -14,6 +14,7 @@ public:
     void GetStanceLegParam(int count, int legID, double s);
     void GetStanceDsBound(int count);
     void GetStanceDsBoundByNewton(int count);
+    void GetStanceDsBoundByFunc(int count);
     void GetStanceSwitchPoint();
     void GetStanceOptimalDsBySwitchPoint();
     void GetStanceOptimalDsByDirectNI();
@@ -25,6 +26,7 @@ public:
     void GetSwingLegParam(int count, int legID, double sw, double *pva_body);
     void GetSwingDsBound(int count, int legID);
     void GetSwingDsBoundByNewton(int count, int legID);
+    void GetSwingDsBoundByFunc(int count, int legID);
     void GetSwingSwitchPoint(int legID);
     void GetSwingOptimalDsBySwitchPoint(int legID);
     void GetSwingOptimalDsByDirectNI(int legID);

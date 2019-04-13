@@ -42,12 +42,18 @@
         <z abbreviation="z" type="double" default="0"/>
     </ppw_param>
 </ppw>
+<mv default="mv_param">
+    <mv_param type="group">
+        <totalCount abbreviation="t" type="int" default="1000"/>
+    </mv_param>
+</mv>
 
 
 rs.addCmd("mwr",NormalGait::parseMoveWithRotate,NormalGait::moveWithRotate);
 rs.addCmd("arc",NormalGait::parseAdjustRc,NormalGait::adjustRc);
 rs.addCmd("cwk",NormalGait::parseCircleWalk,NormalGait::circleWalk);
 rs.addCmd("ppw",NormalGait::parseP2PWalk,NormalGait::p2pWalk);
+rs.addCmd("mv",NormalGait::parseModelValidate,NormalGait::modelValidate);
 */
 
 namespace NormalGait
@@ -478,4 +484,60 @@ namespace NormalGait
         }
         return param.count-2*param.n*param.totalCount-1;
     }
+
+
+    void parseModelValidate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    {
+        ModelValidateParam param;
+
+        for(auto &i:params)
+        {
+            if(i.first=="totalCount")
+            {
+                param.totalCount=std::stoi(i.second);
+            }
+            else
+            {
+                std::cout<<"parse failed"<<std::endl;
+            }
+        }
+
+        msg.copyStruct(param);
+
+        std::cout<<"finished parse"<<std::endl;
+    }
+
+    int modelValidate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    {
+        auto &robot = static_cast<Robots::RobotBase &>(model);
+        auto &param = static_cast<const ModelValidateParam &>(param_in);
+
+        static double beginPee[18];
+        static double beginPin[18];
+        double L2 {0.05};
+        double L1 {0.05};
+
+        if(param.count==0)
+        {
+            robot.GetPee(beginPee);
+            robot.GetPin(beginPin);
+        }
+
+        double Pin[18] {0};
+        std::copy_n(beginPin,18,Pin);
+        Pin[3+0]=beginPin[3]-0.5*L1*(1-cos(PI*param.count/param.totalCount));
+        Pin[3+1]=beginPin[4]-0.5*L2*(1-cos(2*PI*param.count/param.totalCount));
+        Pin[3+2]=beginPin[5]+0.5*L1*(1-cos(PI*param.count/param.totalCount));
+        robot.SetPin(Pin);
+
+        double Pee[18] {0};
+        std::copy_n(beginPee,18,Pee);
+        Pee[3+0]=beginPee[3]-0.5*L1*(1-cos(PI*param.count/param.totalCount));
+        Pee[3+1]=beginPee[4]+0.5*L2*(1-cos(2*PI*param.count/param.totalCount));
+        Pee[3+2]=beginPee[5]+0.5*L1*(1-cos(PI*param.count/param.totalCount));
+        robot.SetPee(Pee);
+
+        return param.count-param.totalCount-1;
+    }
+
 }

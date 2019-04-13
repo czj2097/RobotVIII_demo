@@ -4,6 +4,7 @@
 #include <aris.h>
 #include <Robot_Gait.h>
 #include <Robot_Type_I.h>
+#include <algorithm>
 
 namespace NormalGait
 {
@@ -57,6 +58,15 @@ namespace NormalGait
     };
     void parseLegWork(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
     int legWork(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
+    struct ModelValidateParam final :public aris::server::GaitParamBase
+    {
+        double distance {0};
+        std::int32_t totalCount {1000};
+    };
+    void parseModelValidate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+    int modelValidate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+
 }
 
 #endif

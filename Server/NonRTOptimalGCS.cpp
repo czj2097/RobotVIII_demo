@@ -303,6 +303,93 @@ void NonRTOptimalGCS::GetStanceDsBoundByNewton(int count)
     //printf("%d,Second Newton Iteration of StanceLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",count,k,value_low,value_up,ds0,ds1);
 }
 
+void NonRTOptimalGCS::GetStanceDsBoundByFunc(int count)
+{
+    double a2[18] {0};
+    double a0H[18] {0};
+    double a0L[18] {0};
+    int num {0};
+    double FuncA2;
+    double FuncA0;
+    double ds;
+    double minDs {1e6};
+
+    for (int j=0;j<6;j++)
+    {
+        for (int k=0;k<3;k++)
+        {
+            if(isParamddsExact0_body[count][3*j+k]==-1)
+            {
+                if(count>=count1 && count<count2)//stance 135
+                {
+                    if(j%2==1)
+                    {
+                        a2[num]=output_a2[count][3*j+k];
+                        a0H[num]=output_a0H[count][3*j+k];
+                        a0L[num]=output_a0L[count][3*j+k];
+                        num++;
+                    }
+                }
+                else if(count>=count3 && count<count4)//stance 024
+                {
+                    if(j%2==0)
+                    {
+                        a2[num]=output_a2[count][3*j+k];
+                        a0H[num]=output_a0H[count][3*j+k];
+                        a0L[num]=output_a0L[count][3*j+k];
+                        num++;
+                    }
+                }
+                else
+                {
+                    a2[num]=output_a2[count][3*j+k];
+                    a0H[num]=output_a0H[count][3*j+k];
+                    a0L[num]=output_a0L[count][3*j+k];
+                    num++;
+                }
+            }
+        }
+    }
+    //printf("num:%d\n",num);
+
+    for(int i=0;i<num;i++)
+    {
+        for(int j=0;j<num;j++)
+        {
+            if(i!=j)
+            {
+                FuncA2=a2[i]-a2[j];
+                FuncA0=a0H[i]-a0L[j];
+                if(FuncA2==0 || FuncA0*FuncA2>0)
+                {
+                    //printf("Error! proper ds does not exist!\n");
+                    ds=-1;
+                }
+                else
+                {
+                    ds=sqrt(-FuncA0/FuncA2);
+                }
+                if(minDs>ds && ds>0)
+                {
+                    minDs=ds;
+                }
+            }
+        }
+    }
+
+    if(minDs==1e6)
+    {
+        printf("Warning! minDs too small!\n");
+    }
+
+    ds_upBound_aLmt_body[count]=minDs;
+    ds_upBound_vLmt_body[count]=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+18));
+    ds_upBound_body[count]=std::min(ds_upBound_aLmt_body[count],ds_upBound_vLmt_body[count]);
+
+    dds_lowBound_body[count]=GetStanceMaxDec(count,ds_upBound_body[count]);
+    dds_upBound_body[count]=GetStanceMinAcc(count,ds_upBound_body[count]);
+}
+
 void NonRTOptimalGCS::GetStanceSwitchPoint()
 {
     double slopedsBound_for_body[2201] {0};
@@ -1128,7 +1215,8 @@ void NonRTOptimalGCS::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_
         }
 
         //GetStanceDsBound(i);
-        GetStanceDsBoundByNewton(i);
+        //GetStanceDsBoundByNewton(i);
+        GetStanceDsBoundByFunc(i);
     }
 
     gettimeofday(&tpend,NULL);
@@ -1364,7 +1452,8 @@ void NonRTOptimalGCS::AnalyseStanceOptimalTime()
             }
 
             //GetStanceDsBound(i);
-            GetStanceDsBoundByNewton(i);
+            //GetStanceDsBoundByNewton(i);
+            GetStanceDsBoundByFunc(i);
 
         }
 
