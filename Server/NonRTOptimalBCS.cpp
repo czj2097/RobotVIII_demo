@@ -1,7 +1,7 @@
 #include "NonRTOptimalBCS.h"
 #include "rtdk.h"
 
-namespace time_optimal
+namespace TimeOptimal
 {
     void NonRTOptimalBCS::GetTimeOptimalGait(double step_length, double step_height, double acc_limit, double vel_limit, int leg_id, double *init_tippos, double *out_tippos, double &out_period)
     {
@@ -1121,11 +1121,11 @@ namespace time_optimal
         }
     }
 
-    double FastWalk::initBodyPos[6];
-    double FastWalk::initTipPos[18];
-    double FastWalk::swingPee_scale[3001][18];
+    double FastWalkBCS::initBodyPos[6];
+    double FastWalkBCS::initTipPos[18];
+    double FastWalkBCS::swingPee_scale[3001][18];
 
-    void FastWalk::parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
+    void FastWalkBCS::parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
     {
         Robots::WalkParam param;
 
@@ -1179,7 +1179,7 @@ namespace time_optimal
         }
     }
 
-    int  FastWalk::fastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+    int  FastWalkBCS::fastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
     {
         auto &robot = static_cast<Robots::RobotBase &>(model);
         auto &param = static_cast<const Robots::WalkParam &>(param_in);
@@ -1256,14 +1256,14 @@ namespace time_optimal
         return 2*param.n*param.totalCount-param.count-1;
     }
 
-    bool FastWalk::GetScalingPath(Robots::WalkParam &param, int leg_id)
+    bool FastWalkBCS::GetScalingPath(Robots::WalkParam &param, int leg_id)
     {
         double aLmt {2.37};
         double vLmt {0.4};
         double out_TipPos[6000][3] {0};
         double out_period {0};
 
-        time_optimal::NonRTOptimalBCS planner;
+        TimeOptimal::NonRTOptimalBCS planner;
         planner.GetTimeOptimalGait(param.d,param.h,aLmt,vLmt,leg_id,initTipPos+3*leg_id,*out_TipPos,out_period);
         printf("out_period of leg %d is %.3f\n",leg_id,out_period);
 

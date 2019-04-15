@@ -13,7 +13,7 @@
 #include <Robot_Type_I.h>
 #include <Robot_Gait.h>
 
-namespace time_optimal
+namespace TimeOptimal
 {
     void matrix_dot_matrix(double *matrix1, int matrix1_row, int matrix1_col, double *matrix2, int matrix2_col, double *matrix_out);
     void dlmwrite(const char *filename, const double *mtx, const int m, const int n);
@@ -90,7 +90,7 @@ namespace time_optimal
         double vt;
     };
 
-    class FastWalk
+    class FastWalkBCS
     {
     public:
         static int  fastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);

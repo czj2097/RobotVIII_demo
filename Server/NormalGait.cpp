@@ -537,7 +537,7 @@ namespace NormalGait
         Pee[3+2]=beginPee[5]+0.5*L1*(1-cos(PI*param.count/param.totalCount));
         robot.SetPee(Pee);
 
-        return param.count-param.totalCount-1;
+        return param.count-param.totalCount+1;
     }
 
 }
