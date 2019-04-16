@@ -6,6 +6,8 @@
 #include <Robot_Type_I.h>
 #include <Robot_Gait.h>
 
+using namespace aris::control;
+
 namespace TimeOptimal
 {
     class NonRTOptimalGCS
@@ -29,6 +31,7 @@ namespace TimeOptimal
         void GetSwingLegParam(int count, int legID, double sw, double *pva_body);
         void GetSwingDsBound(int count, int legID);
         void GetSwingDsBoundByNewton(int count, int legID);
+        void GetSwingDsBoundByFunc(int count, int legID);
         void GetSwingSwitchPoint(int legID);
         void GetSwingOptimalDsBySwitchPoint(int legID);
         void GetSwingOptimalDsByDirectNI(int legID);
@@ -63,7 +66,7 @@ namespace TimeOptimal
         Robots::RobotTypeI rbt;
 
         double vLmt {1.0};
-        double aLmt {3.2};
+        double aLmt {5.0};
         double stepH {0.05};
         double stepD {0.4};
         double dutyCycle {0.6};
@@ -191,12 +194,19 @@ namespace TimeOptimal
         double Ain_s[2201][18] {{0}};
     };
 
+    struct FastWalkGCSParam
+    {
+        double Peb;
+        double Pee[18];
+        double Pin[18];
+    };
     class FastWalkGCS
     {
     public:
         static int  fastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
         static void parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
         static void GetScalingPath(Robots::WalkParam &param);
+        static void recordData();
 
     private:
         static double initBodyPos[6];
@@ -204,6 +214,10 @@ namespace TimeOptimal
         static double swingPee_scale[3001][18];
         static double bodyConstVel;
         static double dutyCycle;
+
+        static FastWalkGCSParam fwgParam;
+        static Pipe<FastWalkGCSParam> fwgPipe;
+        static std::thread fwgThread;
     };
 }
 

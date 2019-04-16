@@ -15,6 +15,7 @@ namespace TimeOptimal
 
         GetOptimalDsByMajorIteration();
         GetOptimalGait2t(out_tippos,out_bodyvel,out_period);
+        OutputData();
         duty_cycle=dutyCycle;
     }
 
@@ -394,7 +395,7 @@ namespace TimeOptimal
 
         if(minDs==1e6)
         {
-            printf("Warning! minDs too small!\n");
+            printf("Warning! Stance minDs too small!\n");
         }
 
         ds_upBound_aLmt_body[count]=minDs;
@@ -1648,7 +1649,7 @@ namespace TimeOptimal
         {
             if(isParamddsExact0[swCount][3*legID+k]==-1)
             {
-                dec[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0L[count][3*legID+k];
+                dec[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]*ds+output_a0L[count][3*legID+k];
             }
         }
         return *std::max_element(dec,dec+3);
@@ -1663,7 +1664,7 @@ namespace TimeOptimal
         {
             if(isParamddsExact0[swCount][3*legID+k]==-1)
             {
-                acc[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]+output_a0H[count][3*legID+k];
+                acc[k]=output_a2[count][3*legID+k]*ds*ds+output_a1[count][3*legID+k]*ds+output_a0H[count][3*legID+k];
             }
         }
         return *std::min_element(acc,acc+3);
@@ -1908,6 +1909,95 @@ namespace TimeOptimal
         dds_upBound[swCount][legID]=GetSwingMinAcc(count,ds_upBound[swCount][legID],legID);
     }
 
+    void NonRTOptimalGCS::GetSwingDsBoundByFunc(int count, int legID)
+    {
+        int swCount = count<count3 ? (count-count1) : (count-count3);
+
+        double a2[3] {0};
+        double a1[3] {0};
+        double a0H[3] {0};
+        double a0L[3] {0};
+        int num {0};
+        double FuncA2;
+        double FuncA1;
+        double FuncA0;
+        double ds;
+        double minDs {1e6};
+
+        for (int k=0;k<3;k++)
+        {
+            if(isParamddsExact0[swCount][3*legID+k]==-1)
+            {
+                a2[num]=output_a2[count][3*legID+k];
+                a1[num]=output_a1[count][3*legID+k];
+                a0H[num]=output_a0H[count][3*legID+k];
+                a0L[num]=output_a0L[count][3*legID+k];
+                num++;
+            }
+        }
+
+        for(int i=0;i<num;i++)
+        {
+            for(int j=0;j<num;j++)
+            {
+                if(i!=j)
+                {
+                    FuncA2=a2[i]-a2[j];
+                    FuncA1=a1[i]-a1[j];
+                    FuncA0=a0H[i]-a0L[j];
+                    if(FuncA2==0 || FuncA1*FuncA1-4*FuncA0*FuncA2<0)
+                    {
+                        ds=-1;
+                    }
+                    else
+                    {
+                        double ds1=(sqrt(FuncA1*FuncA1-4*FuncA0*FuncA2)-FuncA1)/(2*FuncA2);
+                        double ds2=(-sqrt(FuncA1*FuncA1-4*FuncA0*FuncA2)-FuncA1)/(2*FuncA2);
+                        ds=std::max(ds1,ds2);
+                    }
+                    if(minDs>ds && ds>0)
+                    {
+                        minDs=ds;
+                    }
+                }
+            }
+        }
+
+        if(minDs==1e6)
+        {
+            printf("Warning! Swing minDs too small or minDs donot exist!\n");
+        }
+
+        ds_upBound_aLmt[swCount][legID]=minDs;
+        //printf("ds_upBound_aLmt finished!\n");
+
+        double vLmt_value[3] {0};
+        double Jvi_dot_vb[3] {0};
+        double vb_sw3[3] {0};
+        vb_sw3[2]=pva_b[count][1];
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
+        for (int k=0;k<3;k++)
+        {
+            if(output_dds[count][3*legID+k]>0)
+            {
+                vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/output_dds[count][3*legID+k];
+            }
+            else if(output_dds[count][3*legID+k]<0)
+            {
+                vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/output_dds[count][3*legID+k];
+            }
+            else
+            {
+                printf("WARNING!!! param_dds equals zero!!! SwingLeg : %d \n",count);
+            }
+        }
+        ds_upBound_vLmt[swCount][legID]=*std::min_element(vLmt_value,vLmt_value+3);
+
+        ds_upBound[swCount][legID]=std::min(ds_upBound_aLmt[swCount][legID],ds_upBound_vLmt[swCount][legID]);
+        dds_lowBound[swCount][legID]=GetSwingMaxDec(count,ds_upBound[swCount][legID],legID);
+        dds_upBound[swCount][legID]=GetSwingMinAcc(count,ds_upBound[swCount][legID],legID);
+    }
+
     void NonRTOptimalGCS::GetSwingSwitchPoint(int legID)
     {
         double slopedsBound_for[901] {0};
@@ -2075,7 +2165,7 @@ namespace TimeOptimal
         {
             if(k!=switchScrewID[switchID][legID])
             {
-                dec[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]+param_a0L[3*legID+k];
+                dec[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0L[3*legID+k];
             }
         }
         return *std::max_element(dec,dec+3);
@@ -2089,7 +2179,7 @@ namespace TimeOptimal
         {
             if(k!=switchScrewID[switchID][legID])
             {
-                acc[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]+param_a0H[3*legID+k];
+                acc[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0H[3*legID+k];
             }
         }
         return *std::min_element(acc,acc+3);
@@ -2617,7 +2707,7 @@ namespace TimeOptimal
 
     void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
     {
-        rbt.loadXml("../../../RobotVIII_demo/resource/RobotEDU2.xml");
+        rbt.loadXml("../../resource/RobotEDU2.xml");
 
         timeval tpstart,tpend;
         float tused;
@@ -2681,7 +2771,8 @@ namespace TimeOptimal
                     int count = (j%2==0) ? (i+count1) : (i+count3);
                     GetSwingLegParam(count,j,s_w[i][j],*pva_b+3*count);
                     //GetSwingDsBound(count,j);
-                    GetSwingDsBoundByNewton(count,j);
+                    //GetSwingDsBoundByNewton(count,j);
+                    GetSwingDsBoundByFunc(count,j);
                 }
 
                 GetSwingSwitchPoint(j);
@@ -2694,6 +2785,7 @@ namespace TimeOptimal
                     totalTime[j]+=2*(s_w[i][j]-s_w[i-1][j])/(real_ds[i-1][j]+real_ds[i][j]);
                     timeArray[i][j]=totalTime[j];
                 }
+
             }
             maxSwingTime=*std::max_element(totalTime,totalTime+6);
             printf("totalTime: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f; maxTime:%.4f\n",
@@ -4140,6 +4232,9 @@ namespace TimeOptimal
     double FastWalkGCS::swingPee_scale[3001][18];
     double FastWalkGCS::bodyConstVel;
     double FastWalkGCS::dutyCycle;
+    FastWalkGCSParam FastWalkGCS::fwgParam;
+    Pipe<FastWalkGCSParam> FastWalkGCS::fwgPipe(true);
+    std::thread FastWalkGCS::fwgThread;
 
     void FastWalkGCS::parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)
     {
@@ -4290,41 +4385,46 @@ namespace TimeOptimal
         }
         else//const
         {
-            period_count=(param.count-param.totalCount/2)/param.totalCount;
+            period_count=(param.count-param.totalCount/2)%param.totalCount;
             pEB[2]=-param.d/4;
 
             robot.SetPeb(pEB);
             robot.SetPee(*swingPee_scale+18*period_count,robot.body());
         }
-        rt_printf("count=%d\n",param.count);
+        //rt_printf("count=%d\n",param.count);
 
-        return 2*param.n*param.totalCount-param.count-1;
+        fwgParam.Peb=pEB[2];
+        robot.GetPee(fwgParam.Pee,robot.body());
+        robot.GetPin(fwgParam.Pin);
+        fwgPipe.sendToNrt(fwgParam);
+
+        return param.n*param.totalCount-param.count-1;
     }
 
     void FastWalkGCS::GetScalingPath(Robots::WalkParam &param)
     {
-        double aLmt {3.2};
-        double vLmt {1.0};
+        double aLmt {5.4};
+        double vLmt {1.5};
         double out_TipPos[3000][18] {0};
         double out_period {0};
 
-        dutyCycle=0.6;
+        dutyCycle=0.5;
         TimeOptimal::NonRTOptimalGCS planner;
         planner.GetTimeOptimalGait(param.d,param.h,dutyCycle,aLmt,vLmt,initPee,*out_TipPos,bodyConstVel,out_period);
         printf("out_period is %.3f\n",out_period);
 
-        int out_period_count=(int)(out_period*1000);
+        int out_period_count=round(out_period*1000);
         int totalCount = param.totalCount;
         int k {0};
         double ratio = (double)totalCount/out_period_count;//>=1
         if(ratio<1)
         {
             printf("Warning! TotalCount(%d) smaller than the minimum count(%d)! We have made TotalCount=minimum count!\n",totalCount,out_period_count);
-            totalCount=out_period_count;
+            //totalCount=out_period_count;
         }
 
         bodyConstVel/=ratio;
-        for(int i=0; i<totalCount; i++)
+        for(int i=0; i<totalCount-1; i++)
         {
             for(int j=k; j<out_period_count; j++)
             {
@@ -4347,9 +4447,47 @@ namespace TimeOptimal
         }
         for(int leg_id=0;leg_id<6;leg_id++)
         {
-            swingPee_scale[totalCount][3*leg_id]=out_TipPos[out_period_count][3*leg_id];
-            swingPee_scale[totalCount][3*leg_id+1]=out_TipPos[out_period_count][3*leg_id+1];
-            swingPee_scale[totalCount][3*leg_id+2]=out_TipPos[out_period_count][3*leg_id+2];
+            int i=totalCount-1;
+            int j=out_period_count-1;
+            swingPee_scale[i][3*leg_id]=out_TipPos[j][3*leg_id]+(out_TipPos[0][3*leg_id]-out_TipPos[j][3*leg_id])*(i-ratio*j)/ratio;
+            swingPee_scale[i][3*leg_id+1]=out_TipPos[j][3*leg_id+1]+(out_TipPos[0][3*leg_id+1]-out_TipPos[j][3*leg_id+1])*(i-ratio*j)/ratio;
+            swingPee_scale[i][3*leg_id+2]=out_TipPos[j][3*leg_id+2]+(out_TipPos[0][3*leg_id+2]-out_TipPos[j][3*leg_id+2])*(i-ratio*j)/ratio;
         }
+        aris::dynamic::dlmwrite("/var/log/aris/swingPee_scale.txt",*swingPee_scale,3000,18);
+        aris::dynamic::dlmwrite("/var/log/aris/out_TipPos.txt",*out_TipPos,3000,18);
+
     }
+
+void FastWalkGCS::recordData()
+{
+    fwgThread = std::thread([&]()
+    {
+        struct FastWalkGCSParam param;
+        static std::fstream fileGait;
+        std::string name = aris::core::logFileName();
+        name.replace(name.rfind("log.txt"), std::strlen("FastWalkGCSData.txt"), "FastWalkGCSData.txt");
+        fileGait.open(name.c_str(), std::ios::out | std::ios::trunc);
+
+        long long count = -1;
+        while (1)
+        {
+            fwgPipe.recvInNrt(param);
+
+            fileGait << ++count << " ";
+            fileGait << param.Peb << " ";
+            for (int i=0;i<18;i++)
+            {
+                fileGait << param.Pee[i] << "  ";
+            }
+            for (int i=0;i<18;i++)
+            {
+                fileGait << param.Pin[i] << "  ";
+            }
+            fileGait << std::endl;
+        }
+
+        fileGait.close();
+    });
+}
+
 }

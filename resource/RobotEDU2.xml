@@ -20,7 +20,7 @@
             <S2jpe type="matrix">{ 0, 0,      0,     0, -PI / 2, 0 }</S2jpe>
             <S3ipe type="matrix">{ 0, 0.050, -0.027, 0, -PI / 2, 0 }</S3ipe>
             <S3jpe type="matrix">{ 0, 0,      0,     0, -PI / 2, 0 }</S3jpe>
-            <Sfipe type="matrix">{ 0.037, 0.006, 0, 0, 0, 0 }</Sfipe>
+            <Sfipe type="matrix">{ 0.065, 0, 0, 0, 0, 0 }</Sfipe>
             <Sfjpe type="matrix">{ 0,   0, 0, 0, 0, 0 }</Sfjpe>
             <LFpe type="matrix">{-0.0762, 0, -0.1320, PI/2, PI*2/3,   -PI/2-PI*43.64/180}</LFpe>
             <LMpe type="matrix">{-0.1524, 0,  0,      PI/2, PI*3/3,   -PI/2-PI*43.64/180}</LMpe>
