@@ -1,13 +1,16 @@
-#include "NonRTOptimalGCS.h"
+#include "NonRTOptimalGCSRotate.h"
 #include "rtdk.h"
 
 namespace TimeOptimal
 {
-    void NonRTOptimalGCS::GetTimeOptimalGait(double step_length, double step_height, double &duty_cycle,double acc_limit, double vel_limit, double *init_tippos,
+    void NonRTOptimalGCSRotate::GetTimeOptimalGait(double step_length, double step_height, double step_alpha, double step_beta,
+                                             double &duty_cycle, double acc_limit, double vel_limit, double *init_tippos,
                                              double *out_tippos, double &out_bodyvel, double &out_period)
     {
         stepD=step_length;
         stepH=step_height;
+        stepAlpha=step_alpha;
+        stepBeta=step_beta;
         dutyCycle=duty_cycle;
         aLmt=acc_limit;
         vLmt=vel_limit;
@@ -15,11 +18,11 @@ namespace TimeOptimal
 
         GetOptimalDsByMajorIteration();
         GetOptimalGait2t(out_tippos,out_bodyvel,out_period);
-        OutputData();
+        //OutputData();
         duty_cycle=dutyCycle;
     }
 
-    void NonRTOptimalGCS::GetStanceLegParam(int count, int legID, double s)
+    void NonRTOptimalGCSRotate::GetStanceLegParam(int count, int legID, double s)
     {
         double pEB[6] {0};
         double pEE[18] {0};
@@ -27,72 +30,98 @@ namespace TimeOptimal
         double dJvi_x[9] {0};
         double dJvi_y[9] {0};
         double dJvi_z[9] {0};
-        double dJvi[9] {0};//used in stanceLeg
+        double dJvi_dot_C1[9] {0};//used in stanceLeg
 
         double param_dsds1[18] {0};
         double param_dsds2[18] {0};
         double param_dsds[18] {0};
         double param_const[18] {0};//for aLmt of swingLeg
 
-        double b_sb_tmp=-stepD*s;
-        double db_sb_tmp=-stepD;
-        double ddb_sb_tmp=0;
+        double b_sb_tmp[3];//{gama,z,x}
+        double db_sb_tmp[3];
+        double ddb_sb_tmp[3];
 
-        pEB[2]=initPeb[2]+b_sb_tmp;
+        b_sb_tmp[0]=stepBeta*s;
+        b_sb_tmp[1]=0;
+        b_sb_tmp[2]=0;
+
+        db_sb_tmp[0]=stepBeta;
+        db_sb_tmp[1]=0;
+        db_sb_tmp[2]=0;
+
+        ddb_sb_tmp[0]=0;
+        ddb_sb_tmp[1]=0;
+        ddb_sb_tmp[2]=0;
+
+        pEB[0]=initPeb[0]+b_sb_tmp[2];
+        pEB[2]=initPeb[2]+b_sb_tmp[1];
+        pEB[3]=initPeb[3]+b_sb_tmp[0];
         if(legID%2==1)//135
         {
             if(count<count3)
             {
-                pEE[3*legID]=initPee[3*legID];
+                pEE[3*legID]=initPee[3*legID]*cos(stepBeta/4)+initPee[3*legID+2]*sin(stepBeta/4);
                 pEE[3*legID+1]=initPee[3*legID+1];
-                pEE[3*legID+2]=initPee[3*legID+2]-stepD/4;
+                pEE[3*legID+2]=-initPee[3*legID]*sin(stepBeta/4)+initPee[3*legID+2]*cos(stepBeta/4);
             }
             else
             {
-                pEE[3*legID]=initPee[3*legID];
+                pEE[3*legID]=initPee[3*legID]*cos(5*stepBeta/4)+initPee[3*legID+2]*sin(5*stepBeta/4);
                 pEE[3*legID+1]=initPee[3*legID+1];
-                pEE[3*legID+2]=initPee[3*legID+2]-stepD/4-stepD;
+                pEE[3*legID+2]=-initPee[3*legID]*sin(5*stepBeta/4)+initPee[3*legID+2]*cos(5*stepBeta/4);
             }
         }
         else//024
         {
             if(count<count1)
             {
-                pEE[3*legID]=initPee[3*legID];
+                pEE[3*legID]=initPee[3*legID]*cos(-stepBeta/4)+initPee[3*legID+2]*sin(-stepBeta/4);
                 pEE[3*legID+1]=initPee[3*legID+1];
-                pEE[3*legID+2]=initPee[3*legID+2]+stepD/4;
+                pEE[3*legID+2]=-initPee[3*legID]*sin(-stepBeta/4)+initPee[3*legID+2]*cos(-stepBeta/4);
             }
             else
             {
-                pEE[3*legID]=initPee[3*legID];
+                pEE[3*legID]=initPee[3*legID]*cos(3*stepBeta/4)+initPee[3*legID+2]*sin(3*stepBeta/4);
                 pEE[3*legID+1]=initPee[3*legID+1];
-                pEE[3*legID+2]=initPee[3*legID+2]+stepD/4-stepD;
+                pEE[3*legID+2]=-initPee[3*legID]*sin(3*stepBeta/4)+initPee[3*legID+2]*cos(3*stepBeta/4);
             }
         }
 
-        rbt.SetPeb(pEB);
+        rbt.SetPeb(pEB,"213");
         rbt.pLegs[legID]->SetPee(pEE+3*legID);
 
         rbt.pLegs[legID]->GetJvi(Jvi,rbt.body());
         rbt.pLegs[legID]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
 
-        double db_sb3[3] {0};//vel and acc in Body CS
-        double ddb_sb3[3] {0};
-        db_sb3[2]=-db_sb_tmp;
-        ddb_sb3[2]=-ddb_sb_tmp;
+        double C1_tmp[3] {0};//C1 in Thesis
+        double C2_tmp[3] {0};//C2 in Thesis
+        C1_tmp[0]=-db_sb_tmp[2]-db_sb_tmp[0]*(pEE[3*legID+2]-b_sb_tmp[1]);
+        C1_tmp[2]=-db_sb_tmp[1]+db_sb_tmp[0]*(pEE[3*legID]  -b_sb_tmp[2]);
+        C2_tmp[0]=-ddb_sb_tmp[0]*(pEE[3*legID+2]-b_sb_tmp[1])+db_sb_tmp[0]*db_sb_tmp[0]*(pEE[3*legID]  -b_sb_tmp[2])-2*db_sb_tmp[0]*C1_tmp[2]-ddb_sb_tmp[2];
+        C2_tmp[2]= ddb_sb_tmp[0]*(pEE[3*legID]  -b_sb_tmp[2])+db_sb_tmp[0]*db_sb_tmp[0]*(pEE[3*legID+2]-b_sb_tmp[1])+2*db_sb_tmp[0]*C1_tmp[0]-ddb_sb_tmp[1];
 
-        std::fill_n(dJvi,9,0);
-        aris::dynamic::s_daxpy(9,db_sb3[0],dJvi_x,1,dJvi,1);//for s_b
-        aris::dynamic::s_daxpy(9,db_sb3[1],dJvi_y,1,dJvi,1);
-        aris::dynamic::s_daxpy(9,db_sb3[2],dJvi_z,1,dJvi,1);
+        double C1[3] {0};
+        double C2[3] {0};
+        C1[0]=C1_tmp[0]*cos(b_sb_tmp[0])-C1_tmp[2]*sin(b_sb_tmp[0]);
+        C1[2]=C1_tmp[0]*sin(b_sb_tmp[0])+C1_tmp[2]*cos(b_sb_tmp[0]);
+        C2[0]=C2_tmp[0]*cos(b_sb_tmp[0])-C2_tmp[2]*sin(b_sb_tmp[0]);
+        C2[2]=C2_tmp[0]*sin(b_sb_tmp[0])+C2_tmp[2]*cos(b_sb_tmp[0]);
+
+        memcpy(*output_C+36*count+3*legID   ,C1,3*sizeof(double));
+        memcpy(*output_C+36*count+18+3*legID,C2,3*sizeof(double));
+
+        std::fill_n(dJvi_dot_C1,9,0);
+        aris::dynamic::s_daxpy(9,C1[0],dJvi_x,1,dJvi_dot_C1,1);//for s_b
+        aris::dynamic::s_daxpy(9,C1[1],dJvi_y,1,dJvi_dot_C1,1);
+        aris::dynamic::s_daxpy(9,C1[2],dJvi_z,1,dJvi_dot_C1,1);
 
         std::fill_n(param_dds+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,db_sb3,1,1,param_dds+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C1,1,1,param_dds+3*legID,1);
 
         std::fill_n(param_dsds1+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddb_sb3,1,1,param_dsds1+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C2,1,1,param_dsds1+3*legID,1);//G*C2
         std::fill_n(param_dsds2+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,dJvi,3,db_sb3,1,1,param_dsds2+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_C1,3,C1,1,1,param_dsds2+3*legID,1);//H*C1
         std::fill_n(param_dsds+3*legID,3,0);
         for (int k=0;k<3;k++)
         {
@@ -123,9 +152,12 @@ namespace TimeOptimal
 
         if(count!=-1)
         {
-            b_sb[count]=b_sb_tmp;
-            db_sb[count]=db_sb_tmp;
-            ddb_sb[count]=ddb_sb_tmp;
+            for(int i=0;i<3;i++)
+            {
+                b_sb[count][i]=b_sb_tmp[i];
+                db_sb[count][i]=db_sb_tmp[i];
+                ddb_sb[count][i]=ddb_sb_tmp[i];
+            }
             rbt.pLegs[legID]->GetPee(*output_PeeB+18*count+3*legID,rbt.body());
             memcpy( *output_dsds+18*count+3*legID,  param_dsds+3*legID, 3*sizeof(double));
             memcpy(  *output_dds+18*count+3*legID,   param_dds+3*legID, 3*sizeof(double));
@@ -135,7 +167,7 @@ namespace TimeOptimal
         }
     }
 
-    double NonRTOptimalGCS::GetStanceMaxDec(int count, double ds)
+    double NonRTOptimalGCSRotate::GetStanceMaxDec(int count, double ds)
     {
         double dec[18] {0};
         std::fill_n(dec,18,-1e6);
@@ -167,7 +199,7 @@ namespace TimeOptimal
         return *std::max_element(dec,dec+18);
     }
 
-    double NonRTOptimalGCS::GetStanceMinAcc(int count, double ds)
+    double NonRTOptimalGCSRotate::GetStanceMinAcc(int count, double ds)
     {
         double acc[18] {0};
         std::fill_n(acc,18,1e6);
@@ -199,7 +231,7 @@ namespace TimeOptimal
         return *std::min_element(acc,acc+18);
     }
 
-    void NonRTOptimalGCS::GetStanceDsBound(int count)
+    void NonRTOptimalGCSRotate::GetStanceDsBound(int count)
     {
         int k_st {0};
         bool dsBoundFlag_st {false};
@@ -250,7 +282,7 @@ namespace TimeOptimal
         ds_upBound_body[count]=std::min(ds_upBound_aLmt_body[count],ds_upBound_vLmt_body[count]);
     }
 
-    void NonRTOptimalGCS::GetStanceDsBoundByNewton(int count)
+    void NonRTOptimalGCSRotate::GetStanceDsBoundByNewton(int count)
     {
         double ds0 {1e6};
         double value0;
@@ -269,7 +301,7 @@ namespace TimeOptimal
         }
         if(k==0)
         {
-            printf("ds0=%f too small, please set it larger and try again!",ds0);
+            printf("WARNING!!! ds0=%f too small, please set it larger and try again!",ds0);
             std::abort();
         }
         else
@@ -319,7 +351,7 @@ namespace TimeOptimal
         //printf("%d,Second Newton Iteration of StanceLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",count,k,value_low,value_up,ds0,ds1);
     }
 
-    void NonRTOptimalGCS::GetStanceDsBoundByFunc(int count)
+    void NonRTOptimalGCSRotate::GetStanceDsBoundByFunc(int count)
     {
         double a2[18] {0};
         double a0H[18] {0};
@@ -378,7 +410,6 @@ namespace TimeOptimal
                     FuncA0=a0H[i]-a0L[j];
                     if(FuncA2==0 || FuncA0*FuncA2>0)
                     {
-                        //printf("Error! proper ds does not exist!\n");
                         ds=-1;
                     }
                     else
@@ -395,7 +426,7 @@ namespace TimeOptimal
 
         if(minDs==1e6)
         {
-            printf("Warning! Stance minDs too small!\n");
+            printf("WARNING! Stance minDs too small! count=%d\n",count);
         }
 
         ds_upBound_aLmt_body[count]=minDs;
@@ -406,7 +437,7 @@ namespace TimeOptimal
         dds_upBound_body[count]=GetStanceMinAcc(count,ds_upBound_body[count]);
     }
 
-    void NonRTOptimalGCS::GetStanceSwitchPoint()
+    void NonRTOptimalGCSRotate::GetStanceSwitchPoint()
     {
         double slopedsBound_for_body[2201] {0};
         double slopedsBound_back_body[2201] {0};
@@ -521,19 +552,19 @@ namespace TimeOptimal
             }
         }
 
-        printf("StanceLeg Tangent Switch Point:");
-        for(int i=0;i<tangentCount_body+1;i++)
-        {
-            printf("%.2f,",tangentPoint_body[i]);
-        }
-        printf("\n");
+//        printf("StanceLeg Tangent Switch Point:");
+//        for(int i=0;i<tangentCount_body+1;i++)
+//        {
+//            printf("%.2f,",tangentPoint_body[i]);
+//        }
+//        printf("\n");
 
-        printf("StanceLeg ZeroInertia Switch Point:");
-        for(int i=0;i<paramdds0Count_body+1;i++)
-        {
-            printf("%.2f,",paramdds0Point_body[i]);
-        }
-        printf("\n");
+//        printf("StanceLeg ZeroInertia Switch Point:");
+//        for(int i=0;i<paramdds0Count_body+1;i++)
+//        {
+//            printf("%.2f,",paramdds0Point_body[i]);
+//        }
+//        printf("\n");
 
         //merge tangentPoint & paramdds0Point into switchPoint
         for(int i=0;i<tangentCount_body;i++)
@@ -594,7 +625,7 @@ namespace TimeOptimal
         printf("\n");
     }
 
-    double NonRTOptimalGCS::GetStanceSwitchMaxDec(int switchID, double ds)
+    double NonRTOptimalGCSRotate::GetStanceSwitchMaxDec(int switchID, double ds)
     {
         double dec[18] {0};
         std::fill_n(dec,18,-1e6);
@@ -627,7 +658,7 @@ namespace TimeOptimal
         return *std::max_element(dec,dec+18);
     }
 
-    double NonRTOptimalGCS::GetStanceSwitchMinAcc(int switchID, double ds)
+    double NonRTOptimalGCSRotate::GetStanceSwitchMinAcc(int switchID, double ds)
     {
         double acc[18] {0};
         std::fill_n(acc,18,1e6);
@@ -660,7 +691,7 @@ namespace TimeOptimal
         return *std::min_element(acc,acc+18);
     }
 
-    double NonRTOptimalGCS::GetStanceSwitchDsBound(int switchID)
+    double NonRTOptimalGCSRotate::GetStanceSwitchDsBound(int switchID)
     {
         double ds_a;
         int k_st {0};
@@ -701,7 +732,7 @@ namespace TimeOptimal
         return std::min(ds_a,ds_v);
     }
 
-    void NonRTOptimalGCS::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint)
+    void NonRTOptimalGCSRotate::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint)
     {
         lowPoint[0]=-1;
         lowPoint[switchCount_body-1]=ds_upBound_body[count5];
@@ -761,7 +792,7 @@ namespace TimeOptimal
         }
     }
 
-    void NonRTOptimalGCS::GetStanceOptimalDsBySwitchPoint()
+    void NonRTOptimalGCSRotate::GetStanceOptimalDsBySwitchPoint()
     {
         bool stopFlag {false};
         int forwardEnd_s {-1};
@@ -770,18 +801,18 @@ namespace TimeOptimal
         double *upPoint=new double [switchCount_body];
         GetStanceTwoPointAtSwitch(lowPoint,upPoint);
 
-        printf("lowPoint:");
-        for(int i=0;i<switchCount_body;i++)
-        {
-            printf("%.2f,",lowPoint[i]);
-        }
-        printf("\n");
-        printf("upPoint:");
-        for(int i=0;i<switchCount_body;i++)
-        {
-            printf("%.2f,",upPoint[i]);
-        }
-        printf("\n");
+//        printf("lowPoint:");
+//        for(int i=0;i<switchCount_body;i++)
+//        {
+//            printf("%.2f,",lowPoint[i]);
+//        }
+//        printf("\n");
+//        printf("upPoint:");
+//        for(int i=0;i<switchCount_body;i++)
+//        {
+//            printf("%.2f,",upPoint[i]);
+//        }
+//        printf("\n");
 
         for(int i=0;i<count5+1;i++)
         {
@@ -813,7 +844,7 @@ namespace TimeOptimal
             else if(k_st_start<forwardEnd_s)
             {
                 ignoreBackward=true;
-                printf("StanceLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
+                //printf("StanceLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
             }
             else if(k_st_start==forwardEnd_s && lowPoint[m]>forwardEnd_ds)
             {
@@ -910,7 +941,7 @@ namespace TimeOptimal
             else if(k_st_start<forwardEnd_s)
             {
                 ignoreForward=true;
-                printf("StanceLeg forward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
+                //printf("StanceLeg forward start at a passed point, quit switchPoint %.1f\n",switchPoint_body[m]);
             }
             else if(k_st_start==forwardEnd_s)
             {
@@ -974,7 +1005,7 @@ namespace TimeOptimal
         delete [] upPoint;
     }
 
-    void NonRTOptimalGCS::ApplyStanceExtraItegration()
+    void NonRTOptimalGCSRotate::ApplyStanceExtraItegration()
     {
         bool stopFlag {false};
         int k_st {0};
@@ -1026,12 +1057,12 @@ namespace TimeOptimal
         }
         else
         {
-            printf("Amazing!!!Ds[start] equal Ds[end].No need to apply extra itegration.\n");
+            printf("Amazing!!! Ds[start] equal Ds[end].No need to apply extra itegration.\n");
         }
 
     }
 
-    void NonRTOptimalGCS::GetStanceOptimalDsByDirectNI()
+    void NonRTOptimalGCSRotate::GetStanceOptimalDsByDirectNI()
     {
         bool stopFlag {false};
         bool accFlag {true};
@@ -1163,7 +1194,7 @@ namespace TimeOptimal
         }
     }
 
-    void NonRTOptimalGCS::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_b3, double s_b4)
+    void NonRTOptimalGCSRotate::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_b3, double s_b4)
     {
         std::fill_n(ds_backward_body,count5+1,0);
         std::fill_n(ds_forward_body,count5+1,0);
@@ -1234,6 +1265,16 @@ namespace TimeOptimal
             //GetStanceDsBoundByNewton(i);
             GetStanceDsBoundByFunc(i);
         }
+        //output data to analyse when error
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_PeeB.txt",*output_PeeB,2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const.txt", *output_const, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a1.txt",*output_a1,2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0L.txt",*output_a0L,2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a0H.txt",*output_a0H,2201,18);
 
         gettimeofday(&tpend,NULL);
         tused=tpend.tv_sec-tpstart.tv_sec+(double)(tpend.tv_usec-tpstart.tv_usec)/1000000;
@@ -1255,7 +1296,7 @@ namespace TimeOptimal
 
     }
 
-    void NonRTOptimalGCS::GetStanceOptimalDsByMinorIteration()
+    void NonRTOptimalGCSRotate::GetStanceOptimalDsByMinorIteration()
     {
         double t1 {0};
         double t2 {0};
@@ -1312,7 +1353,7 @@ namespace TimeOptimal
         //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_body.txt",s_b,count5+1,1);
     }
 
-    void NonRTOptimalGCS::GetStanceOptimalDsByNewton()
+    void NonRTOptimalGCSRotate::GetStanceOptimalDsByNewton()
     {
         double t1 {0};
         double t2 {0};
@@ -1324,14 +1365,14 @@ namespace TimeOptimal
         double D4 {1};
 
         int k {0};
-    //    s_b1=0.5*dutyCycle-0.25;/*(dutyCycle-0.5)/2*/
-    //    s_b2=0.75-0.5*dutyCycle;/*(dutyCycle-0.5)/2+(1-dutyCycle)*/
-    //    s_b3=0.5*dutyCycle+0.25;/*(dutyCycle-0.5)/2+0.5*/
-    //    s_b4=1.25-0.5*dutyCycle;/*1-(dutyCycle-0.5)/2*/
-        s_b1=0;
-        s_b2=0.5;
-        s_b3=0.5;
-        s_b4=1;
+        s_b1=0.5*dutyCycle-0.25;/*(dutyCycle-0.5)/2*/
+        s_b2=0.75-0.5*dutyCycle;/*(dutyCycle-0.5)/2+(1-dutyCycle)*/
+        s_b3=0.5*dutyCycle+0.25;/*(dutyCycle-0.5)/2+0.5*/
+        s_b4=1.25-0.5*dutyCycle;/*1-(dutyCycle-0.5)/2*/
+//        s_b1=0;
+//        s_b2=0.5;
+//        s_b3=0.5;
+//        s_b4=1;
         GetStanceOptimalDsAtSb(s_b1, s_b2, s_b3, s_b4);
         t1=timeArray_body[count1]-(0.5*dutyCycle-0.25)*Tstep;
         t2=timeArray_body[count2]-(0.75-0.5*dutyCycle)*Tstep;
@@ -1378,6 +1419,20 @@ namespace TimeOptimal
         }
 
         printf("Quasi-Newton Method count: %d, s_b1=%.4f, s_b2=%.4f, s_b3=%.4f, s_b4=%.4f\n",k,s_b1,s_b2,s_b3,s_b4);
+        //output data to analyse when error
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt_body.txt",ds_upBound_aLmt_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_vLmt_body.txt",ds_upBound_vLmt_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_upBound_body.txt",dds_upBound_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_upBound_body.txt",dds_lowBound_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_forward_body.txt",ds_forward_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward_body.txt",ds_backward_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward_body.txt",dds_forward_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward_body.txt",dds_backward_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds_body.txt",real_ds_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds_body.txt",real_dds_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax_body.txt",real_ddsMax_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin_body.txt",real_ddsMin_body,2201,1);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_body_tmp.txt",timeArray_body_tmp,2201,1);
     }
 
     /*
@@ -1385,7 +1440,7 @@ namespace TimeOptimal
     However, it is in fact a special situation, but not rigorous provement.
     It is developed for the paper published in Part C, but not used bacause it is not so convincing mathematically.
     */
-    void NonRTOptimalGCS::AnalyseStanceOptimalTime()
+    void NonRTOptimalGCSRotate::AnalyseStanceOptimalTime()
     {
         double Tsb1 {0};
         double Tsb2 {0};
@@ -1508,7 +1563,7 @@ namespace TimeOptimal
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_body.txt",s_b,count5+1,1);
     }
 
-    void NonRTOptimalGCS::GetSwingLegParam(int count, int legID, double sw, double *pva_body)
+    void NonRTOptimalGCSRotate::GetSwingLegParam(int count, int legID, double sw, double *sb_mtx)
     {
         double pEB[6] {0};
         double pEE[18] {0};
@@ -1516,8 +1571,8 @@ namespace TimeOptimal
         double dJvi_x[9] {0};
         double dJvi_y[9] {0};
         double dJvi_z[9] {0};
-        double dJvi_dot_f[9] {0};//used in swingLeg
-        double dJvi_dot_vb[9] {0};//used in swingLeg
+        double dJvi_dot_df[9] {0};//used in swingLeg
+        double dJvi_dot_C1[9] {0};//used in swingLeg
 
         double param_dsds1[18] {0};
         double param_dsds2[18] {0};
@@ -1525,79 +1580,130 @@ namespace TimeOptimal
         double param_ds2[18] {0};
         double param_const1[18] {0};
         double param_const2[18] {0};
+        double param_const3[18] {0};
         double param_dsds[18] {0};
         double param_ds[18] {0};//for aLmt of swingLeg
         double param_const[18] {0};//for aLmt of swingLeg
 
-        f_sw[0]=0;
-        f_sw[1]=stepH*sin(sw);
-        f_sw[2]=stepD/2*cos(sw);
-        df_sw[0]=0;
-        df_sw[1]=stepH*cos(sw);
-        df_sw[2]=-stepD/2*sin(sw);
-        ddf_sw[0]=0;
-        ddf_sw[1]=-stepH*sin(sw);
-        ddf_sw[2]=-stepD/2*cos(sw);
+        double ratio_f[3] {0};
+        if(legID%2==1)
+        {
+            ratio_f[0]=initPee[3*legID]*(cos(5*stepBeta/4)-cos(stepBeta/4))+initPee[3*legID+2]*(sin(5*stepBeta/4)-sin(stepBeta/4));
+            ratio_f[2]=-initPee[3*legID]*(sin(5*stepBeta/4)-sin(stepBeta/4))+initPee[3*legID+2]*(cos(5*stepBeta/4)-cos(stepBeta/4));
+        }
+        else
+        {
+            ratio_f[0]=initPee[3*legID]*(cos(3*stepBeta/4)-cos(-stepBeta/4))+initPee[3*legID+2]*(sin(3*stepBeta/4)-sin(-stepBeta/4));
+            ratio_f[2]=-initPee[3*legID]*(sin(3*stepBeta/4)-sin(-stepBeta/4))+initPee[3*legID+2]*(cos(3*stepBeta/4)-cos(-stepBeta/4));
+        }
 
-        pEB[2]=initPeb[2]+pva_body[0];
+        f_sw[0]=-ratio_f[0]/2*(cos(sw)-1);
+        f_sw[1]=stepH*sin(sw);
+        f_sw[2]=-ratio_f[2]/2*(cos(sw)-1);
+
+        df_sw[0]=ratio_f[0]/2*sin(sw);
+        df_sw[1]=stepH*cos(sw);
+        df_sw[2]=ratio_f[2]/2*sin(sw);
+
+        ddf_sw[0]=ratio_f[0]/2*cos(sw);
+        ddf_sw[1]=-stepH*sin(sw);
+        ddf_sw[2]=ratio_f[2]/2*cos(sw);
+
+        //b_sb:{gama,z,x}
+        pEB[0]=initPeb[0]+b_sb[count][2];
+        pEB[2]=initPeb[2]+b_sb[count][1];
+        pEB[3]=initPeb[3]+b_sb[count][0];
         if(legID%2==1)//135
         {
-            pEE[3*legID]=initPee[3*legID]+f_sw[0];
+            pEE[3*legID]=initPee[3*legID]*cos(stepBeta/4)+initPee[3*legID+2]*sin(stepBeta/4)+f_sw[0];
             pEE[3*legID+1]=initPee[3*legID+1]+f_sw[1];
-            pEE[3*legID+2]=initPee[3*legID+2]-stepD/4+f_sw[2]-stepD/2;
+            pEE[3*legID+2]=-initPee[3*legID]*sin(stepBeta/4)+initPee[3*legID+2]*cos(stepBeta/4)+f_sw[2];
         }
         else//024
         {
-            pEE[3*legID]=initPee[3*legID]+f_sw[0];
+            pEE[3*legID]=initPee[3*legID]*cos(-stepBeta/4)+initPee[3*legID+2]*sin(-stepBeta/4)+f_sw[0];
             pEE[3*legID+1]=initPee[3*legID+1]+f_sw[1];
-            pEE[3*legID+2]=initPee[3*legID+2]+stepD/4+f_sw[2]-stepD/2;
+            pEE[3*legID+2]=-initPee[3*legID]*sin(-stepBeta/4)+initPee[3*legID+2]*cos(-stepBeta/4)+f_sw[2];
         }
-        rbt.SetPeb(pEB);
+        rbt.SetPeb(pEB,"213");
         rbt.pLegs[legID]->SetPee(pEE+3*legID);
+
+        memcpy(*output_PebPee+24*count,pEB,6*sizeof(double));
+        memcpy(*output_PebPee+24*count+6+3*legID,pEE+3*legID,3*sizeof(double));
 
         rbt.pLegs[legID]->GetJvi(Jvi,rbt.body());
         rbt.pLegs[legID]->GetdJacOverPee(dJvi_x,dJvi_y,dJvi_z,"B");
 
-        double vb_sw3[3] {0};
-        double ab_sw3[3] {0};
-        vb_sw3[2]=pva_body[1];
-        ab_sw3[2]=pva_body[2];
+        //b_sb,db_sb,ddb_sb:{gama,z,x}
+        double C1_tmp[3] {0};//C1 in Thesis
+        double C2_tmp[3] {0};//C2 in Thesis
+        C1_tmp[0]=-db_sb[count][2]-db_sb[count][0]*(pEE[3*legID+2]-b_sb[count][1]);
+        C1_tmp[2]=-db_sb[count][1]+db_sb[count][0]*(pEE[3*legID]-b_sb[count][2]);
+        C2_tmp[0]=-ddb_sb[count][0]*(pEE[3*legID+2]-b_sb[count][1])+db_sb[count][0]*db_sb[count][0]*(pEE[3*legID]  -b_sb[count][2])-2*db_sb[count][0]*C1_tmp[2]-ddb_sb[count][2];
+        C2_tmp[2]= ddb_sb[count][0]*(pEE[3*legID]  -b_sb[count][2])+db_sb[count][0]*db_sb[count][0]*(pEE[3*legID+2]-b_sb[count][1])+2*db_sb[count][0]*C1_tmp[0]-ddb_sb[count][1];
 
-        std::fill_n(dJvi_dot_f,9,0);
-        aris::dynamic::s_daxpy(9,df_sw[0],dJvi_x,1,dJvi_dot_f,1);
-        aris::dynamic::s_daxpy(9,df_sw[1],dJvi_y,1,dJvi_dot_f,1);
-        aris::dynamic::s_daxpy(9,df_sw[2],dJvi_z,1,dJvi_dot_f,1);
+        double C1[3] {0};
+        double C2[3] {0};
+        C1[0]=C1_tmp[0]*cos(b_sb[count][0])-C1_tmp[2]*sin(b_sb[count][0]);
+        C1[2]=C1_tmp[0]*sin(b_sb[count][0])+C1_tmp[2]*cos(b_sb[count][0]);
+        C2[0]=C2_tmp[0]*cos(b_sb[count][0])-C2_tmp[2]*sin(b_sb[count][0]);
+        C2[2]=C2_tmp[0]*sin(b_sb[count][0])+C2_tmp[2]*cos(b_sb[count][0]);
 
-        std::fill_n(dJvi_dot_vb,9,0);
-        aris::dynamic::s_daxpy(9,vb_sw3[0],dJvi_x,1,dJvi_dot_vb,1);
-        aris::dynamic::s_daxpy(9,vb_sw3[1],dJvi_y,1,dJvi_dot_vb,1);
-        aris::dynamic::s_daxpy(9,vb_sw3[2],dJvi_z,1,dJvi_dot_vb,1);
+        memcpy(*output_C+36*count+3*legID   ,C1,3*sizeof(double));
+        memcpy(*output_C+36*count+18+3*legID,C2,3*sizeof(double));
+
+        double dgama_cross_df_tmp[3] {db_sb[count][0]*df_sw[2],0,-db_sb[count][0]*df_sw[0]};
+        double dgama_cross_df[3] {0};
+        dgama_cross_df[0]=dgama_cross_df_tmp[0]*cos(b_sb[count][0])-dgama_cross_df_tmp[2]*sin(b_sb[count][0]);
+        dgama_cross_df[2]=dgama_cross_df_tmp[0]*sin(b_sb[count][0])+dgama_cross_df_tmp[2]*cos(b_sb[count][0]);
+
+        double df_sw_inB[3] {0};
+        df_sw_inB[0]=df_sw[0]*cos(b_sb[count][0])-df_sw[2]*sin(b_sb[count][0]);
+        df_sw_inB[1]=df_sw[1];
+        df_sw_inB[2]=df_sw[0]*sin(b_sb[count][0])+df_sw[2]*cos(b_sb[count][0]);
+
+        double ddf_sw_inB[3] {0};
+        ddf_sw_inB[0]=ddf_sw[0]*cos(b_sb[count][0])-ddf_sw[2]*sin(b_sb[count][0]);
+        ddf_sw_inB[1]=ddf_sw[1];
+        ddf_sw_inB[2]=ddf_sw[0]*sin(b_sb[count][0])+ddf_sw[2]*cos(b_sb[count][0]);
+
+        std::fill_n(dJvi_dot_df,9,0);
+        aris::dynamic::s_daxpy(9,df_sw_inB[0],dJvi_x,1,dJvi_dot_df,1);
+        aris::dynamic::s_daxpy(9,df_sw_inB[1],dJvi_y,1,dJvi_dot_df,1);
+        aris::dynamic::s_daxpy(9,df_sw_inB[2],dJvi_z,1,dJvi_dot_df,1);
+
+        std::fill_n(dJvi_dot_C1,9,0);
+        aris::dynamic::s_daxpy(9,C1[0],dJvi_x,1,dJvi_dot_C1,1);
+        aris::dynamic::s_daxpy(9,C1[1],dJvi_y,1,dJvi_dot_C1,1);
+        aris::dynamic::s_daxpy(9,C1[2],dJvi_z,1,dJvi_dot_C1,1);
 
         std::fill_n(param_dds+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_sw,1,1,param_dds+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,df_sw_inB,1,1,param_dds+3*legID,1);
 
         std::fill_n(param_dsds1+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_sw,1,1,param_dsds1+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ddf_sw_inB,1,1,param_dsds1+3*legID,1);
         std::fill_n(param_dsds2+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_f,3,df_sw,1,1,param_dsds2+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_df,3,df_sw_inB,1,1,param_dsds2+3*legID,1);
 
         std::fill_n(param_ds1+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_vb,3,df_sw,1,1,param_ds1+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,dgama_cross_df,1,1,param_ds1+3*legID,1);
         std::fill_n(param_ds2+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_f,3,vb_sw3,1,1,param_ds2+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_df,3,C1,1,1,param_ds2+3*legID,1);
 
         std::fill_n(param_const1+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_vb,3,vb_sw3,1,1,param_const1+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C1,1,1,param_const1+3*legID,1);
         std::fill_n(param_const2+3*legID,3,0);
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,ab_sw3,1,1,param_const2+3*legID,1);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C2,1,1,param_const2+3*legID,1);//G*C2
+        std::fill_n(param_const3+3*legID,3,0);
+        aris::dynamic::s_dgemm(3,1,3,1,dJvi_dot_C1,3,C1,1,1,param_const3+3*legID,1);//H*C1
 
         std::fill_n(param_dsds+3*legID,3,0);
         std::fill_n(param_ds+3*legID,3,0);
         for (int k=0;k<3;k++)
         {
             param_dsds[3*legID+k]=param_dsds1[3*legID+k]+param_dsds2[3*legID+k];
-            param_ds[3*legID+k]=-param_ds1[3*legID+k]-param_ds2[3*legID+k];
-            param_const[3*legID+k]=param_const1[3*legID+k]-param_const2[3*legID+k];
+            param_ds[3*legID+k]=2*(-param_ds1[3*legID+k]+param_ds2[3*legID+k])*sb_mtx[1];
+            param_const[3*legID+k]=param_const1[3*legID+k]*sb_mtx[2]+(param_const2[3*legID+k]+param_const3[3*legID+k])*sb_mtx[1]*sb_mtx[1];
 
             if(param_dds[3*legID+k]>0)
             {
@@ -1629,9 +1735,12 @@ namespace TimeOptimal
             rbt.pLegs[legID]->GetPee(*output_PeeB+18*count+3*legID,rbt.body());
             memcpy(*output_dsds+18*count+3*legID,  param_dsds+3*legID,  3*sizeof(double));
             memcpy(*output_ds+18*count+3*legID,  param_ds+3*legID,  3*sizeof(double));
+//            memcpy(*output_ds1+18*count+3*legID, param_ds1+3*legID, 3*sizeof(double));
+//            memcpy(*output_ds2+18*count+3*legID, param_ds2+3*legID, 3*sizeof(double));
             memcpy(*output_const+18*count+3*legID,  param_const+3*legID,  3*sizeof(double));
-            memcpy(*output_const1+18*count+3*legID,  param_const1+3*legID,  3*sizeof(double));
-            memcpy(*output_const2+18*count+3*legID,  param_const2+3*legID,  3*sizeof(double));
+//            memcpy(*output_const1+18*count+3*legID,  param_const1+3*legID,  3*sizeof(double));
+//            memcpy(*output_const2+18*count+3*legID,  param_const2+3*legID,  3*sizeof(double));
+//            memcpy(*output_const3+18*count+3*legID,  param_const3+3*legID,  3*sizeof(double));
             memcpy(*output_dds+18*count+3*legID, param_dds+3*legID, 3*sizeof(double));
             memcpy(*output_a2+18*count+3*legID,  param_a2+3*legID,  3*sizeof(double));
             memcpy(*output_a1+18*count+3*legID,  param_a1+3*legID,  3*sizeof(double));
@@ -1640,7 +1749,7 @@ namespace TimeOptimal
         }
     }
 
-    double NonRTOptimalGCS::GetSwingMaxDec(int count, double ds, int legID)
+    double NonRTOptimalGCSRotate::GetSwingMaxDec(int count, double ds, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
         double dec[3] {0};
@@ -1655,7 +1764,7 @@ namespace TimeOptimal
         return *std::max_element(dec,dec+3);
     }
 
-    double NonRTOptimalGCS::GetSwingMinAcc(int count, double ds, int legID)
+    double NonRTOptimalGCSRotate::GetSwingMinAcc(int count, double ds, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
         double acc[3] {0};
@@ -1670,7 +1779,7 @@ namespace TimeOptimal
         return *std::min_element(acc,acc+3);
     }
 
-    void NonRTOptimalGCS::GetSwingDsBound(int count, int legID)
+    void NonRTOptimalGCSRotate::GetSwingDsBound(int count, int legID)
     {
         bool ds_lowBoundFlag_sw {false};
         bool ds_upBoundFlag_sw {false};
@@ -1751,32 +1860,39 @@ namespace TimeOptimal
         }
 
         double vLmt_value[3] {0};
-        double Jvi_dot_vb[3] {0};
-        double vb_sw3[3] {0};
-        vb_sw3[2]=pva_b[count][1];
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
+        double Jvi_dot_C1[3] {0};
+        double pEE[18];
+        rbt.pLegs[legID]->GetPee(pEE+3*legID);
+
+        double C1_tmp[3] {0};//C1 in Thesis
+        C1_tmp[0]=-db_sb[count][2]-db_sb[count][0]*(pEE[3*legID+2]-b_sb[count][1]);
+        C1_tmp[2]=-db_sb[count][1]+db_sb[count][0]*(pEE[3*legID]-b_sb[count][2]);
+        double C1[3] {0};
+        C1[0]=C1_tmp[0]*cos(b_sb[count][0])-C1_tmp[2]*sin(b_sb[count][2]);
+        C1[2]=C1_tmp[0]*sin(b_sb[count][0])+C1_tmp[2]*cos(b_sb[count][2]);
+
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C1,1,1,Jvi_dot_C1,1);
         for (int k=0;k<3;k++)
         {
             if(output_dds[count][3*legID+k]>0)
             {
-                vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/output_dds[count][3*legID+k];
+                vLmt_value[k]=(Jvi_dot_C1[k]+vLmt)/output_dds[count][3*legID+k];
             }
             else if(output_dds[count][3*legID+k]<0)
             {
-                vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/output_dds[count][3*legID+k];
+                vLmt_value[k]=(Jvi_dot_C1[k]-vLmt)/output_dds[count][3*legID+k];
             }
             else
             {
                 printf("WARNING!!! param_dds equals zero!!! SwingLeg : %d \n",count);
             }
-
         }
         ds_upBound_vLmt[swCount][legID]=*std::min_element(vLmt_value,vLmt_value+3);
         ds_upBound[swCount][legID]=std::min(ds_upBound_aLmt[swCount][legID],ds_upBound_vLmt[swCount][legID]);
         ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
     }
 
-    void NonRTOptimalGCS::GetSwingDsBoundByNewton(int count, int legID)
+    void NonRTOptimalGCSRotate::GetSwingDsBoundByNewton(int count, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
 
@@ -1883,33 +1999,39 @@ namespace TimeOptimal
         ds_upBound_aLmt[swCount][legID]=ds1;
 
         double vLmt_value[3] {0};
-        double Jvi_dot_vb[3] {0};
-        double vb_sw3[3] {0};
-        vb_sw3[2]=pva_b[count][1];
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
+        double Jvi_dot_C1[3] {0};
+        double pEE[18];
+        rbt.pLegs[legID]->GetPee(pEE+3*legID);
+
+        double C1_tmp[3] {0};//C1 in Thesis
+        C1_tmp[0]=-db_sb[count][2]-db_sb[count][0]*(pEE[3*legID+2]-b_sb[count][1]);
+        C1_tmp[2]=-db_sb[count][1]+db_sb[count][0]*(pEE[3*legID]-b_sb[count][2]);
+        double C1[3] {0};
+        C1[0]=C1_tmp[0]*cos(b_sb[count][0])-C1_tmp[2]*sin(b_sb[count][2]);
+        C1[2]=C1_tmp[0]*sin(b_sb[count][0])+C1_tmp[2]*cos(b_sb[count][2]);
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C1,1,1,Jvi_dot_C1,1);
         for (int k=0;k<3;k++)
         {
             if(output_dds[count][3*legID+k]>0)
             {
-                vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/output_dds[count][3*legID+k];
+                vLmt_value[k]=(Jvi_dot_C1[k]+vLmt)/output_dds[count][3*legID+k];
             }
             else if(output_dds[count][3*legID+k]<0)
             {
-                vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/output_dds[count][3*legID+k];
+                vLmt_value[k]=(Jvi_dot_C1[k]-vLmt)/output_dds[count][3*legID+k];
             }
             else
             {
                 printf("WARNING!!! param_dds equals zero!!! SwingLeg : %d \n",count);
             }
+
         }
         ds_upBound_vLmt[swCount][legID]=*std::min_element(vLmt_value,vLmt_value+3);
-
         ds_upBound[swCount][legID]=std::min(ds_upBound_aLmt[swCount][legID],ds_upBound_vLmt[swCount][legID]);
-        dds_lowBound[swCount][legID]=GetSwingMaxDec(count,ds_upBound[swCount][legID],legID);
-        dds_upBound[swCount][legID]=GetSwingMinAcc(count,ds_upBound[swCount][legID],legID);
+        ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
     }
 
-    void NonRTOptimalGCS::GetSwingDsBoundByFunc(int count, int legID)
+    void NonRTOptimalGCSRotate::GetSwingDsBoundByFunc(int count, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
 
@@ -1955,7 +2077,7 @@ namespace TimeOptimal
                         double ds2=(-sqrt(FuncA1*FuncA1-4*FuncA0*FuncA2)-FuncA1)/(2*FuncA2);
                         ds=std::max(ds1,ds2);
                     }
-                    if(minDs>ds && ds>0)
+                    if(minDs>ds && ds>0 && GetSwingMaxDec(count,ds-1e-3,legID)<GetSwingMinAcc(count,ds-1e-3,legID))
                     {
                         minDs=ds;
                     }
@@ -1965,40 +2087,47 @@ namespace TimeOptimal
 
         if(minDs==1e6)
         {
-            printf("Warning! Swing minDs too small or minDs donot exist!\n");
+            printf("WARNING!!! Swing minDs too small or minDs donot exist at count %d!\n",count);
         }
 
         ds_upBound_aLmt[swCount][legID]=minDs;
         //printf("ds_upBound_aLmt finished!\n");
 
         double vLmt_value[3] {0};
-        double Jvi_dot_vb[3] {0};
-        double vb_sw3[3] {0};
-        vb_sw3[2]=pva_b[count][1];
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
+        double Jvi_dot_C1[3] {0};
+        double pEE[18];
+        rbt.pLegs[legID]->GetPee(pEE+3*legID);
+
+        double C1_tmp[3] {0};//C1 in Thesis
+        C1_tmp[0]=-db_sb[count][2]-db_sb[count][0]*(pEE[3*legID+2]-b_sb[count][1]);
+        C1_tmp[2]=-db_sb[count][1]+db_sb[count][0]*(pEE[3*legID]-b_sb[count][2]);
+        double C1[3] {0};
+        C1[0]=C1_tmp[0]*cos(b_sb[count][0])-C1_tmp[2]*sin(b_sb[count][2]);
+        C1[2]=C1_tmp[0]*sin(b_sb[count][0])+C1_tmp[2]*cos(b_sb[count][2]);
+
+        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,C1,1,1,Jvi_dot_C1,1);
         for (int k=0;k<3;k++)
         {
             if(output_dds[count][3*legID+k]>0)
             {
-                vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/output_dds[count][3*legID+k];
+                vLmt_value[k]=(Jvi_dot_C1[k]+vLmt)/output_dds[count][3*legID+k];
             }
             else if(output_dds[count][3*legID+k]<0)
             {
-                vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/output_dds[count][3*legID+k];
+                vLmt_value[k]=(Jvi_dot_C1[k]-vLmt)/output_dds[count][3*legID+k];
             }
             else
             {
                 printf("WARNING!!! param_dds equals zero!!! SwingLeg : %d \n",count);
             }
+
         }
         ds_upBound_vLmt[swCount][legID]=*std::min_element(vLmt_value,vLmt_value+3);
-
         ds_upBound[swCount][legID]=std::min(ds_upBound_aLmt[swCount][legID],ds_upBound_vLmt[swCount][legID]);
-        dds_lowBound[swCount][legID]=GetSwingMaxDec(count,ds_upBound[swCount][legID],legID);
-        dds_upBound[swCount][legID]=GetSwingMinAcc(count,ds_upBound[swCount][legID],legID);
+        ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
     }
 
-    void NonRTOptimalGCS::GetSwingSwitchPoint(int legID)
+    void NonRTOptimalGCSRotate::GetSwingSwitchPoint(int legID)
     {
         double slopedsBound_for[901] {0};
         double slopedsBound_back[901] {0};
@@ -2069,19 +2198,19 @@ namespace TimeOptimal
             }
         }
 
-        printf("SwingLeg %d Tangent Switch Point:",legID);
-        for(int i=0;i<tangentCount+1;i++)
-        {
-            printf("%.1f,",tangentPoint[i]);
-        }
-        printf("\n");
+//        printf("SwingLeg %d Tangent Switch Point:",legID);
+//        for(int i=0;i<tangentCount+1;i++)
+//        {
+//            printf("%.1f,",tangentPoint[i]);
+//        }
+//        printf("\n");
 
-        printf("SwingLeg %d ZeroInertia Switch Point:",legID);
-        for(int i=0;i<paramdds0Count+1;i++)
-        {
-            printf("%.1f,",paramdds0Point[i]);
-        }
-        printf("\n");
+//        printf("SwingLeg %d ZeroInertia Switch Point:",legID);
+//        for(int i=0;i<paramdds0Count+1;i++)
+//        {
+//            printf("%.1f,",paramdds0Point[i]);
+//        }
+//        printf("\n");
 
         //merge tangentPoint & paramdds0Point into switchPoint
         switchPoint[0][legID]=0;
@@ -2157,7 +2286,7 @@ namespace TimeOptimal
         printf("\n");
     }
 
-    double NonRTOptimalGCS::GetSwingSwitchMaxDec(int switchID, double ds, int legID)
+    double NonRTOptimalGCSRotate::GetSwingSwitchMaxDec(int switchID, double ds, int legID)
     {
         double dec[3] {0};
         std::fill_n(dec,3,-1e6);
@@ -2171,7 +2300,7 @@ namespace TimeOptimal
         return *std::max_element(dec,dec+3);
     }
 
-    double NonRTOptimalGCS::GetSwingSwitchMinAcc(int switchID, double ds, int legID)
+    double NonRTOptimalGCSRotate::GetSwingSwitchMinAcc(int switchID, double ds, int legID)
     {
         double acc[3] {0};
         std::fill_n(acc,3,1e6);
@@ -2185,7 +2314,7 @@ namespace TimeOptimal
         return *std::min_element(acc,acc+3);
     }
 
-    double NonRTOptimalGCS::GetSwingSwitchDsBound(int switchID, int legID, double *pva_body)
+    double NonRTOptimalGCSRotate::GetSwingSwitchDsBound(int switchID, int legID, double *pva_body)
     {
         bool ds_lowBoundFlag_sw {false};
         bool ds_upBoundFlag_sw {false};
@@ -2263,7 +2392,7 @@ namespace TimeOptimal
         return std::min(ds_a,ds_v);
     }
 
-    void NonRTOptimalGCS::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint)
+    void NonRTOptimalGCSRotate::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint)
     {
         lowPoint[0]=-1;
         //lowPoint[switchCount[legID]-1]=0;
@@ -2321,7 +2450,7 @@ namespace TimeOptimal
         }
     }
 
-    void NonRTOptimalGCS::GetSwingOptimalDsBySwitchPoint(int legID)
+    void NonRTOptimalGCSRotate::GetSwingOptimalDsBySwitchPoint(int legID)
     {
         bool stopFlag {false};
         int forwardEnd_s {-1};
@@ -2330,18 +2459,18 @@ namespace TimeOptimal
         double *upPoint=new double [switchCount[legID]];
         GetSwingTwoPointAtSwitch(legID,lowPoint,upPoint);
 
-        printf("lowPoint:");
-        for(int i=0;i<switchCount[legID];i++)
-        {
-            printf("%.2f,",lowPoint[i]);
-        }
-        printf("\n");
-        printf("upPoint:");
-        for(int i=0;i<switchCount[legID];i++)
-        {
-            printf("%.2f,",upPoint[i]);
-        }
-        printf("\n");
+//        printf("lowPoint:");
+//        for(int i=0;i<switchCount[legID];i++)
+//        {
+//            printf("%.2f,",lowPoint[i]);
+//        }
+//        printf("\n");
+//        printf("upPoint:");
+//        for(int i=0;i<switchCount[legID];i++)
+//        {
+//            printf("%.2f,",upPoint[i]);
+//        }
+//        printf("\n");
 
 
         for(int i=0;i<swingSCount+1;i++)
@@ -2366,7 +2495,7 @@ namespace TimeOptimal
             else if(k_sw_start<forwardEnd_s)
             {
                 ignoreBackward=true;
-                printf("SwingLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
+                //printf("SwingLeg backward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
             }
             else if(k_sw_start==forwardEnd_s && lowPoint[m]>forwardEnd_ds)
             {
@@ -2456,7 +2585,7 @@ namespace TimeOptimal
             else if(k_sw_start<forwardEnd_s)
             {
                 ignoreForward=true;
-                printf("SwingLeg forward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
+                //printf("SwingLeg forward start at a passed point, quit switchPoint %.1f\n",switchPoint[m][legID]);
             }
             else if(k_sw_start==forwardEnd_s && upPoint[m]>forwardEnd_ds)
             {
@@ -2522,7 +2651,7 @@ namespace TimeOptimal
         delete [] upPoint;
     }
 
-    void NonRTOptimalGCS::ApplySwingExtraIntegration(int legID)
+    void NonRTOptimalGCSRotate::ApplySwingExtraIntegration(int legID)
     {
         bool stopFlag {false};
         int k_sw {0};
@@ -2533,12 +2662,11 @@ namespace TimeOptimal
         real_ds[0][legID]=0;
         k_sw_start=k_sw=0;
         stopFlag=false;
-        while(stopFlag==false)
+        while(stopFlag==false && k_sw<count2-count1)
         {
             int count=(legID%2==0) ? (k_sw+count1) : (k_sw+count3);
             real_dds[k_sw][legID]=GetSwingMinAcc(count,real_ds[k_sw][legID],legID);
             real_ds_tmp=sqrt(real_ds[k_sw][legID]*real_ds[k_sw][legID]+2*real_dds[k_sw][legID]*(s_w[k_sw+1][legID]-s_w[k_sw][legID]));
-
             if(real_ds_tmp>real_ds[k_sw+1][legID])
             {
                 stopFlag=true;
@@ -2549,17 +2677,17 @@ namespace TimeOptimal
                 k_sw++;
             }
         }
+        printf("ExtraIntegration(forward) stops at k_sw=%d\n",k_sw);
 
         //backward
         real_ds[count2-count1][legID]=0;
         k_sw_start=k_sw=count2-count1;
         stopFlag=false;
-        while(stopFlag==false)
+        while(stopFlag==false  && k_sw>0)
         {
             int count=(legID%2==0) ? (k_sw+count1) : (k_sw+count3);
             real_dds[k_sw][legID]=GetSwingMaxDec(count,real_ds[k_sw][legID],legID);
             real_ds_tmp=sqrt(real_ds[k_sw][legID]*real_ds[k_sw][legID]-2*real_dds[k_sw][legID]*(s_w[k_sw][legID]-s_w[k_sw-1][legID]));
-
             if(real_ds_tmp>real_ds[k_sw-1][legID])
             {
                 stopFlag=true;
@@ -2570,9 +2698,10 @@ namespace TimeOptimal
                 k_sw--;
             }
         }
+        printf("ExtraIntegration(backward) stops at k_sw=%d\n",k_sw);
     }
 
-    void NonRTOptimalGCS::GetSwingOptimalDsByDirectNI(int legID)
+    void NonRTOptimalGCSRotate::GetSwingOptimalDsByDirectNI(int legID)
     {
         bool stopFlag {false};
         bool accFlag {true};
@@ -2705,9 +2834,9 @@ namespace TimeOptimal
         }
     }
 
-    void NonRTOptimalGCS::GetOptimalDsByMajorIteration()
+    void NonRTOptimalGCSRotate::GetOptimalDsByMajorIteration()
     {
-        rbt.loadXml("../../resource/RobotEDU2.xml");
+        rbt.loadXml("../../../RobotVIII_demo/resource/RobotEDU2.xml");
 
         timeval tpstart,tpend;
         float tused;
@@ -2720,9 +2849,15 @@ namespace TimeOptimal
         //pva_b & s_w initialized here, and need to be updated during major iteration
         for (int i=0;i<count5+1;i++)
         {
-            output_init_pva_b[i][0]=pva_b[i][0]=b_sb[i];
-            output_init_pva_b[i][1]=pva_b[i][1]=db_sb[i]*real_ds_body[i];
-            output_init_pva_b[i][2]=pva_b[i][2]=ddb_sb[i]*real_ds_body[i]*real_ds_body[i]+db_sb[i]*real_dds_body[i];
+            s_b_mtrx_scale[i][0]=s_b[i];
+            s_b_mtrx_scale[i][1]=real_ds_body[i];
+            s_b_mtrx_scale[i][2]=real_dds_body[i];
+            for(int j=0;j<3;j++)
+            {
+                output_init_pva_b[i][j]=pva_b[i][j]=b_sb[i][j];
+                output_init_pva_b[i][j+3]=pva_b[i][j+3]=db_sb[i][j]*real_ds_body[i];
+                output_init_pva_b[i][j+6]=pva_b[i][j+6]=ddb_sb[i][j]*real_ds_body[i]*real_ds_body[i]+db_sb[i][j]*real_dds_body[i];
+            }
 
             for(int j=0;j<3;j++)
             {
@@ -2769,7 +2904,7 @@ namespace TimeOptimal
                 for (int i=0;i<swingSCount+1;i++)//024
                 {
                     int count = (j%2==0) ? (i+count1) : (i+count3);
-                    GetSwingLegParam(count,j,s_w[i][j],*pva_b+3*count);
+                    GetSwingLegParam(count,j,s_w[i][j],*s_b_mtrx_scale+3*count);
                     //GetSwingDsBound(count,j);
                     //GetSwingDsBoundByNewton(count,j);
                     GetSwingDsBoundByFunc(count,j);
@@ -2819,14 +2954,22 @@ namespace TimeOptimal
                 dutyCycle=1-maxSwingTime/Tstep_tmp;
             }
 
-            //update pva_b & s_w here
-            double pva_b_tmp[2201][3] {0};
+            //update s_b & s_w here
+            double s_b_mtrx_tmp[2201][3] {0};
+            double pva_b_tmp[2201][9] {0};
             for(int i=0;i<count5+1;i++)
             {
                 timeArray_body_tmp[i]=timeArray_body[i]*maxSwingTime/((1-dutyCycle)*Tstep);
-                pva_b_tmp[i][0]=output_init_pva_b[i][0];
-                pva_b_tmp[i][1]=output_init_pva_b[i][1]*(1-dutyCycle)*Tstep/maxSwingTime;
-                pva_b_tmp[i][2]=output_init_pva_b[i][2]*(1-dutyCycle)*Tstep/maxSwingTime*(1-dutyCycle)*Tstep/maxSwingTime;
+                s_b_mtrx_tmp[i][0]=s_b[i];
+                s_b_mtrx_tmp[i][1]=real_ds_body[i]*(1-dutyCycle)*Tstep/maxSwingTime;
+                s_b_mtrx_tmp[i][2]=real_dds_body[i]*(1-dutyCycle)*Tstep/maxSwingTime*(1-dutyCycle)*Tstep/maxSwingTime;
+
+                for(int j=0;j<3;j++)
+                {
+                    pva_b_tmp[i][j]  =output_init_pva_b[i][j];
+                    pva_b_tmp[i][j+3]=output_init_pva_b[i][j+3]*(1-dutyCycle)*Tstep/maxSwingTime;
+                    pva_b_tmp[i][j+6]=output_init_pva_b[i][j+6]*(1-dutyCycle)*Tstep/maxSwingTime*(1-dutyCycle)*Tstep/maxSwingTime;
+                }
             }
             Tstep_tmp=timeArray_body_tmp[count5];
 
@@ -2894,7 +3037,8 @@ namespace TimeOptimal
 
             memcpy(*real_ds_scale_tmp,*real_ds_scale,(swingSCount+1)*6*sizeof(double));
             memcpy(*s_w,*s_w_tmp,(swingSCount+1)*6*sizeof(double));
-            memcpy(*pva_b,*pva_b_tmp,(count5+1)*3*sizeof(double));
+            memcpy(*pva_b,*pva_b_tmp,(count5+1)*9*sizeof(double));
+            memcpy(*s_b_mtrx_scale,*s_b_mtrx_tmp,(count5+1)*3*sizeof(double));
             maxTime_last=maxSwingTime;
             //memcpy(totalTime_last,totalTime,6*sizeof(double));
 
@@ -2910,7 +3054,7 @@ namespace TimeOptimal
         printf("UsedTime:%f\n",tused);
     }
 
-    void NonRTOptimalGCS::GetOptimalGait2s()
+    void NonRTOptimalGCSRotate::GetOptimalGait2s()
     {
         printf("start GetOptimalGait2s\n");
         double pEB[6] {0};
@@ -2919,25 +3063,32 @@ namespace TimeOptimal
         double vEE[18] {0};
         double aEB[6] {0};
         double aEE[18] {0};
+        double ratio_f[3] {0};
 
         std::fill_n(vEE,18,0);
         std::fill_n(aEE,18,0);
         for (int i=0;i<count1;i++)
         {
-            pEB[2]=initPeb[2]+pva_b[i][0];
-            vEB[2]=pva_b[i][1];
-            aEB[2]=pva_b[i][2];
+            pEB[0]=initPeb[0]+pva_b[i][2];
+            pEB[2]=initPeb[2]+pva_b[i][1];
+            pEB[3]=initPeb[3]+pva_b[i][0];
+            vEB[0]=pva_b[i][5];
+            vEB[2]=pva_b[i][4];
+            vEB[3]=pva_b[i][3];
+            aEB[0]=pva_b[i][8];
+            aEB[2]=pva_b[i][7];
+            aEB[3]=pva_b[i][6];
             for(int j=0;j<3;j++)
             {
-                pEE[6*j+3]=initPee[6*j+3];
-                pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
-
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4;
+                pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4);
+
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
+                pEE[6*j+4]=initPee[6*j+4];
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -2954,28 +3105,39 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         for (int i=count1;i<count2+1;i++)
         {
-            pEB[2]=initPeb[2]+pva_b[i][0];
-            vEB[2]=pva_b[i][1];
-            aEB[2]=pva_b[i][2];
+            pEB[0]=initPeb[0]+pva_b[i][2];
+            pEB[2]=initPeb[2]+pva_b[i][1];
+            pEB[3]=initPeb[3]+pva_b[i][0];
+            vEB[0]=pva_b[i][5];
+            vEB[2]=pva_b[i][4];
+            vEB[3]=pva_b[i][3];
+            aEB[0]=pva_b[i][8];
+            aEB[2]=pva_b[i][7];
+            aEB[3]=pva_b[i][6];
             for(int j=0;j<3;j++)
             {
-                f_sw[0]=0;
+                ratio_f[0]=initPee[6*j]*(cos(3*stepBeta/4)-cos(-stepBeta/4))+initPee[6*j+2]*(sin(3*stepBeta/4)-sin(-stepBeta/4));
+                ratio_f[2]=-initPee[6*j]*(sin(3*stepBeta/4)-sin(-stepBeta/4))+initPee[6*j+2]*(cos(3*stepBeta/4)-cos(-stepBeta/4));
+
+                f_sw[0]=-ratio_f[0]/2*(cos(s_w[i-count1][2*j])-1);
                 f_sw[1]=stepH*sin(s_w[i-count1][2*j]);
-                f_sw[2]=stepD/2*cos(s_w[i-count1][2*j]);
-                df_sw[0]=0;
+                f_sw[2]=-ratio_f[2]/2*(cos(s_w[i-count1][2*j])-1);
+
+                df_sw[0]=ratio_f[0]/2*sin(s_w[i-count1][2*j]);
                 df_sw[1]=stepH*cos(s_w[i-count1][2*j]);
-                df_sw[2]=-stepD/2*sin(s_w[i-count1][2*j]);
-                ddf_sw[0]=0;
+                df_sw[2]=ratio_f[2]/2*sin(s_w[i-count1][2*j]);
+
+                ddf_sw[0]=ratio_f[0]/2*cos(s_w[i-count1][2*j]);
                 ddf_sw[1]=-stepH*sin(s_w[i-count1][2*j]);
-                ddf_sw[2]=-stepD/2*cos(s_w[i-count1][2*j]);
+                ddf_sw[2]=ratio_f[2]/2*cos(s_w[i-count1][2*j]);
 
-                pEE[6*j+3]=initPee[6*j+3];
-                pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
-
-                pEE[6*j]=initPee[6*j]+f_sw[0];
+                pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4)+f_sw[0];
                 pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4+f_sw[2]-stepD/2;
+                pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4)+f_sw[2];
+
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
+                pEE[6*j+4]=initPee[6*j+4];
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
 
                 vEE[6*j]=df_sw[0]*real_ds_scale[i-count1][2*j];
                 vEE[6*j+1]=df_sw[1]*real_ds_scale[i-count1][2*j];
@@ -2985,7 +3147,8 @@ namespace TimeOptimal
                 aEE[6*j+1]=ddf_sw[1]*real_ds_scale[i-count1][2*j]*real_ds_scale[i-count1][2*j]+df_sw[1]*real_dds_scale[i-count1][2*j];
                 aEE[6*j+2]=ddf_sw[2]*real_ds_scale[i-count1][2*j]*real_ds_scale[i-count1][2*j]+df_sw[2]*real_dds_scale[i-count1][2*j];
             }
-            rbt.SetPeb(pEB);
+
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3002,20 +3165,26 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         for(int i=count2+1;i<count3;i++)
         {
-            pEB[2]=initPeb[2]+pva_b[i][0];
-            vEB[2]=pva_b[i][1];
-            aEB[2]=pva_b[i][2];
+            pEB[0]=initPeb[0]+pva_b[i][2];
+            pEB[2]=initPeb[2]+pva_b[i][1];
+            pEB[3]=initPeb[3]+pva_b[i][0];
+            vEB[0]=pva_b[i][5];
+            vEB[2]=pva_b[i][4];
+            vEB[3]=pva_b[i][3];
+            aEB[0]=pva_b[i][8];
+            aEB[2]=pva_b[i][7];
+            aEB[3]=pva_b[i][6];
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3032,28 +3201,39 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         for(int i=count3;i<count4+1;i++)
         {
-            pEB[2]=initPeb[2]+pva_b[i][0];
-            vEB[2]=pva_b[i][1];
-            aEB[2]=pva_b[i][2];
+            pEB[0]=initPeb[0]+pva_b[i][2];
+            pEB[2]=initPeb[2]+pva_b[i][1];
+            pEB[3]=initPeb[3]+pva_b[i][0];
+            vEB[0]=pva_b[i][5];
+            vEB[2]=pva_b[i][4];
+            vEB[3]=pva_b[i][3];
+            aEB[0]=pva_b[i][8];
+            aEB[2]=pva_b[i][7];
+            aEB[3]=pva_b[i][6];
             for(int j=0;j<3;j++)
             {
-                f_sw[0]=0;
-                f_sw[1]=stepH*sin(s_w[i-count3][2*j+1]);
-                f_sw[2]=stepD/2*cos(s_w[i-count3][2*j+1]);
-                df_sw[0]=0;
-                df_sw[1]=stepH*cos(s_w[i-count3][2*j+1]);
-                df_sw[2]=-stepD/2*sin(s_w[i-count3][2*j+1]);
-                ddf_sw[0]=0;
-                ddf_sw[1]=-stepH*sin(s_w[i-count3][2*j+1]);
-                ddf_sw[2]=-stepD/2*cos(s_w[i-count3][2*j+1]);
+                ratio_f[0]=initPee[6*j+3]*(cos(5*stepBeta/4)-cos(stepBeta/4))+initPee[6*j+5]*(sin(5*stepBeta/4)-sin(stepBeta/4));
+                ratio_f[2]=-initPee[6*j+3]*(sin(5*stepBeta/4)-sin(stepBeta/4))+initPee[6*j+5]*(cos(5*stepBeta/4)-cos(stepBeta/4));
 
-                pEE[6*j]=initPee[6*j];
+                f_sw[0]=-ratio_f[0]/2*(cos(s_w[i-count1][2*j])-1);
+                f_sw[1]=stepH*sin(s_w[i-count1][2*j]);
+                f_sw[2]=-ratio_f[2]/2*(cos(s_w[i-count1][2*j])-1);
+
+                df_sw[0]=ratio_f[0]/2*sin(s_w[i-count1][2*j]);
+                df_sw[1]=stepH*cos(s_w[i-count1][2*j]);
+                df_sw[2]=ratio_f[2]/2*sin(s_w[i-count1][2*j]);
+
+                ddf_sw[0]=ratio_f[0]/2*cos(s_w[i-count1][2*j]);
+                ddf_sw[1]=-stepH*sin(s_w[i-count1][2*j]);
+                ddf_sw[2]=ratio_f[2]/2*cos(s_w[i-count1][2*j]);
+
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3]+f_sw[0];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4)+f_sw[0];
                 pEE[6*j+4]=initPee[6*j+4]+f_sw[1];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4+f_sw[2]-stepD/2;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4)+f_sw[2];
 
                 vEE[6*j+3]=df_sw[0]*real_ds_scale[i-count3][2*j+1];
                 vEE[6*j+4]=df_sw[1]*real_ds_scale[i-count3][2*j+1];
@@ -3063,7 +3243,7 @@ namespace TimeOptimal
                 aEE[6*j+4]=ddf_sw[1]*real_ds_scale[i-count3][2*j+1]*real_ds_scale[i-count3][2*j+1]+df_sw[1]*real_dds_scale[i-count3][2*j+1];
                 aEE[6*j+5]=ddf_sw[2]*real_ds_scale[i-count3][2*j+1]*real_ds_scale[i-count3][2*j+1]+df_sw[2]*real_dds_scale[i-count3][2*j+1];
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3080,21 +3260,27 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         for(int i=count4+1;i<count5+1;i++)
         {
-            pEB[2]=initPeb[2]+pva_b[i][0];
-            vEB[2]=pva_b[i][1];
-            aEB[2]=pva_b[i][2];
+            pEB[0]=initPeb[0]+pva_b[i][2];
+            pEB[2]=initPeb[2]+pva_b[i][1];
+            pEB[3]=initPeb[3]+pva_b[i][0];
+            vEB[0]=pva_b[i][5];
+            vEB[2]=pva_b[i][4];
+            vEB[3]=pva_b[i][3];
+            aEB[0]=pva_b[i][8];
+            aEB[2]=pva_b[i][7];
+            aEB[3]=pva_b[i][6];
             for(int j=0;j<3;j++)
             {
 
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(5*stepBeta/4)+initPee[6*j+5]*sin(5*stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4-stepD;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(5*stepBeta/4)+initPee[6*j+5]*cos(5*stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3109,10 +3295,10 @@ namespace TimeOptimal
         printf("finish GetOptimalGait2s\n");
     }
 
-    void NonRTOptimalGCS::GetOptimalGait2t()
+    void NonRTOptimalGCSRotate::GetOptimalGait2t()
     {
         printf("start GetOptimalGait2t\n");
-        double * pva_b_t=new double [3*stepTimeCount];
+        double * pva_b_t=new double [9*stepTimeCount];
         double * s_w_t=new double [6*swingTimeCount];
         double * ds_w_t=new double [6*swingTimeCount];
         double * dds_w_t=new double [6*swingTimeCount];
@@ -3134,9 +3320,9 @@ namespace TimeOptimal
                 if(0.001*i>=timeArray_body_tmp[k] && 0.001*i<timeArray_body_tmp[k+1])
                 {
                     k_start=k;
-                    for(int j=0;j<3;j++)
+                    for(int j=0;j<9;j++)
                     {
-                        *(pva_b_t+3*i+j)=pva_b[k][j]+(pva_b[k+1][j]-pva_b[k][j])
+                        *(pva_b_t+9*i+j)=pva_b[k][j]+(pva_b[k+1][j]-pva_b[k][j])
                                 *(0.001*i-timeArray_body_tmp[k])/(timeArray_body_tmp[k+1]-timeArray_body_tmp[k]);
                     }
                     break;
@@ -3171,6 +3357,7 @@ namespace TimeOptimal
         double pEE[18] {0};
         double vEE[18] {0};
         double aEE[18] {0};
+        double ratio_f[3] {0};
 
         std::fill_n(vEE,18,0);
         std::fill_n(aEE,18,0);
@@ -3179,20 +3366,26 @@ namespace TimeOptimal
         iEnd=round(swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4);
         for (int i=0;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4;
+                pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3221,30 +3414,46 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         iStart=iEnd;
         iEnd=round(swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4+swingTimeCount);
+        if(iEnd-iStart>swingTimeCount)
+        {
+            printf("WARNING!!! s_w short than swingTimeCount!\n");
+            iEnd=iStart+swingTimeCount;
+        }
         for (int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                f_sw[0]=0;
+                ratio_f[0]=initPee[6*j]*(cos(3*stepBeta/4)-cos(-stepBeta/4))+initPee[6*j+2]*(sin(3*stepBeta/4)-sin(-stepBeta/4));
+                ratio_f[2]=-initPee[6*j]*(sin(3*stepBeta/4)-sin(-stepBeta/4))+initPee[6*j+2]*(cos(3*stepBeta/4)-cos(-stepBeta/4));
+
+                f_sw[0]=-ratio_f[0]/2*(cos(*(s_w_t+6*(i-iStart)+2*j))-1);
                 f_sw[1]=stepH*sin(*(s_w_t+6*(i-iStart)+2*j));
-                f_sw[2]=stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j));
-                df_sw[0]=0;
+                f_sw[2]=-ratio_f[2]/2*(cos(*(s_w_t+6*(i-iStart)+2*j))-1);
+
+                df_sw[0]=ratio_f[0]/2*sin(*(s_w_t+6*(i-iStart)+2*j));
                 df_sw[1]=stepH*cos(*(s_w_t+6*(i-iStart)+2*j));
-                df_sw[2]=-stepD/2*sin(*(s_w_t+6*(i-iStart)+2*j));
-                ddf_sw[0]=0;
+                df_sw[2]=ratio_f[2]/2*sin(*(s_w_t+6*(i-iStart)+2*j));
+
+                ddf_sw[0]=ratio_f[0]/2*cos(*(s_w_t+6*(i-iStart)+2*j));
                 ddf_sw[1]=-stepH*sin(*(s_w_t+6*(i-iStart)+2*j));
-                ddf_sw[2]=-stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j));
+                ddf_sw[2]=ratio_f[2]/2*cos(*(s_w_t+6*(i-iStart)+2*j));
 
-                pEE[6*j]=initPee[6*j]+f_sw[0];
+                pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4)+f_sw[0];
                 pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4+f_sw[2]-stepD/2;
+                pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4)+f_sw[2];
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
 
                 vEE[6*j]=df_sw[0]*(*(ds_w_t+6*(i-iStart)+2*j));
                 vEE[6*j+1]=df_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j));
@@ -3254,7 +3463,7 @@ namespace TimeOptimal
                 aEE[6*j+1]=ddf_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j))*(*(ds_w_t+6*(i-iStart)+2*j))+df_sw[1]*(*(dds_w_t+6*(i-iStart)+2*j));
                 aEE[6*j+2]=ddf_sw[2]*(*(ds_w_t+6*(i-iStart)+2*j))*(*(ds_w_t+6*(i-iStart)+2*j))+df_sw[2]*(*(dds_w_t+6*(i-iStart)+2*j));
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3285,20 +3494,26 @@ namespace TimeOptimal
         iEnd=round(3*swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4+swingTimeCount);
         for(int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3327,30 +3542,46 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         iStart=iEnd;
         iEnd=round(3*swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4+2*swingTimeCount);
+        if(iEnd-iStart>swingTimeCount)
+        {
+            printf("WARNING!!! s_w short than swingTimeCount!\n");
+            iEnd=iStart+swingTimeCount;
+        }
         for(int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                f_sw[0]=0;
+                ratio_f[0]=initPee[6*j+3]*(cos(5*stepBeta/4)-cos(stepBeta/4))+initPee[6*j+5]*(sin(5*stepBeta/4)-sin(stepBeta/4));
+                ratio_f[2]=-initPee[6*j+3]*(sin(5*stepBeta/4)-sin(stepBeta/4))+initPee[6*j+5]*(cos(5*stepBeta/4)-cos(stepBeta/4));
+
+                f_sw[0]=-ratio_f[0]/2*(cos(*(s_w_t+6*(i-iStart)+2*j+1))-1);
                 f_sw[1]=stepH*sin(*(s_w_t+6*(i-iStart)+2*j+1));
-                f_sw[2]=stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
-                df_sw[0]=0;
+                f_sw[2]=-ratio_f[2]/2*(cos(*(s_w_t+6*(i-iStart)+2*j+1))-1);
+
+                df_sw[0]=ratio_f[0]/2*sin(*(s_w_t+6*(i-iStart)+2*j+1));
                 df_sw[1]=stepH*cos(*(s_w_t+6*(i-iStart)+2*j+1));
-                df_sw[2]=-stepD/2*sin(*(s_w_t+6*(i-iStart)+2*j+1));
-                ddf_sw[0]=0;
+                df_sw[2]=ratio_f[2]/2*sin(*(s_w_t+6*(i-iStart)+2*j+1));
+
+                ddf_sw[0]=ratio_f[0]/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
                 ddf_sw[1]=-stepH*sin(*(s_w_t+6*(i-iStart)+2*j+1));
-                ddf_sw[2]=-stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
+                ddf_sw[2]=ratio_f[2]/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
 
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3]+f_sw[0];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4)+f_sw[0];
                 pEE[6*j+4]=initPee[6*j+4]+f_sw[1];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4+f_sw[2]-stepD/2;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4)+f_sw[2];
 
                 vEE[6*j+3]=df_sw[0]*(*(ds_w_t+6*(i-iStart)+2*j+1));
                 vEE[6*j+4]=df_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j+1));
@@ -3360,7 +3591,7 @@ namespace TimeOptimal
                 aEE[6*j+4]=ddf_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j+1))*(*(ds_w_t+6*(i-iStart)+2*j+1))+df_sw[1]*(*(dds_w_t+6*(i-iStart)+2*j+1));
                 aEE[6*j+5]=ddf_sw[2]*(*(ds_w_t+6*(i-iStart)+2*j+1))*(*(ds_w_t+6*(i-iStart)+2*j+1))+df_sw[2]*(*(dds_w_t+6*(i-iStart)+2*j+1));
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3391,20 +3622,26 @@ namespace TimeOptimal
         iEnd=stepTimeCount;
         for(int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(5*stepBeta/4)+initPee[6*j+5]*sin(5*stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4-stepD;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(5*stepBeta/4)+initPee[6*j+5]*cos(5*stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3429,7 +3666,7 @@ namespace TimeOptimal
             rbt.GetAin(Ain_t+18*i);
         }
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_t,stepTimeCount,3);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_t,stepTimeCount,9);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w_t.txt",s_w_t,swingTimeCount,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee_t.txt",Pee_t,stepTimeCount,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin_t.txt",Pin_t,stepTimeCount,18);
@@ -3452,10 +3689,10 @@ namespace TimeOptimal
         printf("finish GetOptimalGait2t\n");
     }
 
-    void NonRTOptimalGCS::GetOptimalGait2t(double *out_tippos, double &out_bodyvel, double &out_period)
+    void NonRTOptimalGCSRotate::GetOptimalGait2t(double *out_tippos, double &out_bodyvel, double &out_period)
     {
         printf("start GetOptimalGait2t\n");
-        double * pva_b_t=new double [3*stepTimeCount];
+        double * pva_b_t=new double [9*stepTimeCount];
         double * s_w_t=new double [6*swingTimeCount];
         double * ds_w_t=new double [6*swingTimeCount];
         double * dds_w_t=new double [6*swingTimeCount];
@@ -3477,9 +3714,9 @@ namespace TimeOptimal
                 if(0.001*i>=timeArray_body_tmp[k] && 0.001*i<timeArray_body_tmp[k+1])
                 {
                     k_start=k;
-                    for(int j=0;j<3;j++)
+                    for(int j=0;j<9;j++)
                     {
-                        *(pva_b_t+3*i+j)=pva_b[k][j]+(pva_b[k+1][j]-pva_b[k][j])
+                        *(pva_b_t+9*i+j)=pva_b[k][j]+(pva_b[k+1][j]-pva_b[k][j])
                                 *(0.001*i-timeArray_body_tmp[k])/(timeArray_body_tmp[k+1]-timeArray_body_tmp[k]);
                     }
                     break;
@@ -3514,6 +3751,7 @@ namespace TimeOptimal
         double pEE[18] {0};
         double vEE[18] {0};
         double aEE[18] {0};
+        double ratio_f[3] {0};
 
         std::fill_n(vEE,18,0);
         std::fill_n(aEE,18,0);
@@ -3522,20 +3760,26 @@ namespace TimeOptimal
         iEnd=round(swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4);
         for (int i=0;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4;
+                pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3564,30 +3808,46 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         iStart=iEnd;
         iEnd=round(swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4+swingTimeCount);
+        if(iEnd-iStart>swingTimeCount)
+        {
+            printf("WARNING!!! s_w short than swingTimeCount!\n");
+            iEnd=iStart+swingTimeCount;
+        }
         for (int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                f_sw[0]=0;
+                ratio_f[0]=initPee[6*j]*(cos(3*stepBeta/4)-cos(-stepBeta/4))+initPee[6*j+2]*(sin(3*stepBeta/4)-sin(-stepBeta/4));
+                ratio_f[2]=-initPee[6*j]*(sin(3*stepBeta/4)-sin(-stepBeta/4))+initPee[6*j+2]*(cos(3*stepBeta/4)-cos(-stepBeta/4));
+
+                f_sw[0]=-ratio_f[0]/2*(cos(*(s_w_t+6*(i-iStart)+2*j))-1);
                 f_sw[1]=stepH*sin(*(s_w_t+6*(i-iStart)+2*j));
-                f_sw[2]=stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j));
-                df_sw[0]=0;
+                f_sw[2]=-ratio_f[2]/2*(cos(*(s_w_t+6*(i-iStart)+2*j))-1);
+
+                df_sw[0]=ratio_f[0]/2*sin(*(s_w_t+6*(i-iStart)+2*j));
                 df_sw[1]=stepH*cos(*(s_w_t+6*(i-iStart)+2*j));
-                df_sw[2]=-stepD/2*sin(*(s_w_t+6*(i-iStart)+2*j));
-                ddf_sw[0]=0;
+                df_sw[2]=ratio_f[2]/2*sin(*(s_w_t+6*(i-iStart)+2*j));
+
+                ddf_sw[0]=ratio_f[0]/2*cos(*(s_w_t+6*(i-iStart)+2*j));
                 ddf_sw[1]=-stepH*sin(*(s_w_t+6*(i-iStart)+2*j));
-                ddf_sw[2]=-stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j));
+                ddf_sw[2]=ratio_f[2]/2*cos(*(s_w_t+6*(i-iStart)+2*j));
 
-                pEE[6*j]=initPee[6*j]+f_sw[0];
+                pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4)+f_sw[0];
                 pEE[6*j+1]=initPee[6*j+1]+f_sw[1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4+f_sw[2]-stepD/2;
+                pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4)+f_sw[2];
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
 
                 vEE[6*j]=df_sw[0]*(*(ds_w_t+6*(i-iStart)+2*j));
                 vEE[6*j+1]=df_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j));
@@ -3597,7 +3857,7 @@ namespace TimeOptimal
                 aEE[6*j+1]=ddf_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j))*(*(ds_w_t+6*(i-iStart)+2*j))+df_sw[1]*(*(dds_w_t+6*(i-iStart)+2*j));
                 aEE[6*j+2]=ddf_sw[2]*(*(ds_w_t+6*(i-iStart)+2*j))*(*(ds_w_t+6*(i-iStart)+2*j))+df_sw[2]*(*(dds_w_t+6*(i-iStart)+2*j));
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3628,20 +3888,26 @@ namespace TimeOptimal
         iEnd=round(3*swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4+swingTimeCount);
         for(int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3670,30 +3936,46 @@ namespace TimeOptimal
         std::fill_n(aEE,18,0);
         iStart=iEnd;
         iEnd=round(3*swingTimeCount/(1-dutyCycle)*(2*dutyCycle-1)/4+2*swingTimeCount);
+        if(iEnd-iStart>swingTimeCount)
+        {
+            printf("WARNING!!! s_w short than swingTimeCount!\n");
+            iEnd=iStart+swingTimeCount;
+        }
         for(int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                f_sw[0]=0;
+                ratio_f[0]=initPee[6*j+3]*(cos(5*stepBeta/4)-cos(stepBeta/4))+initPee[6*j+5]*(sin(5*stepBeta/4)-sin(stepBeta/4));
+                ratio_f[2]=-initPee[6*j+3]*(sin(5*stepBeta/4)-sin(stepBeta/4))+initPee[6*j+5]*(cos(5*stepBeta/4)-cos(stepBeta/4));
+
+                f_sw[0]=-ratio_f[0]/2*(cos(*(s_w_t+6*(i-iStart)+2*j+1))-1);
                 f_sw[1]=stepH*sin(*(s_w_t+6*(i-iStart)+2*j+1));
-                f_sw[2]=stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
-                df_sw[0]=0;
+                f_sw[2]=-ratio_f[2]/2*(cos(*(s_w_t+6*(i-iStart)+2*j+1))-1);
+
+                df_sw[0]=ratio_f[0]/2*sin(*(s_w_t+6*(i-iStart)+2*j+1));
                 df_sw[1]=stepH*cos(*(s_w_t+6*(i-iStart)+2*j+1));
-                df_sw[2]=-stepD/2*sin(*(s_w_t+6*(i-iStart)+2*j+1));
-                ddf_sw[0]=0;
+                df_sw[2]=ratio_f[2]/2*sin(*(s_w_t+6*(i-iStart)+2*j+1));
+
+                ddf_sw[0]=ratio_f[0]/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
                 ddf_sw[1]=-stepH*sin(*(s_w_t+6*(i-iStart)+2*j+1));
-                ddf_sw[2]=-stepD/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
+                ddf_sw[2]=ratio_f[2]/2*cos(*(s_w_t+6*(i-iStart)+2*j+1));
 
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3]+f_sw[0];
+                pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4)+f_sw[0];
                 pEE[6*j+4]=initPee[6*j+4]+f_sw[1];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4+f_sw[2]-stepD/2;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4)+f_sw[2];
 
                 vEE[6*j+3]=df_sw[0]*(*(ds_w_t+6*(i-iStart)+2*j+1));
                 vEE[6*j+4]=df_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j+1));
@@ -3703,7 +3985,7 @@ namespace TimeOptimal
                 aEE[6*j+4]=ddf_sw[1]*(*(ds_w_t+6*(i-iStart)+2*j+1))*(*(ds_w_t+6*(i-iStart)+2*j+1))+df_sw[1]*(*(dds_w_t+6*(i-iStart)+2*j+1));
                 aEE[6*j+5]=ddf_sw[2]*(*(ds_w_t+6*(i-iStart)+2*j+1))*(*(ds_w_t+6*(i-iStart)+2*j+1))+df_sw[2]*(*(dds_w_t+6*(i-iStart)+2*j+1));
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3734,20 +4016,26 @@ namespace TimeOptimal
         iEnd=stepTimeCount;
         for(int i=iStart;i<iEnd;i++)
         {
-            pEB[2]=initPeb[2]+*(pva_b_t+3*i);
-            vEB[2]=*(pva_b_t+3*i+1);
-            aEB[2]=*(pva_b_t+3*i+2);
+            pEB[0]=initPeb[0]+*(pva_b_t+9*i+2);
+            pEB[2]=initPeb[2]+*(pva_b_t+9*i+1);
+            pEB[3]=initPeb[3]+*(pva_b_t+9*i+0);
+            vEB[0]=*(pva_b_t+9*i+5);
+            vEB[2]=*(pva_b_t+9*i+4);
+            vEB[3]=*(pva_b_t+9*i+3);
+            aEB[0]=*(pva_b_t+9*i+8);
+            aEB[2]=*(pva_b_t+9*i+7);
+            aEB[3]=*(pva_b_t+9*i+6);
             for(int j=0;j<3;j++)
             {
-                pEE[6*j]=initPee[6*j];
+                pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                 pEE[6*j+1]=initPee[6*j+1];
-                pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                pEE[6*j+3]=initPee[6*j+3];
+                pEE[6*j+3]=initPee[6*j+3]*cos(5*stepBeta/4)+initPee[6*j+5]*sin(5*stepBeta/4);
                 pEE[6*j+4]=initPee[6*j+4];
-                pEE[6*j+5]=initPee[6*j+5]-stepD/4-stepD;
+                pEE[6*j+5]=-initPee[6*j+3]*sin(5*stepBeta/4)+initPee[6*j+5]*cos(5*stepBeta/4);
             }
-            rbt.SetPeb(pEB);
+            rbt.SetPeb(pEB,"213");
             rbt.SetVb(vEB);
             rbt.SetAb(aEB);
             rbt.SetPee(pEE);
@@ -3776,7 +4064,7 @@ namespace TimeOptimal
         out_bodyvel=*(pva_b_t+1);
         out_period=0.001*stepTimeCount;
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_t,stepTimeCount,3);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_t,stepTimeCount,9);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w_t.txt",s_w_t,swingTimeCount,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee_t.txt",Pee_t,stepTimeCount,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin_t.txt",Pin_t,stepTimeCount,18);
@@ -3799,7 +4087,7 @@ namespace TimeOptimal
         printf("finish GetOptimalGait2t\n");
     }
 
-    void NonRTOptimalGCS::OutputData()
+    void NonRTOptimalGCSRotate::OutputData()
     {
         printf("Start output data...\n");
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_upBound_aLmt_body.txt",ds_upBound_aLmt_body,2201,1);
@@ -3810,13 +4098,23 @@ namespace TimeOptimal
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/ds_backward_body.txt",ds_backward_body,2201,1);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward_body.txt",dds_forward_body,2201,1);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward_body.txt",dds_backward_body,2201,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds_body.txt",real_ds_body,2201,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds_body.txt",real_dds_body,2201,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax_body.txt",real_ddsMax_body,2201,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin_body.txt",real_ddsMin_body,2201,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_body_tmp.txt",timeArray_body_tmp,2201,1);
 
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_C.txt",*output_C,2201,36);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_PebPee.txt",*output_PebPee,2201,24);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_PeeB.txt",*output_PeeB,2201,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dsds.txt", *output_dsds, 2201,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds.txt", *output_ds, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds1.txt",*output_ds1,2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_ds2.txt",*output_ds2,2201,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const.txt", *output_const, 2201,18);
-    //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt", *output_const1, 2201,18);
-    //    aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt", *output_const2, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const1.txt", *output_const1, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const2.txt", *output_const2, 2201,18);
+//        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_const3.txt", *output_const3, 2201,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_dds.txt",*output_dds,2201,18);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/param_a2.txt",*output_a2,2201,18);
@@ -3836,18 +4134,16 @@ namespace TimeOptimal
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_forward.txt",*dds_forward,901,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/dds_backward.txt",*dds_backward,901,6);
 
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds_body.txt",real_ds_body,2201,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds_body.txt",real_dds_body,2201,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax_body.txt",real_ddsMax_body,2201,1);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin_body.txt",real_ddsMin_body,2201,1);
+
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ds.txt",*real_ds,901,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_dds.txt",*real_dds,901,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMax.txt",*real_ddsMax,901,6);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/real_ddsMin.txt",*real_ddsMin,901,6);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_w.txt",*s_w,901,6);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2201,3);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_body_tmp.txt",timeArray_body_tmp,2201,1);
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b.txt",*pva_b,2201,9);
+
+        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_tmp.txt",*timeArray_tmp,901,6);
 
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pee_s.txt",*Pee_s,2201,18);
         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Pin_s.txt",*Pin_s,2201,18);
@@ -3857,7 +4153,7 @@ namespace TimeOptimal
     }
 
 
-    void NonRTOptimalGCS::GetNormalGait()
+    void NonRTOptimalGCSRotate::GetNormalGait(double &out_period)
     {
         printf("Start GetNormalGait\n");
         double pEB[6] {0};
@@ -3872,6 +4168,7 @@ namespace TimeOptimal
         double maxAbsVin {0};
         int k {0};
         bool stopFlag {false};
+        double ratio_f[2] {0};
 
         while(stopFlag==false && k<=100)
         {
@@ -3885,18 +4182,20 @@ namespace TimeOptimal
             iEnd=round(TotalCount*(2*dutyCycle-1)/4);
             for(int i=0;i<iEnd;i++)
             {
-                pEB[2]=initPeb[2]-stepD*i/TotalCount;
+                pEB[0]=initPeb[0];
+                pEB[2]=initPeb[2];
+                pEB[3]=initPeb[3]+stepBeta*i/TotalCount;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j]=initPee[6*j];
+                    pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4);
                     pEE[6*j+1]=initPee[6*j+1];
-                    pEE[6*j+2]=initPee[6*j+2]+stepD/4;
+                    pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4);
 
-                    pEE[6*j+3]=initPee[6*j+3];
+                    pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                     pEE[6*j+4]=initPee[6*j+4];
-                    pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                    pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
                 }
-                rbt.SetPeb(pEB);
+                rbt.SetPeb(pEB,"213");
                 rbt.SetPee(pEE);
 
                 rbt.GetPee(normalPee+18*i,rbt.body());
@@ -3907,18 +4206,23 @@ namespace TimeOptimal
             iEnd=round(TotalCount*((2*dutyCycle-1)/4+(1-dutyCycle)));
             for (int i=iStart;i<iEnd;i++)
             {
-                pEB[2]=initPeb[2]-stepD*i/TotalCount;
+                pEB[0]=initPeb[0];
+                pEB[2]=initPeb[2];
+                pEB[3]=initPeb[3]+stepBeta*i/TotalCount;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j]=initPee[6*j];
-                    pEE[6*j+1]=initPee[6*j+1]-stepH/2*(cos(2*PI*(i-iStart)/(iEnd-iStart))-1);
-                    pEE[6*j+2]=initPee[6*j+2]+stepD/4+stepD/2*cos(PI*(i-iStart)/(iEnd-iStart))-stepD/2;
+                    ratio_f[0]=initPee[6*j]*(cos(3*stepBeta/4)-cos(-stepBeta/4))+initPee[6*j+2]*(sin(3*stepBeta/4)-sin(-stepBeta/4));
+                    ratio_f[2]=-initPee[6*j]*(sin(3*stepBeta/4)-sin(-stepBeta/4))+initPee[6*j+2]*(cos(3*stepBeta/4)-cos(-stepBeta/4));
 
-                    pEE[6*j+3]=initPee[6*j+3];
+                    pEE[6*j]=initPee[6*j]*cos(-stepBeta/4)+initPee[6*j+2]*sin(-stepBeta/4)-ratio_f[0]/2*(cos(PI*(i-iStart)/(iEnd-iStart))-1);
+                    pEE[6*j+1]=initPee[6*j+1]-stepH/2*(cos(2*PI*(i-iStart)/(iEnd-iStart))-1);
+                    pEE[6*j+2]=-initPee[6*j]*sin(-stepBeta/4)+initPee[6*j+2]*cos(-stepBeta/4)+-ratio_f[2]/2*(cos(PI*(i-iStart)/(iEnd-iStart))-1);
+
+                    pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                     pEE[6*j+4]=initPee[6*j+4];
-                    pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                    pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
                 }
-                rbt.SetPeb(pEB);
+                rbt.SetPeb(pEB,"213");
                 rbt.SetPee(pEE);
 
                 rbt.GetPee(normalPee+18*i,rbt.body());
@@ -3929,18 +4233,20 @@ namespace TimeOptimal
             iEnd=round(TotalCount*(3*(2*dutyCycle-1)/4+(1-dutyCycle)));
             for(int i=iStart;i<iEnd;i++)
             {
-                pEB[2]=initPeb[2]-stepD*i/TotalCount;
+                pEB[0]=initPeb[0];
+                pEB[2]=initPeb[2];
+                pEB[3]=initPeb[3]+stepBeta*i/TotalCount;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j]=initPee[6*j];
+                    pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                     pEE[6*j+1]=initPee[6*j+1];
-                    pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                    pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                    pEE[6*j+3]=initPee[6*j+3];
+                    pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4);
                     pEE[6*j+4]=initPee[6*j+4];
-                    pEE[6*j+5]=initPee[6*j+5]-stepD/4;
+                    pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4);
                 }
-                rbt.SetPeb(pEB);
+                rbt.SetPeb(pEB,"213");
                 rbt.SetPee(pEE);
 
                 rbt.GetPee(normalPee+18*i,rbt.body());
@@ -3951,18 +4257,23 @@ namespace TimeOptimal
             iEnd=round(TotalCount*(3*(2*dutyCycle-1)/4+2*(1-dutyCycle)));
             for(int i=iStart;i<iEnd;i++)
             {
-                pEB[2]=initPeb[2]-stepD*i/TotalCount;
+                pEB[0]=initPeb[0];
+                pEB[2]=initPeb[2];
+                pEB[3]=initPeb[3]+stepBeta*i/TotalCount;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j]=initPee[6*j];
-                    pEE[6*j+1]=initPee[6*j+1];
-                    pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                    ratio_f[0]=initPee[6*j+3]*(cos(5*stepBeta/4)-cos(stepBeta/4))+initPee[6*j+5]*(sin(5*stepBeta/4)-sin(stepBeta/4));
+                    ratio_f[2]=-initPee[6*j+3]*(sin(5*stepBeta/4)-sin(stepBeta/4))+initPee[6*j+5]*(cos(5*stepBeta/4)-cos(stepBeta/4));
 
-                    pEE[6*j+3]=initPee[6*j+3];
+                    pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
+                    pEE[6*j+1]=initPee[6*j+1];
+                    pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
+
+                    pEE[6*j+3]=initPee[6*j+3]*cos(stepBeta/4)+initPee[6*j+5]*sin(stepBeta/4)-ratio_f[0]/2*(cos(PI*(i-iStart)/(iEnd-iStart))-1);
                     pEE[6*j+4]=initPee[6*j+4]-stepH/2*(cos(2*PI*(i-iStart)/(iEnd-iStart))-1);
-                    pEE[6*j+5]=initPee[6*j+5]-stepD/4+stepD/2*cos(PI*(i-iStart)/(iEnd-iStart))-stepD/2;
+                    pEE[6*j+5]=-initPee[6*j+3]*sin(stepBeta/4)+initPee[6*j+5]*cos(stepBeta/4)-ratio_f[2]/2*(cos(PI*(i-iStart)/(iEnd-iStart))-1);
                 }
-                rbt.SetPeb(pEB);
+                rbt.SetPeb(pEB,"213");
                 rbt.SetPee(pEE);
 
                 rbt.GetPee(normalPee+18*i,rbt.body());
@@ -3973,18 +4284,20 @@ namespace TimeOptimal
             iEnd=TotalCount+1;
             for(int i=iStart;i<iEnd;i++)
             {
-                pEB[2]=initPeb[2]-stepD*i/TotalCount;
+                pEB[0]=initPeb[0];
+                pEB[2]=initPeb[2];
+                pEB[3]=initPeb[3]+stepBeta*i/TotalCount;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j]=initPee[6*j];
+                    pEE[6*j]=initPee[6*j]*cos(3*stepBeta/4)+initPee[6*j+2]*sin(3*stepBeta/4);
                     pEE[6*j+1]=initPee[6*j+1];
-                    pEE[6*j+2]=initPee[6*j+2]+stepD/4-stepD;
+                    pEE[6*j+2]=-initPee[6*j]*sin(3*stepBeta/4)+initPee[6*j+2]*cos(3*stepBeta/4);
 
-                    pEE[6*j+3]=initPee[6*j+3];
+                    pEE[6*j+3]=initPee[6*j+3]*cos(5*stepBeta/4)+initPee[6*j+5]*sin(5*stepBeta/4);
                     pEE[6*j+4]=initPee[6*j+4];
-                    pEE[6*j+5]=initPee[6*j+5]-stepD/4-stepD;
+                    pEE[6*j+5]=-initPee[6*j+3]*sin(5*stepBeta/4)+initPee[6*j+5]*cos(5*stepBeta/4);
                 }
-                rbt.SetPeb(pEB);
+                rbt.SetPeb(pEB,"213");
                 rbt.SetPee(pEE);
 
                 rbt.GetPee(normalPee+18*i,rbt.body());
@@ -4024,6 +4337,7 @@ namespace TimeOptimal
                     }
                     else
                     {
+                        out_period=TotalCount*0.001;
                         stopFlag=true;
                         printf("Ain=%.4f or Vin=%.4f reach the maximum(A:%.4f,V:%.4f) at TotalCount=%d(from %d), iteration time:%d\n",maxAin,maxVin,aLmt,vLmt,TotalCount,stepTimeCount,k);
                         aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPee.txt",normalPee,TotalCount+1,18);
@@ -4036,7 +4350,7 @@ namespace TimeOptimal
                 {
                     TotalCount-=countLen;
                     countLen/=10;
-                    printf("countLen change to %d\n",countLen);
+                    //printf("countLen change to %d\n",countLen);
                 }
             }
             else
@@ -4045,15 +4359,26 @@ namespace TimeOptimal
                 k++;
             }
 
+            if(k==101)
+            {
+                //output data to analyse when error
+                aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPee.txt",normalPee,TotalCount+1,18);
+                aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPin.txt",normalPin,TotalCount+1,18);
+                aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalVin.txt",normalVin,TotalCount,18);
+                aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalAin.txt",normalAin,TotalCount-1,18);
+            }
             delete [] normalPee;
             delete [] normalPin;
             delete [] normalVin;
             delete [] normalAin;
         }
-        printf("Finish GetNormalGait\n");
+
+
+        printf("Finish GetNormalGait,k=%d,Ain=%.4f or Vin=%.4f, TotalCount=%d\n",k,maxAbsAin,maxAbsVin,TotalCount);
     }
 
-    void NonRTOptimalGCS::GetEntireGait()
+    /******only for alpha=0 and beta=0**********/
+    void NonRTOptimalGCSRotate::GetEntireGait()
     {
         printf("Start GetEntireGait\n");
         double c3;
@@ -4229,7 +4554,7 @@ namespace TimeOptimal
 
     rs.addCmd("fwg",TimeOptimal::FastWalkGCS::parseFastWalk,TimeOptimal::FastWalkGCS::fastWalk);
     */
-
+/*
     double FastWalkGCS::initBodyPos[6];
     double FastWalkGCS::initPee[18];
     double FastWalkGCS::swingPee_scale[3001][18];
@@ -4412,7 +4737,7 @@ namespace TimeOptimal
         double out_period {0};
 
         dutyCycle=0.5;
-        TimeOptimal::NonRTOptimalGCS planner;
+        TimeOptimal::NonRTOptimalGCSRotate planner;
         planner.GetTimeOptimalGait(param.d,param.h,dutyCycle,aLmt,vLmt,initPee,*out_TipPos,bodyConstVel,out_period);
         printf("out_period is %.3f\n",out_period);
 
@@ -4492,5 +4817,5 @@ namespace TimeOptimal
             fileGait.close();
         });
     }
-
+*/
 }
