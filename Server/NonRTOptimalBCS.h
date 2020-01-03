@@ -9,7 +9,7 @@
 #include <sys/time.h>
 #include <algorithm>
 
-#include <aris.h>
+#include <aris_dynamic.h>
 #include <Robot_Type_I.h>
 #include <Robot_Gait.h>
 

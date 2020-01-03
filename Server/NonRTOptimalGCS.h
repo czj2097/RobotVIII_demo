@@ -2,7 +2,7 @@
 #define NONRT_OPTIMAL_GCS_H
 #include <sys/time.h>
 
-#include <aris.h>
+#include <aris_dynamic.h>
 #include <Robot_Type_I.h>
 #include <Robot_Gait.h>
 

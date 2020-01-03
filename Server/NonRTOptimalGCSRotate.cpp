@@ -1,5 +1,4 @@
 #include "NonRTOptimalGCSRotate.h"
-#include "rtdk.h"
 
 namespace TimeOptimal
 {
@@ -22,6 +21,7 @@ namespace TimeOptimal
         duty_cycle=dutyCycle;
     }
 
+	/*获取约束方程中dds,ds^2,ds以及常数项的系数，针对身体运动受到的站立腿约束*/
     void NonRTOptimalGCSRotate::GetStanceLegParam(int count, int legID, double s)
     {
         double pEB[6] {0};
@@ -167,6 +167,7 @@ namespace TimeOptimal
         }
     }
 
+	/*获取加速度约束下限值的最大值*/
     double NonRTOptimalGCSRotate::GetStanceMaxDec(int count, double ds)
     {
         double dec[18] {0};
@@ -199,6 +200,7 @@ namespace TimeOptimal
         return *std::max_element(dec,dec+18);
     }
 
+	/*获取加速度约束上限值的最小值*/
     double NonRTOptimalGCSRotate::GetStanceMinAcc(int count, double ds)
     {
         double acc[18] {0};
@@ -231,6 +233,7 @@ namespace TimeOptimal
         return *std::min_element(acc,acc+18);
     }
 
+	/*遍历法，令加速度约束上限的最小值等于下限的最大值求得速度上限值，表现求为多条二次函数曲线的最小交点*/
     void NonRTOptimalGCSRotate::GetStanceDsBound(int count)
     {
         int k_st {0};
@@ -282,6 +285,7 @@ namespace TimeOptimal
         ds_upBound_body[count]=std::min(ds_upBound_aLmt_body[count],ds_upBound_vLmt_body[count]);
     }
 
+	/*牛顿迭代法，令加速度约束上限的最小值等于下限的最大值求得速度上限值，表现求为多条二次函数曲线的最小交点*/
     void NonRTOptimalGCSRotate::GetStanceDsBoundByNewton(int count)
     {
         double ds0 {1e6};
@@ -351,6 +355,7 @@ namespace TimeOptimal
         //printf("%d,Second Newton Iteration of StanceLeg stops at k=%d, value_low=%f,value_up=%f, ds0=%f, ds1=%f\n",count,k,value_low,value_up,ds0,ds1);
     }
 
+	/*求二次函数曲线的所有交点，取其最小值，其中某些曲线可能没交点*/
     void NonRTOptimalGCSRotate::GetStanceDsBoundByFunc(int count)
     {
         double a2[18] {0};
@@ -437,6 +442,7 @@ namespace TimeOptimal
         dds_upBound_body[count]=GetStanceMinAcc(count,ds_upBound_body[count]);
     }
 
+	/*针对身体运动受到的站立腿约束，获取三类切换点*/
     void NonRTOptimalGCSRotate::GetStanceSwitchPoint()
     {
         double slopedsBound_for_body[2201] {0};
@@ -625,113 +631,7 @@ namespace TimeOptimal
         printf("\n");
     }
 
-    double NonRTOptimalGCSRotate::GetStanceSwitchMaxDec(int switchID, double ds)
-    {
-        double dec[18] {0};
-        std::fill_n(dec,18,-1e6);
-
-        for (int j=0;j<6;j++)
-        {
-            for (int k=0;k<3;k++)
-            {
-                if(switchPoint_body[switchID]>=count1 && switchPoint_body[switchID]<count2)//stance 135
-                {
-                    if(j%2==1)
-                    dec[3*j+k]=param_a2[3*j+k]*ds*ds+param_a0L[3*j+k];
-                }
-                else if(switchPoint_body[switchID]>=count3 && switchPoint_body[switchID]<count4)//stance 024
-                {
-                    if(j%2==0)
-                    dec[3*j+k]=param_a2[3*j+k]*ds*ds+param_a0L[3*j+k];
-                }
-                else
-                {
-                    dec[3*j+k]=param_a2[3*j+k]*ds*ds+param_a0L[3*j+k];
-                }
-            }
-        }
-        if(switchScrewID_body[switchID]>0)
-        {
-            dec[switchScrewID_body[switchID]]=-1e6;
-        }
-
-        return *std::max_element(dec,dec+18);
-    }
-
-    double NonRTOptimalGCSRotate::GetStanceSwitchMinAcc(int switchID, double ds)
-    {
-        double acc[18] {0};
-        std::fill_n(acc,18,1e6);
-
-        for (int j=0;j<6;j++)
-        {
-            for (int k=0;k<3;k++)
-            {
-                if(switchPoint_body[switchID]>=count1 && switchPoint_body[switchID]<count2)//stance 135
-                {
-                    if(j%2==1)
-                    acc[3*j+k]=param_a2[3*j+k]*ds*ds+param_a0H[3*j+k];
-                }
-                else if(switchPoint_body[switchID]>=count3 && switchPoint_body[switchID]<count4)//stance 024
-                {
-                    if(j%2==0)
-                    acc[3*j+k]=param_a2[3*j+k]*ds*ds+param_a0H[3*j+k];
-                }
-                else
-                {
-                    acc[3*j+k]=param_a2[3*j+k]*ds*ds+param_a0H[3*j+k];
-                }
-            }
-        }
-        if(switchScrewID_body[switchID]>0)
-        {
-            acc[switchScrewID_body[switchID]]=1e6;
-        }
-
-        return *std::min_element(acc,acc+18);
-    }
-
-    double NonRTOptimalGCSRotate::GetStanceSwitchDsBound(int switchID)
-    {
-        double ds_a;
-        int k_st {0};
-        bool dsBoundFlag_st {false};
-        const int kstCount {15000};
-        while (dsBoundFlag_st==false)
-        {
-            ds_a=0.001*k_st;
-            double max_dec=GetStanceSwitchMaxDec(switchID,ds_a);
-            double min_acc=GetStanceSwitchMinAcc(switchID,ds_a);
-
-            if(min_acc<max_dec)
-            {
-                k_st--;
-                for(int k_st2=0;k_st2<1000;k_st2++)
-                {
-                    ds_a=0.001*k_st+0.001*0.001*k_st2;
-                    max_dec=GetStanceSwitchMaxDec(switchID,ds_a);
-                    min_acc=GetStanceSwitchMinAcc(switchID,ds_a);
-                    if(min_acc<max_dec)
-                    {
-                        ds_a=0.001*k_st+0.001*0.001*(k_st2-1);
-                        dsBoundFlag_st=true;
-                        break;
-                    }
-                }
-            }
-
-            if(k_st==kstCount)
-            {
-                dsBoundFlag_st=true;
-                printf("WARNING!!! kstCount=%d is too small!!!\n",kstCount);
-            }
-            k_st++;
-        }
-
-        double ds_v=vLmt/(*std::max_element(abs_param_dds,abs_param_dds+18));
-        return std::min(ds_a,ds_v);
-    }
-
+	/*获取切换点前后向前积分和向后积分的起始点，直接从切换点积分在某些时候会因离散积分误差而无法通过*/
     void NonRTOptimalGCSRotate::GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint)
     {
         lowPoint[0]=-1;
@@ -741,37 +641,6 @@ namespace TimeOptimal
 
         for(int i=1;i<switchCount_body-1;i++)
         {
-    //        double s;
-    //        if(switchPoint_body[i]<901)
-    //        {
-    //            s=s_b1/900*switchPoint_body[i];
-    //            for(int j=0;j<3;j++)
-    //            {
-    //                GetStanceLegParam(-1,2*j+1,s);//135
-    //            }
-    //        }
-    //        else if(switchPoint_body[i]<1351)
-    //        {
-    //            s=s_b1+(s_b2-s_b1)/450*(switchPoint_body[i]-900);
-    //            for(int j=0;j<6;j++)
-    //            {
-    //                GetStanceLegParam(-1,j,s);
-    //            }
-    //        }
-    //        else
-    //        {
-    //            s=s_b2+(1-s_b2)/900*(switchPoint_body[i]-1350);
-    //            for(int j=0;j<3;j++)
-    //            {
-    //                GetStanceLegParam(-1,2*j,s);//024
-    //            }
-    //        }
-    //        double ds=GetStanceSwitchDsBound(i);
-    //        double dds_back=GetStanceSwitchMaxDec(i,ds);
-    //        double dds_for=GetStanceSwitchMinAcc(i,ds);
-    //        lowPoint[i]=std::min(ds_upBound_body[num-1],sqrt(ds*ds-2*dds_back*(switchPoint_body[i]+1-num)*(s_b[num]-s_b[num-1])));
-    //        upPoint[i]=std::min(ds_upBound_body[num+1],sqrt(ds*ds+2*dds_for*(num+1-switchPoint_body[i])*(s_b[num+1]-s_b[num])));
-
             if(switchType_body[i]=='t')
             {
                 int num=(int)switchPoint_body[i];
@@ -792,6 +661,7 @@ namespace TimeOptimal
         }
     }
 
+	/*从切换点开始前向后向积分获取最佳ds曲线*/
     void NonRTOptimalGCSRotate::GetStanceOptimalDsBySwitchPoint()
     {
         bool stopFlag {false};
@@ -1005,6 +875,7 @@ namespace TimeOptimal
         delete [] upPoint;
     }
 
+	/*因离散积分误差存在，最优曲线的起始点和终止点值有差异，但行走过程要求这两个值相等，因此取其较大侧修正，并积分*/
     void NonRTOptimalGCSRotate::ApplyStanceExtraItegration()
     {
         bool stopFlag {false};
@@ -1062,6 +933,7 @@ namespace TimeOptimal
 
     }
 
+	/*不使用切换点，从起点和终点开始尝试积分，超出ds上限后退回再尝试，如此实现求解。该方法开发于不了解切换点时，计算耗时大于切换点且计算误差大，不建议使用*/
     void NonRTOptimalGCSRotate::GetStanceOptimalDsByDirectNI()
     {
         bool stopFlag {false};
@@ -1194,6 +1066,7 @@ namespace TimeOptimal
         }
     }
 
+	/*调用前面的函数，计算给定s_b1,s_b2,s_b3,s_b4时的最优曲线*/
     void NonRTOptimalGCSRotate::GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_b3, double s_b4)
     {
         std::fill_n(ds_backward_body,count5+1,0);
@@ -1296,6 +1169,7 @@ namespace TimeOptimal
 
     }
 
+	/*因s_b1,s_b2,s_b3,s_b4未知，需要迭代求解修正。该函数使用自己的算法，不能保证收敛性。实测收敛*/
     void NonRTOptimalGCSRotate::GetStanceOptimalDsByMinorIteration()
     {
         double t1 {0};
@@ -1353,6 +1227,7 @@ namespace TimeOptimal
         //aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_body.txt",s_b,count5+1,1);
     }
 
+	/*因s_b1,s_b2,s_b3,s_b4未知，需要迭代求解修正。该函数使用拟牛顿法，能保证收敛性。*/
     void NonRTOptimalGCSRotate::GetStanceOptimalDsByNewton()
     {
         double t1 {0};
@@ -1435,134 +1310,7 @@ namespace TimeOptimal
 //        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeArray_body_tmp.txt",timeArray_body_tmp,2201,1);
     }
 
-    /*
-    To prove the function Tsb1/Tstep is monotonous as sb1 changes, by calculating values of Tsb1/Tstep for all sb1 in its domain.
-    However, it is in fact a special situation, but not rigorous provement.
-    It is developed for the paper published in Part C, but not used bacause it is not so convincing mathematically.
-    */
-    void NonRTOptimalGCSRotate::AnalyseStanceOptimalTime()
-    {
-        double Tsb1 {0};
-        double Tsb2 {0};
-        double Tsb3 {0};
-        double Tsb4 {0};
-        double s_b1;//(dutyCycle-0.5)/2;
-        double s_b2;//(dutyCycle-0.5)/2+(1-dutyCycle);
-        double s_b3;//(dutyCycle-0.5)/2+0.5;
-        double s_b4;//1-(dutyCycle-0.5)/2;
-        double data[100][100];
-        double data1[100][100];
-        double data2[100][100];
-        int kLen {100};
-
-        int k1=20;
-        int k2=0;
-        //for(int k1=0;k1<kLen;k1++)
-        {
-            //for(int k2=0;k2<kLen;k2++)
-            {
-            s_b1=0.25/kLen*k1;
-            s_b2=0.25+0.25/kLen*(k2+1);
-            s_b3=0.5+s_b1;
-            s_b4=0.5+s_b2;
-
-            std::fill_n(ds_backward_body,count5+1,0);
-            std::fill_n(ds_forward_body,count5+1,0);
-            Tstep=0;
-            switchCount_body=0;
-            std::fill_n(switchPoint_body,count5+1,-1);
-            std::fill_n(switchType_body,count5+1,'0');
-            std::fill_n(switchScrewID_body,count5+1,-1);
-            std::fill_n(*isParamddsExact0_body,(count5+1)*18,-1);
-
-            for (int i=0;i<count5+1;i++)
-            {
-                std::fill_n(abs_param_dds,18,0);
-                if(i<count1)
-                {
-                    s_b[i]=s_b1/count1*i;
-                    for(int j=0;j<6;j++)
-                    {
-                        GetStanceLegParam(i,j,s_b[i]);
-                    }
-                }
-                else if(i<count2)
-                {
-                    s_b[i]=s_b1+(s_b2-s_b1)/(count2-count1)*(i-count1);
-                    for(int j=0;j<3;j++)
-                    {
-                        GetStanceLegParam(i,2*j+1,s_b[i]);//135
-                    }
-                }
-                else if(i<count5/2)
-                {
-                    s_b[i]=s_b2+(0.5-s_b2)/(count5/2-count2)*(i-count2);
-                    for(int j=0;j<6;j++)
-                    {
-                        GetStanceLegParam(i,j,s_b[i]);
-                    }
-                }
-                else if(i<count3)
-                {
-                    s_b[i]=0.5+(s_b3-0.5)/(count3-count5/2)*(i-count5/2);
-                    for(int j=0;j<6;j++)
-                    {
-                        GetStanceLegParam(i,j,s_b[i]);
-                    }
-                }
-                else if(i<count4)
-                {
-                    s_b[i]=s_b3+(s_b4-s_b3)/(count4-count3)*(i-count3);
-                    for(int j=0;j<3;j++)
-                    {
-                        GetStanceLegParam(i,2*j,s_b[i]);//024
-                    }
-                }
-                else
-                {
-                    s_b[i]=s_b4+(1-s_b4)/(count5-count4)*(i-count4);
-                    for(int j=0;j<6;j++)
-                    {
-                        GetStanceLegParam(i,j,s_b[i]);
-                    }
-                }
-
-                //GetStanceDsBound(i);
-                //GetStanceDsBoundByNewton(i);
-                GetStanceDsBoundByFunc(i);
-
-            }
-
-            GetStanceSwitchPoint();
-            GetStanceOptimalDsBySwitchPoint();
-            ApplyStanceExtraItegration();
-            //GetStanceOptimalDsByDirectNI();
-
-            for(int i=0;i<count5+1;i++)
-            {
-                if(i!=0)
-                {
-                    Tstep+=2*(s_b[i]-s_b[i-1])/(real_ds_body[i-1]+real_ds_body[i]);
-                    timeArray_body[i]=Tstep;
-                }
-            }
-            Tsb1=timeArray_body[count1];
-            Tsb2=timeArray_body[count2];
-            Tsb3=timeArray_body[count3];
-            Tsb4=timeArray_body[count4];
-
-            data[k1][k2]=Tsb1/Tstep;
-            data1[k1][k2]=Tstep;
-            data2[k1][k2]=Tsb1;
-            }
-        }
-
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/timeRatio.txt",*data,kLen,kLen);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Tstep.txt",*data1,kLen,kLen);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/Tsb1.txt",*data2,kLen,kLen);
-        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/s_body.txt",s_b,count5+1,1);
-    }
-
+	/*获取约束方程中dds,ds^2,ds以及常数项的系数，针对已求得身体运动后摆动腿受到的约束*/
     void NonRTOptimalGCSRotate::GetSwingLegParam(int count, int legID, double sw, double *sb_mtx)
     {
         double pEB[6] {0};
@@ -1749,6 +1497,7 @@ namespace TimeOptimal
         }
     }
 
+	/*获取摆动腿加速度下限的最大值*/
     double NonRTOptimalGCSRotate::GetSwingMaxDec(int count, double ds, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
@@ -1764,6 +1513,7 @@ namespace TimeOptimal
         return *std::max_element(dec,dec+3);
     }
 
+	/*获取摆动腿加速度上限的最小值*/
     double NonRTOptimalGCSRotate::GetSwingMinAcc(int count, double ds, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
@@ -1779,6 +1529,7 @@ namespace TimeOptimal
         return *std::min_element(acc,acc+3);
     }
 
+	/*遍历法，获取摆动腿速度上限值*/
     void NonRTOptimalGCSRotate::GetSwingDsBound(int count, int legID)
     {
         bool ds_lowBoundFlag_sw {false};
@@ -1892,6 +1643,7 @@ namespace TimeOptimal
         ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
     }
 
+	/*牛顿迭代法，获取摆动腿速度上限值*/
     void NonRTOptimalGCSRotate::GetSwingDsBoundByNewton(int count, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
@@ -2031,6 +1783,7 @@ namespace TimeOptimal
         ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
     }
 
+	/*显式求解二次函数曲线交点，取最小值，某些曲线可能无交点*/
     void NonRTOptimalGCSRotate::GetSwingDsBoundByFunc(int count, int legID)
     {
         int swCount = count<count3 ? (count-count1) : (count-count3);
@@ -2127,6 +1880,7 @@ namespace TimeOptimal
         ds_lowBound[swCount][legID]=ds_lowBound_aLmt[swCount][legID];
     }
 
+	/*获取摆动腿三类切换点*/
     void NonRTOptimalGCSRotate::GetSwingSwitchPoint(int legID)
     {
         double slopedsBound_for[901] {0};
@@ -2286,112 +2040,7 @@ namespace TimeOptimal
         printf("\n");
     }
 
-    double NonRTOptimalGCSRotate::GetSwingSwitchMaxDec(int switchID, double ds, int legID)
-    {
-        double dec[3] {0};
-        std::fill_n(dec,3,-1e6);
-        for (int k=0;k<3;k++)
-        {
-            if(k!=switchScrewID[switchID][legID])
-            {
-                dec[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0L[3*legID+k];
-            }
-        }
-        return *std::max_element(dec,dec+3);
-    }
-
-    double NonRTOptimalGCSRotate::GetSwingSwitchMinAcc(int switchID, double ds, int legID)
-    {
-        double acc[3] {0};
-        std::fill_n(acc,3,1e6);
-        for (int k=0;k<3;k++)
-        {
-            if(k!=switchScrewID[switchID][legID])
-            {
-                acc[k]=param_a2[3*legID+k]*ds*ds+param_a1[3*legID+k]*ds+param_a0H[3*legID+k];
-            }
-        }
-        return *std::min_element(acc,acc+3);
-    }
-
-    double NonRTOptimalGCSRotate::GetSwingSwitchDsBound(int switchID, int legID, double *pva_body)
-    {
-        bool ds_lowBoundFlag_sw {false};
-        bool ds_upBoundFlag_sw {false};
-        int k_sw {0};
-        const int kswCount {30000};
-        double ds_a;
-        while (ds_upBoundFlag_sw==false)
-        {
-            ds_a=0.001*k_sw;
-            double max_dec=GetSwingSwitchMaxDec(switchID,ds_a,legID);
-            double min_acc=GetSwingSwitchMinAcc(switchID,ds_a,legID);
-
-            k_sw++;
-            if(k_sw==kswCount)
-            {
-                ds_upBoundFlag_sw=true;
-                printf("WARNING!!! kswCount=%d is too small!!! Leg:%d, switchPoint=%.1f, switchScrewID:%d\n",kswCount,legID,switchPoint[switchID][legID],switchScrewID[switchID][legID]);
-                for(int k=0;k<3;k++)
-                {
-                printf("paramdds=%.1f,parama2=%.1f,parama1=%.1f,parama0H=%.1f,parama0L=%.1f\n",
-                       param_dds[3*legID+k],param_a2[3*legID+k],param_a1[3*legID+k],param_a0H[3*legID+k],param_a0L[3*legID+k]);
-                }
-            }
-            else
-            {
-                if(k_sw%1000==0)
-                {
-                    //printf("min_acc=%.1f, max_dec=%.1f\n",min_acc,max_dec);
-                }
-                if(ds_lowBoundFlag_sw==false && ds_upBoundFlag_sw==false && min_acc>=max_dec)
-                {
-                    ds_lowBoundFlag_sw=true;
-                }
-                else if(ds_lowBoundFlag_sw==true && ds_upBoundFlag_sw==false && min_acc<max_dec)
-                {
-                    k_sw--;
-                    for(int k_sw2=0;k_sw2<1000;k_sw2++)
-                    {
-                        ds_a=0.001*k_sw+0.001*0.001*k_sw2;
-                        max_dec=GetSwingSwitchMaxDec(switchID,ds_a,legID);
-                        min_acc=GetSwingSwitchMinAcc(switchID,ds_a,legID);
-
-                        if(min_acc<max_dec)
-                        {
-                            ds_a=0.001*k_sw+0.001*0.001*(k_sw2-1);
-                            ds_upBoundFlag_sw=true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        double vLmt_value[3] {0};
-        double Jvi_dot_vb[3] {0};
-        double vb_sw3[3] {0};
-        vb_sw3[2]=pva_body[1];
-        aris::dynamic::s_dgemm(3,1,3,1,Jvi,3,vb_sw3,1,1,Jvi_dot_vb,1);
-        for (int k=0;k<3;k++)
-        {
-            if(k!=switchScrewID[switchID][legID])
-            {
-                if(param_dds[3*legID+k]>0)
-                {
-                    vLmt_value[k]=(Jvi_dot_vb[k]+vLmt)/param_dds[3*legID+k];
-                }
-                else if(param_dds[3*legID+k]<0)
-                {
-                    vLmt_value[k]=(Jvi_dot_vb[k]-vLmt)/param_dds[3*legID+k];
-                }
-            }
-            vLmt_value[switchScrewID[switchID][legID]]=1e6;
-        }
-        double ds_v=*std::min_element(vLmt_value,vLmt_value+3);
-        return std::min(ds_a,ds_v);
-    }
-
+	/*获取摆动腿前向后向积分的起点*/
     void NonRTOptimalGCSRotate::GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint)
     {
         lowPoint[0]=-1;
@@ -2403,36 +2052,6 @@ namespace TimeOptimal
 
         for(int i=1;i<switchCount[legID]-1;i++)
         {
-
-    //        int swCount=(int)switchPoint[i][legID];
-    //        int count = legID%2==0 ? swCount : (swCount+1350);
-    //        double alpha=switchPoint[i][legID]-swCount;
-    //        double sb = s_b[count]+alpha*(s_b[count+1]-s_b[count]);
-    //        double sw = s_w[swCount][legID]+alpha*(s_w[swCount+1][legID]-s_w[swCount][legID]);
-    //        double pva_b_switch[3];
-    //        for(int k=0;k<3;k++)
-    //        {
-    //            pva_b_switch[k]=pva_b[count][k]+alpha*(pva_b[count+1][k]-pva_b[count][k]);
-    //        }
-
-    //        GetSwingLegParam(-1,legID,sw,pva_b_switch);
-
-    //        double ds1=GetSwingSwitchDsBound(i,legID,pva_b_switch);
-    //        double ds_tmp=std::min(ds_upBound[num-1][legID],ds_upBound[num][legID]);
-    //        double ds2=std::min(ds_tmp,ds_upBound[num+1][legID]);
-
-    //        double dds_back=GetSwingMaxDec(i,ds2,legID);
-    //        double dds_for=GetSwingMinAcc(i,ds2,legID);
-    //        if(dds_for<dds_back)
-    //        {
-    //            printf("\nWARNING!!!dds_for < dds_back at switchPoint=%.1f,dds_back=%.1f,dds_for=%.1f,ds1=%.8f,ds2=%.8f\n",switchPoint[i][legID],dds_back,dds_for,ds1,ds2);
-    //            for(int k=0;k<3;k++)
-    //            {
-    //                printf("param_dds=%.4f,param_a2=%.4f,param_a1=%.4f,param_a0L=%.4f,param_a0H=%.4f\n\n",param_dds[3*legID+k],param_a2[3*legID+k],param_a1[3*legID+k],param_a0L[3*legID+k],param_a0H[3*legID+k]);
-    //            }
-    //        }
-    //        lowPoint[i]=std::min(ds_upBound[num-1][legID],sqrt(ds*ds-2*dds_back*(switchPoint[i][legID]+1-num)*(s_w[num][legID]-s_w[num-1][legID])));
-    //        upPoint[i]=std::min(ds_upBound[num+1][legID],sqrt(ds*ds+2*dds_for*(num+1-switchPoint[i][legID])*(s_w[num+1][legID]-s_w[num][legID])));
 
             if(switchType[i][legID]=='t')
             {
@@ -2450,6 +2069,7 @@ namespace TimeOptimal
         }
     }
 
+	/*切换点法，获取最优速度曲线*/
     void NonRTOptimalGCSRotate::GetSwingOptimalDsBySwitchPoint(int legID)
     {
         bool stopFlag {false};
@@ -2651,6 +2271,7 @@ namespace TimeOptimal
         delete [] upPoint;
     }
 
+	/*摆动腿边界条件要求速度为零，因此需要从零分别再进行积分*/
     void NonRTOptimalGCSRotate::ApplySwingExtraIntegration(int legID)
     {
         bool stopFlag {false};
@@ -2701,6 +2322,7 @@ namespace TimeOptimal
         printf("ExtraIntegration(backward) stops at k_sw=%d\n",k_sw);
     }
 
+	/*不使用切换点，从起点和终点开始尝试积分，超出ds上限后退回再尝试，如此实现求解。该方法开发于不了解切换点时，计算耗时大于切换点且计算误差大，不建议使用*/
     void NonRTOptimalGCSRotate::GetSwingOptimalDsByDirectNI(int legID)
     {
         bool stopFlag {false};
@@ -2834,6 +2456,7 @@ namespace TimeOptimal
         }
     }
 
+	/*身体和摆动腿最优速度耗时不同，需拉伸同步，拉伸后s_b改变，因此需要迭代求解*/
     void NonRTOptimalGCSRotate::GetOptimalDsByMajorIteration()
     {
         rbt.loadXml("../../../RobotVIII_demo/resource/RobotEDU2.xml");
@@ -3054,6 +2677,7 @@ namespace TimeOptimal
         printf("UsedTime:%f\n",tused);
     }
 
+	/*获取位置-s轨迹*/
     void NonRTOptimalGCSRotate::GetOptimalGait2s()
     {
         printf("start GetOptimalGait2s\n");
@@ -3295,6 +2919,7 @@ namespace TimeOptimal
         printf("finish GetOptimalGait2s\n");
     }
 
+	/*获取位置-时间轨迹*/
     void NonRTOptimalGCSRotate::GetOptimalGait2t()
     {
         printf("start GetOptimalGait2t\n");
@@ -3689,6 +3314,7 @@ namespace TimeOptimal
         printf("finish GetOptimalGait2t\n");
     }
 
+	/*获取位置-时间轨迹，重构，可以输出参数*/
     void NonRTOptimalGCSRotate::GetOptimalGait2t(double *out_tippos, double &out_bodyvel, double &out_period)
     {
         printf("start GetOptimalGait2t\n");
@@ -4152,7 +3778,7 @@ namespace TimeOptimal
         printf("Finish output data\n");
     }
 
-
+	/*利用以上求解拼接出完整的匀速段轨迹，并与未优化轨迹对比*/
     void NonRTOptimalGCSRotate::GetNormalGait(double &out_period)
     {
         printf("Start GetNormalGait\n");
@@ -4377,6 +4003,7 @@ namespace TimeOptimal
         printf("Finish GetNormalGait,k=%d,Ain=%.4f or Vin=%.4f, TotalCount=%d\n",k,maxAbsAin,maxAbsVin,TotalCount);
     }
 
+	/*包括加减速段*/
     /******only for alpha=0 and beta=0**********/
     void NonRTOptimalGCSRotate::GetEntireGait()
     {

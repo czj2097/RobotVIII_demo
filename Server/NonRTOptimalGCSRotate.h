@@ -2,7 +2,7 @@
 #define NONRT_OPTIMAL_GCS_ROTATE_H
 #include <sys/time.h>
 
-#include <aris.h>
+#include <aris_dynamic.h>
 #include <Robot_Type_I.h>
 #include <Robot_Gait.h>
 
@@ -27,7 +27,6 @@ namespace TimeOptimal
         void GetStanceOptimalDsAtSb(double s_b1, double s_b2, double s_b3, double s_b4);
         void GetStanceOptimalDsByMinorIteration();
         void GetStanceOptimalDsByNewton();
-        void AnalyseStanceOptimalTime();
 
         void GetSwingLegParam(int count, int legID, double sw, double *sb_mtx);
         void GetSwingDsBound(int count, int legID);
@@ -48,17 +47,11 @@ namespace TimeOptimal
         void GetEntireGait();
 
     protected:
-        double GetStanceSwitchMaxDec(int switchID, double ds);
-        double GetStanceSwitchMinAcc(int switchID, double ds);
-        double GetStanceSwitchDsBound(int switchID);
         void GetStanceTwoPointAtSwitch(double *lowPoint, double *upPoint);
         double GetStanceMaxDec(int count, double ds);
         double GetStanceMinAcc(int count, double ds);
         void ApplyStanceExtraItegration();
 
-        double GetSwingSwitchMaxDec(int switchID, double ds, int legID);
-        double GetSwingSwitchMinAcc(int switchID, double ds, int legID);
-        double GetSwingSwitchDsBound(int switchID, int legID, double *pva_body);
         void GetSwingTwoPointAtSwitch(int legID, double *lowPoint, double *upPoint);
         double GetSwingMaxDec(int count, double ds, int legID);
         double GetSwingMinAcc(int count, double ds, int legID);
