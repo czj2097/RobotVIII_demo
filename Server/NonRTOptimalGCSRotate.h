@@ -14,6 +14,9 @@ namespace TimeOptimal
     {
     public:
         void GetTimeOptimalGait(double step_length, double step_height, double step_alpha, double step_beta,
+                                                 double &duty_cycle, double acc_limit, double vel_limit, double *init_tippos,
+                                                 double *sb, double *s1);
+        void GetTimeOptimalGait(double step_length, double step_height, double step_alpha, double step_beta,
                                 double &duty_cycle, double acc_limit, double vel_limit, double *init_tippos,
                                 double *out_tippos, double &out_bodyvel, double &out_period);
 
@@ -41,10 +44,11 @@ namespace TimeOptimal
         void GetOptimalGait2s();
         void GetOptimalGait2t();
         void GetOptimalGait2t(double *out_tippos, double &out_bodyvel, double &out_period);
+        void GetOptimalGait2t(double *sb, double *s1);
 
         void OutputData();
 
-        void GetNormalGait(double &out_period);
+        void GetNormalGait(double *out_tippos, double &out_bodyvel, double &out_period);
         void GetEntireGait();
 
     protected:
@@ -66,6 +70,7 @@ namespace TimeOptimal
 
         Robots::RobotTypeI rbt;
 
+        double getparam_time;
         double vLmt {1.0};
         double aLmt {5.0};
         double stepH {0.05};
@@ -202,17 +207,17 @@ namespace TimeOptimal
         double Ain_s[2201][18] {{0}};
     };
 /*
-    struct FastWalkGCSParam
+    struct FastRotateGCSParam
     {
         double Peb;
         double Pee[18];
         double Pin[18];
     };
-    class FastWalkGCS
+    class FastRotateGCS
     {
     public:
-        static int  fastWalk(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
-        static void parseFastWalk(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
+        static int  fastRotate(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+        static void parseFastRotate(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg);
         static void GetScalingPath(Robots::WalkParam &param);
         static void recordData();
 
@@ -223,9 +228,9 @@ namespace TimeOptimal
         static double bodyConstVel;
         static double dutyCycle;
 
-        static FastWalkGCSParam fwgParam;
-        static Pipe<FastWalkGCSParam> fwgPipe;
-        static std::thread fwgThread;
+        static FastRotateGCSParam frgParam;
+        static Pipe<FastRotateGCSParam> frgPipe;
+        static std::thread frgThread;
     };*/
 }
 
