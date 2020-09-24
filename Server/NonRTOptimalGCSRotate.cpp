@@ -2855,7 +2855,7 @@ namespace TimeOptimal
 
     void NonRTOptimalGCSRotate::GetOptimalDsByMajorIteration()
     {
-        rbt.loadXml("../../../RobotVIII_demo/resource/RobotEDU2.xml");
+        rbt.loadXml("../../resource/RobotEDU2.xml");
 
         getparam_time = 0;
         timeval tpstart,tpend;
@@ -4073,7 +4073,7 @@ namespace TimeOptimal
         }
 
         memcpy(out_tippos,Pee_t,18*stepTimeCount*sizeof(double));
-        out_bodyvel=*(pva_b_t+1);
+        out_bodyvel=*(pva_b_t+3);
         out_period=0.001*stepTimeCount;
 
 //        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_t,stepTimeCount,9);
@@ -4583,7 +4583,7 @@ namespace TimeOptimal
         double maxAbsVin {0};
         int k {0};
         bool stopFlag {false};
-        double ratio_f[2] {0};
+        double ratio_f[3] {0};
 
         while(stopFlag==false && k<=100)
         {
@@ -4752,15 +4752,23 @@ namespace TimeOptimal
                     }
                     else
                     {
-                        out_period=TotalCount*0.001;
-                        out_bodyvel=stepBeta/out_period;
-                        memcpy(out_tippos,normalPee,18*(TotalCount+1));
-                        stopFlag=true;
-                        printf("Ain=%.4f or Vin=%.4f reach the maximum(A:%.4f,V:%.4f) at TotalCount=%d(from %d), iteration time:%d\n",maxAin,maxVin,aLmt,vLmt,TotalCount,stepTimeCount,k);
+                        if(TotalCount%2==1)
+                        {
+                            TotalCount+=1;
+                            k++;
+                        }
+                        else
+                        {
+                            out_period=TotalCount*0.001;
+                            out_bodyvel=stepBeta/out_period;
+                            memcpy(out_tippos,normalPee,18*(TotalCount+1)*sizeof(double));
+                            stopFlag=true;
+                            printf("Ain=%.4f or Vin=%.4f reach the maximum(A:%.4f,V:%.4f) at TotalCount=%d(from %d), iteration time:%d\n",maxAin,maxVin,aLmt,vLmt,TotalCount,stepTimeCount,k);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPee.txt",normalPee,TotalCount+1,18);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPin.txt",normalPin,TotalCount+1,18);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalVin.txt",normalVin,TotalCount,18);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalAin.txt",normalAin,TotalCount-1,18);
+                        }
                     }
                 }
                 else
@@ -4974,7 +4982,7 @@ namespace TimeOptimal
 
     rs.addCmd("frg",TimeOptimal::FastRotateGCS::parseFastRotate,TimeOptimal::FastRotateGCS::fastRotate);
     */
-/*
+
     double FastRotateGCS::initBodyPos[6];
     double FastRotateGCS::initPee[18];
     double FastRotateGCS::swingPee_scale[3001][18];
@@ -5042,6 +5050,7 @@ namespace TimeOptimal
         }
         else
         {
+            planner.GetTimeOptimalGait(param.d,param.h,param.alpha,param.beta,dutyCycle,aLmt,vLmt,initPee,*swingPee_scale,bodyConstVel,out_period);
             planner.GetNormalGait(*swingPee_scale,bodyConstVel,out_period);
         }
         param.totalCount=out_period*1000;
@@ -5272,5 +5281,5 @@ namespace TimeOptimal
 
             fileGait.close();
         });
-    }*/
+    }
 }

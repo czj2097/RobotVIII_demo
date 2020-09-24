@@ -206,7 +206,7 @@ namespace TimeOptimal
         double Vin_s[2201][18] {{0}};
         double Ain_s[2201][18] {{0}};
     };
-/*
+
     struct FastRotateGCSParam
     {
         double Peb;
@@ -231,7 +231,7 @@ namespace TimeOptimal
         static FastRotateGCSParam frgParam;
         static Pipe<FastRotateGCSParam> frgPipe;
         static std::thread frgThread;
-    };*/
+    };
 }
 
 #endif

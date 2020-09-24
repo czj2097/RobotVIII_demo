@@ -2780,7 +2780,7 @@ namespace TimeOptimal
 
     void NonRTOptimalGCS360::GetOptimalDsByMajorIteration()
     {
-        rbt.loadXml("../../../RobotVIII_demo/resource/RobotEDU2.xml");
+        rbt.loadXml("../../resource/RobotEDU2.xml");
 
         timeval tpstart,tpend;
         float tused;
@@ -3984,7 +3984,7 @@ namespace TimeOptimal
         }
 
         memcpy(out_tippos,Pee_t,18*stepTimeCount*sizeof(double));
-        out_bodyvel=*(pva_b_t+1);
+        out_bodyvel=sqrt((*(pva_b_t+4))*(*(pva_b_t+4))+(*(pva_b_t+5))*(*(pva_b_t+5)));
         out_period=0.001*stepTimeCount;
 
 //        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/pva_b_t.txt",pva_b_t,stepTimeCount,9);
@@ -4647,15 +4647,23 @@ namespace TimeOptimal
                     }
                     else
                     {
-                        out_period=TotalCount*0.001;
-                        out_bodyvel=stepD/out_period;
-                        memcpy(out_tippos,normalPee,18*(TotalCount+1));
-                        stopFlag=true;
-                        printf("Ain=%.4f or Vin=%.4f reach the maximum(A:%.4f,V:%.4f) at TotalCount=%d(from %d), iteration time:%d\n",maxAin,maxVin,aLmt,vLmt,TotalCount,stepTimeCount,k);
-//                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPee.txt",normalPee,TotalCount+1,18);
+                        if(TotalCount%2==1)
+                        {
+                            TotalCount+=1;
+                            k++;
+                        }
+                        else
+                        {
+                            out_period=TotalCount*0.001;
+                            out_bodyvel=stepD/out_period;
+                            memcpy(out_tippos,normalPee,18*(TotalCount+1)*sizeof(double));
+                            stopFlag=true;
+                            printf("Ain=%.4f or Vin=%.4f reach the maximum(A:%.4f,V:%.4f) at TotalCount=%d(from %d), iteration time:%d\n",maxAin,maxVin,aLmt,vLmt,TotalCount,stepTimeCount,k);
+                            aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPee.txt",normalPee,TotalCount+1,18);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalPin.txt",normalPin,TotalCount+1,18);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalVin.txt",normalVin,TotalCount,18);
 //                        aris::dynamic::dlmwrite("/home/hex/Desktop/mygit/RobotVIII_demo/build/bin/normalAin.txt",normalAin,TotalCount-1,18);
+                        }
                     }
                 }
                 else
@@ -4869,7 +4877,7 @@ namespace TimeOptimal
     rs.addCmd("fwg",TimeOptimal::FastWalkGCS::parseFastWalk,TimeOptimal::FastWalkGCS::fastWalk);
     */
 
-/*
+
     double FastWalkGCS::initBodyPos[6];
     double FastWalkGCS::initPee[18];
     double FastWalkGCS::swingPee_scale[3001][18];
@@ -4940,6 +4948,7 @@ namespace TimeOptimal
         }
         else
         {
+            planner.GetTimeOptimalGait(param.d,param.h,param.alpha,param.beta,dutyCycle,aLmt,vLmt,initPee,*swingPee_scale,bodyConstVel,out_period);
             planner.GetNormalGait(*swingPee_scale,bodyConstVel,out_period);
         }
         param.totalCount=out_period*1000;
@@ -4963,6 +4972,8 @@ namespace TimeOptimal
         double c2;
         double c1;
         double c0;
+        double tmpPeb;
+        double tmpPee;
         int period_count=param.count%(param.totalCount/2);
         int iStart;
         int iEnd;
@@ -4972,92 +4983,110 @@ namespace TimeOptimal
         if(param.count/(param.totalCount/2)==0)//acc 024 swing
         {
             //acc for param.totalCount/2
-            c3=(bodyConstVel+param.d/2/(0.5*param.totalCount*0.001))/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001);
-            c2=(bodyConstVel-3*(bodyConstVel+param.d/2/(0.5*param.totalCount*0.001)))/(param.totalCount*0.001);
-            pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
+            c3=(bodyConstVel-param.d/2/(0.5*param.totalCount*0.001))/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001);
+            c2=(bodyConstVel-3*(bodyConstVel-param.d/2/(0.5*param.totalCount*0.001)))/(param.totalCount*0.001);
+            tmpPeb=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
+            pEB[0]=tmpPeb*sin(PI+param.alpha);
+            pEB[2]=tmpPeb*cos(PI+param.alpha);
+            robot.SetPeb(pEB);
 
             if(period_count>=0 && period_count<(int)(param.totalCount*(2*dutyCycle-1)/4)+1)
             {
-                pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
+                //pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
 
-                robot.SetPeb(pEB);
+                //robot.SetPeb(pEB);
                 robot.SetPee(pEE);
             }
             else if(period_count<(int)(param.totalCount*((2*dutyCycle-1)/4+(1-dutyCycle)))+1)
             {
-               pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
+               //pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
+                tmpPee=-param.d/4*(cos(PI*(period_count-iStart)/(iEnd-iStart))-1);
                 for(int j=0;j<3;j++)
                 {
                     pEE[6*j+4]=initPee[6*j+4]-param.h/2*(cos(2*PI*(period_count-iStart)/(iEnd-iStart))-1);
-                    pEE[6*j+5]=initPee[6*j+5]+param.d/4*(cos(PI*(period_count-iStart)/(iEnd-iStart))-1);
+                    pEE[6*j+3]=initPee[6*j+3]+tmpPee*sin(PI+param.alpha);
+                    pEE[6*j+5]=initPee[6*j+5]+tmpPee*cos(PI+param.alpha);
                 }
 
-                robot.SetPeb(pEB);
+                //robot.SetPeb(pEB);
                 robot.SetPee(pEE);
             }
             else
             {
-                pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
+                //pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j+5]=initPee[6*j+5]-param.d/2;
+                    pEE[6*j+3]=initPee[6*j+3]+param.d/2*sin(PI+param.alpha);
+                    pEE[6*j+5]=initPee[6*j+5]+param.d/2*cos(PI+param.alpha);
                 }
 
-                robot.SetPeb(pEB);
+                //robot.SetPeb(pEB);
                 robot.SetPee(pEE);
             }
         }
         else if(param.count/(param.totalCount/2)==2*param.n-1)//dec 135 swing
         {
-            c0=-param.d-param.d/4;
+            c0=param.d+param.d/4;
             c1=bodyConstVel;
-            c2=(-3*param.d/4-2*c1*(0.5*param.totalCount*0.001))/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001);
-            c3=(param.d/2+c1*(0.5*param.totalCount*0.001))/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001);
+            c2=(3*param.d/4-2*c1*(0.5*param.totalCount*0.001))/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001);
+            c3=(-param.d/2+c1*(0.5*param.totalCount*0.001))/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001)/(0.5*param.totalCount*0.001);
+            tmpPeb=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
+            pEB[0]=tmpPeb*sin(PI+param.alpha);
+            pEB[2]=tmpPeb*cos(PI+param.alpha);
+            robot.SetPeb(pEB);
 
             if(period_count>=0 && period_count<(int)(param.totalCount*(2*dutyCycle-1)/4)+1)
             {
-                pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
+                //pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
+
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j+2]=initPee[6*j+2]-param.d;
-                    pEE[6*j+5]=initPee[6*j+5]-param.d/2-param.d;
+                    pEE[6*j+0]=initPee[6*j+0]+param.d*sin(PI+param.alpha);
+                    pEE[6*j+2]=initPee[6*j+2]+param.d*cos(PI+param.alpha);
+                    pEE[6*j+3]=initPee[6*j+3]+3*param.d/2*sin(PI+param.alpha);
+                    pEE[6*j+5]=initPee[6*j+5]+3*param.d/2*cos(PI+param.alpha);
                 }
 
-                robot.SetPeb(pEB);
+                //robot.SetPeb(pEB);
                 robot.SetPee(pEE);
             }
             else if(period_count<(int)(param.totalCount*((2*dutyCycle-1)/4+(1-dutyCycle)))+1)
             {
-                pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
+                //pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
+                tmpPee=param.d-param.d/4*(cos(PI*(period_count-iStart)/(iEnd-iStart))-1);
                 for(int j=0;j<3;j++)
                 {
                     pEE[6*j+1]=initPee[6*j+1]-param.h/2*(cos(2*PI*(period_count-iStart)/(iEnd-iStart))-1);
-                    pEE[6*j+2]=initPee[6*j+2]-param.d+param.d/4*(cos(PI*(period_count-iStart)/(iEnd-iStart))-1);
+                    pEE[6*j+0]=initPee[6*j+0]+tmpPee*sin(PI+param.alpha);
+                    pEE[6*j+2]=initPee[6*j+2]+tmpPee*cos(PI+param.alpha);
 
-                    pEE[6*j+5]=initPee[6*j+5]-param.d/2-param.d;
+                    pEE[6*j+3]=initPee[6*j+3]+3*param.d/2*sin(PI+param.alpha);
+                    pEE[6*j+5]=initPee[6*j+5]+3*param.d/2*cos(PI+param.alpha);
                 }
-                robot.SetPeb(pEB);
+                //robot.SetPeb(pEB);
                 robot.SetPee(pEE);
             }
             else
             {
-                pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
+                //pEB[2]=c3*1e-9*period_count*period_count*period_count+c2*1e-6*period_count*period_count+c1*1e-3*period_count+c0;
                 for(int j=0;j<3;j++)
                 {
-                    pEE[6*j+2]=initPee[6*j+2]-param.d/2-param.d;
-                    pEE[6*j+5]=initPee[6*j+5]-param.d/2-param.d;
+                    pEE[6*j+0]=initPee[6*j+0]+3*param.d/2*sin(PI+param.alpha);
+                    pEE[6*j+2]=initPee[6*j+2]+3*param.d/2*cos(PI+param.alpha);
+                    pEE[6*j+3]=initPee[6*j+3]+3*param.d/2*sin(PI+param.alpha);
+                    pEE[6*j+5]=initPee[6*j+5]+3*param.d/2*cos(PI+param.alpha);
                 }
 
-                robot.SetPeb(pEB);
+                //robot.SetPeb(pEB);
                 robot.SetPee(pEE);
             }
         }
         else//const
         {
             period_count=(param.count-param.totalCount/2)%param.totalCount;
-            pEB[2]=-param.d/4;
+            //pEB[2]=-param.d/4;
 
-            robot.SetPeb(pEB);
+            //robot.SetPeb(pEB);
             robot.SetPee(*swingPee_scale+18*period_count,robot.body());
         }
         //rt_printf("count=%d\n",param.count);
@@ -5157,5 +5186,5 @@ namespace TimeOptimal
 
             fileGait.close();
         });
-    }*/
+    }
 }

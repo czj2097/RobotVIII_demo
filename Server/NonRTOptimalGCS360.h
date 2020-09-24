@@ -204,7 +204,7 @@ namespace TimeOptimal
         double Ain_s[2201][18] {{0}};
     };
 
-/*
+
     struct FastWalkGCSParam
     {
         double Peb;
@@ -229,7 +229,7 @@ namespace TimeOptimal
         static FastWalkGCSParam fwgParam;
         static Pipe<FastWalkGCSParam> fwgPipe;
         static std::thread fwgThread;
-    };*/
+    };
 }
 
 #endif
